@@ -1,6 +1,8 @@
-// overlay.js - Оверлей для Jackbox Games (ФИНАЛЬНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ)
-(function() {
-    const existing = document.getElementById('game-finder-overlay');
+(function () {
+    const OVERLAY_ID = 'game-finder-overlay';
+    const STYLE_ID = 'game-finder-overlay-style';
+
+    const existing = document.getElementById(OVERLAY_ID);
     if (existing) existing.remove();
 
     const CONFIG = {
@@ -31,7 +33,8 @@
             confidence: 'уверенность: ',
             symbols: ' символов',
             close: 'Закрыть',
-            minimize: 'Свернуть'
+            minimize: 'Свернуть',
+            notEnoughSymbols: 'Вопрос слишком короткий'
         },
         en: {
             title: 'JBG-Finder v1.0',
@@ -53,7 +56,8 @@
             confidence: 'confidence: ',
             symbols: ' symbols',
             close: 'Close',
-            minimize: 'Minimize'
+            minimize: 'Minimize',
+            notEnoughSymbols: 'Question too short'
         }
     };
 
@@ -62,20 +66,101 @@
     let lastQuestion = '';
     let gameDatabase = null;
     let currentLang = CONFIG.defaultLang;
+    let autoCheckTimer = null;
+    let overlayEl = null;
+
+    const dom = {};
+
+    function getText(key) {
+        return (LANG[currentLang] && LANG[currentLang][key]) || (LANG.ru && LANG.ru[key]) || key;
+    }
+
+    function ensureStyle() {
+        if (document.getElementById(STYLE_ID)) return;
+        const style = document.createElement('style');
+        style.id = STYLE_ID;
+        style.textContent = `
+            #${OVERLAY_ID} *{box-sizing:border-box!important}
+            #${OVERLAY_ID}{position:fixed;top:20px;right:20px;width:580px;max-width:95vw;background:linear-gradient(145deg,#2b2b2b 0%,#1e1e1e 100%);backdrop-filter:blur(15px);border:1px solid #3a3a3a;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.8);z-index:999999;font-family:'Segoe UI',sans-serif;color:#e0e0e0;overflow:hidden;user-select:none}
+            .overlay-background-text{position:absolute;top:50%;left:0;transform:translateY(-50%) translateX(100%);font-size:70px;font-weight:900;color:rgba(255,255,255,.06);pointer-events:none;white-space:nowrap;z-index:0;animation:scrollText 28s linear infinite}
+            @keyframes scrollText{0%{transform:translateY(-50%) translateX(100%)}100%{transform:translateY(-50%) translateX(-250%)}}
+            .overlay-header{display:flex;justify-content:space-between;align-items:center;height:40px;padding:0 8px;background:linear-gradient(135deg,#3a3a3a 0%,#2a2a2a 100%);border-bottom:1px solid #3a3a3a;cursor:move}
+            .header-left{display:flex;align-items:center;gap:10px}
+            .overlay-title{font-size:14px;font-weight:600;color:#fff}
+            .db-info{font-size:11px;color:#808080;display:flex;align-items:center;gap:6px}
+            .overlay-controls{display:flex;height:100%}
+            .overlay-btn{width:40px;height:40px;border:none;background:transparent;color:#c0c0c0;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+            .overlay-btn:hover{background:rgba(255,255,255,.06);color:#fff}
+            .flag-btn{font-size:20px}
+            .overlay-content{padding:14px;position:relative;z-index:10}
+            .game-indicator{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 10px;background:rgba(45,45,45,.6);border:1px solid #3a3a3a}
+            .indicator-dot{width:12px;height:12px;border-radius:50%;background:#505050;transition:all .25s ease}
+            .indicator-dot.active{background:#4ecdc4;box-shadow:0 0 8px #4ecdc4}
+            .question-box,.answer-box{margin-bottom:12px;padding:12px;background:rgba(35,35,35,.75);border:1px solid #3a3a3a}
+            .question-box{border-left:3px solid #4ecdc4}
+            .answer-box{border-left:3px solid #505050}
+            .answer-box.found{border-left-color:#4ecdc4;background:rgba(78,205,196,.06)}
+            .answer-box.not-found{border-left-color:#ff6b6b;background:rgba(255,107,107,.06)}
+            .question-header,.answer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+            .question-text,.answer-text{font-size:13px;color:#d0d0d0;line-height:1.5;max-height:120px;overflow-y:auto;word-break:break-word}
+            .answer-text{font-weight:600;color:#fff}
+            .answer-box.found .answer-text{color:#4ecdc4}
+            .answer-box.not-found .answer-text{color:#ff6b6b}
+            .action-buttons{display:flex;gap:8px;margin-bottom:12px}
+            .action-btn{flex:1;padding:10px 12px;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
+            .detect-btn{background:linear-gradient(135deg,#4ecdc4 0%,#44a08d 100%);color:#fff}
+            .search-btn{background:linear-gradient(135deg,#ff6b6b 0%,#ee5a5a 100%);color:#fff}
+            .copy-btn{background:#3a3a3a;color:#c0c0c0;border:1px solid #4a4a4a}
+            .action-btn:disabled{opacity:.35;cursor:not-allowed}
+            .overlay-status{font-size:10px;color:#606060;text-align:center;padding-top:8px;border-top:1px solid #3a3a3a;font-family:'Consolas',monospace}
+            .overlay-minimized{height:40px;overflow:hidden}
+            .overlay-minimized .overlay-content{display:none}
+        `;
+        document.head.appendChild(style);
+    }
+
+    function cacheDom() {
+        dom.status = overlayEl.querySelector('#overlay-status');
+        dom.detectBtn = overlayEl.querySelector('#detect-btn');
+        dom.searchBtn = overlayEl.querySelector('#search-btn');
+        dom.copyBtn = overlayEl.querySelector('#copy-btn');
+        dom.flagBtn = overlayEl.querySelector('#lang-flag-btn');
+        dom.questionText = overlayEl.querySelector('#question-text');
+        dom.questionLength = overlayEl.querySelector('#question-length');
+        dom.answerText = overlayEl.querySelector('#answer-text');
+        dom.answerBox = overlayEl.querySelector('#answer-box');
+        dom.answerConfidence = overlayEl.querySelector('#answer-confidence');
+        dom.statusDot = overlayEl.querySelector('#status-dot');
+        dom.gameName = overlayEl.querySelector('#game-name');
+        dom.gameConfidence = overlayEl.querySelector('#game-confidence');
+        dom.watermark = overlayEl.querySelector('#game-watermark');
+        dom.dbVersion = overlayEl.querySelector('#db-version');
+        dom.dbAge = overlayEl.querySelector('#db-age');
+    }
+
+    function updateStatus(message, type) {
+        if (!dom.status) return;
+        const colors = {
+            info: '#606060',
+            success: '#4ecdc4',
+            warning: '#ffd93d',
+            error: '#ff6b6b',
+            searching: '#ffd93d'
+        };
+        dom.status.textContent = message;
+        dom.status.style.color = colors[type] || colors.info;
+    }
 
     async function loadDatabase() {
+        if (window.GameDatabase) {
+            gameDatabase = window.GameDatabase;
+            updateStatus(getText('dbLoaded'), 'success');
+            updateVersionInfo();
+            return true;
+        }
         return new Promise((resolve) => {
-            if (window.GameDatabase) {
-                gameDatabase = window.GameDatabase;
-                updateStatus(getText('dbLoaded'), 'success');
-                updateVersionInfo();
-                resolve(true);
-                return;
-            }
-
             const script = document.createElement('script');
             script.src = CONFIG.databaseURL + '?t=' + Date.now();
-            
             script.onload = () => {
                 if (window.GameDatabase) {
                     gameDatabase = window.GameDatabase;
@@ -87,718 +172,262 @@
                     resolve(false);
                 }
             };
-            
             script.onerror = () => {
                 updateStatus(getText('dbError'), 'error');
                 resolve(false);
             };
-            
             document.head.appendChild(script);
         });
     }
 
-    function getText(key) {
-        return LANG[currentLang][key] || LANG['ru'][key] || key;
-    }
-
     function updateVersionInfo() {
-        if (!gameDatabase) return;
-        
-        const versionInfo = gameDatabase.getVersionInfo();
-        const versionEl = document.getElementById('db-version');
-        const ageEl = document.getElementById('db-age');
-        
-        if (versionEl) versionEl.textContent = versionInfo.version;
-        
-        if (ageEl) {
-            const daysText = versionInfo.daysSinceUpdate === 0 ? 
-                (currentLang === 'ru' ? 'сегодня' : 'today') : 
-                versionInfo.daysSinceUpdate + 'd';
-            ageEl.textContent = daysText;
-            ageEl.style.color = versionInfo.isOutdated ? '#ff6b6b' : '#4ecdc4';
-        }
+        if (!gameDatabase || typeof gameDatabase.getVersionInfo !== 'function') return;
+        try {
+            const info = gameDatabase.getVersionInfo() || {};
+            if (dom.dbVersion) dom.dbVersion.textContent = info.version || 'v?';
+            if (dom.dbAge) {
+                const days = Number(info.daysSinceUpdate || 0);
+                dom.dbAge.textContent = days === 0 ? (currentLang === 'ru' ? 'сегодня' : 'today') : days + 'd';
+                dom.dbAge.style.color = info.isOutdated ? '#ff6b6b' : '#4ecdc4';
+            }
+        } catch (_) {}
     }
 
-    function updateStatus(message, type) {
-        const statusEl = document.getElementById('overlay-status');
-        if (statusEl) {
-            const colors = {
-                info: '#606060',
-                success: '#4ecdc4',
-                warning: '#ffd93d',
-                error: '#ff6b6b',
-                searching: '#ffd93d'
-            };
-            statusEl.textContent = message;
-            statusEl.style.color = colors[type] || colors.info;
-        }
-    }
-
-    function updateIndicator(detectionResult) {
-        const dot = document.getElementById('status-dot');
-        const name = document.getElementById('game-name');
-        const confidence = document.getElementById('game-confidence');
-        const watermark = document.getElementById('game-watermark');
-        
-        if (detectionResult && detectionResult.gameId && gameDatabase && gameDatabase.gameConfig[detectionResult.gameId]) {
-            const config = gameDatabase.gameConfig[detectionResult.gameId];
-            dot.className = 'indicator-dot active';
-            name.textContent = config.name;
-            confidence.textContent = detectionResult.confidence + '/2 ✓';
-            confidence.title = 'Found: ' + detectionResult.foundIndicators.join(', ');
-            
-            if (watermark) {
-                watermark.textContent = config.name.toUpperCase();
-                watermark.style.color = config.backgroundColor + '15';
-            }
-            
-            currentGame = detectionResult.gameId;
-        } else {
-            dot.className = 'indicator-dot';
-            name.textContent = getText('notDetected');
-            confidence.textContent = '';
-            
-            if (watermark) {
-                watermark.textContent = 'Here we go again! Waiting for so long is tiring thing. Not to mess you up.';
-                watermark.style.color = 'rgba(255, 255, 255, 0.08)';
-            }
-            
+    function updateIndicator(result) {
+        if (!result || !result.gameId || !gameDatabase?.gameConfig?.[result.gameId]) {
             currentGame = null;
+            if (dom.statusDot) dom.statusDot.className = 'indicator-dot';
+            if (dom.gameName) dom.gameName.textContent = getText('notDetected');
+            if (dom.gameConfidence) dom.gameConfidence.textContent = '';
+            if (dom.watermark) dom.watermark.textContent = getText('notDetected');
+            return;
+        }
+        const config = gameDatabase.gameConfig[result.gameId];
+        currentGame = result.gameId;
+        if (dom.statusDot) dom.statusDot.className = 'indicator-dot active';
+        if (dom.gameName) dom.gameName.textContent = config.name || getText('notDetected');
+        if (dom.gameConfidence) dom.gameConfidence.textContent = (result.confidence ?? 0) + '/2';
+        if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
+    }
+
+    function displayQuestion(q) {
+        if (!dom.questionText || !dom.questionLength || !dom.searchBtn) return;
+        if (!q) {
+            dom.questionText.textContent = currentLang === 'ru'
+                ? 'Нажмите "Определить игру" для сканирования...'
+                : 'Press "Detect Game" to start scanning...';
+            dom.questionLength.textContent = '0' + getText('symbols');
+            dom.searchBtn.disabled = true;
+            return;
+        }
+        const text = q.length > 200 ? q.slice(0, 200) + '...' : q;
+        dom.questionText.textContent = text;
+        dom.questionLength.textContent = q.length + getText('symbols');
+        dom.searchBtn.disabled = q.length < CONFIG.minQuestionLength;
+    }
+
+    function autoCheckQuestion() {
+        if (!gameDatabase || !currentGame || typeof gameDatabase.extractQuestion !== 'function') return;
+        if (document.visibilityState !== 'visible') return;
+        try {
+            const q = gameDatabase.extractQuestion(currentGame);
+            if (q && q !== lastQuestion && q.length >= CONFIG.minQuestionLength) {
+                lastQuestion = q;
+                currentQuestion = q;
+                displayQuestion(q);
+            }
+        } catch (_) {}
+    }
+
+    function detectGame() {
+        if (!gameDatabase || typeof gameDatabase.detectGame !== 'function') {
+            updateStatus(getText('dbError'), 'error');
+            return;
+        }
+        updateStatus(getText('scanning'), 'searching');
+        try {
+            const result = gameDatabase.detectGame();
+            updateIndicator(result);
+            if (result?.gameId) {
+                const name = gameDatabase.gameConfig?.[result.gameId]?.name || getText('notDetected');
+                updateStatus(getText('gameDetected') + name, 'success');
+                if (typeof gameDatabase.extractQuestion === 'function') {
+                    const q = gameDatabase.extractQuestion(result.gameId);
+                    if (q) {
+                        currentQuestion = q;
+                        lastQuestion = q;
+                        displayQuestion(q);
+                    }
+                }
+            } else {
+                updateStatus(getText('detectFirst'), 'warning');
+                displayQuestion(null);
+            }
+        } catch (_) {
+            updateStatus(getText('dbError'), 'error');
+        }
+    }
+
+    function searchAnswer() {
+        if (!gameDatabase || !currentGame || !currentQuestion || typeof gameDatabase.findAnswer !== 'function') {
+            updateStatus(getText('detectFirst'), 'warning');
+            return;
+        }
+        updateStatus(getText('scanning'), 'searching');
+        try {
+            const result = gameDatabase.findAnswer(currentQuestion, currentGame);
+            displayQuestion(currentQuestion);
+            if (result?.answer) {
+                dom.answerText.textContent = result.answer;
+                dom.answerBox.classList.remove('not-found');
+                dom.answerBox.classList.add('found');
+                dom.answerConfidence.textContent = (result.confidence ?? 0) + '%';
+                dom.copyBtn.disabled = false;
+                updateStatus(getText('answerFound') + (result.confidence ?? 0) + '%)', 'success');
+            } else {
+                dom.answerText.textContent = getText('answerNotFound');
+                dom.answerBox.classList.remove('found');
+                dom.answerBox.classList.add('not-found');
+                dom.answerConfidence.textContent = '';
+                dom.copyBtn.disabled = true;
+                updateStatus(getText('answerNotFound'), 'error');
+            }
+        } catch (_) {
+            updateStatus(getText('answerNotFound'), 'error');
+        }
+    }
+
+    function copyAnswer() {
+        const text = dom.answerText?.textContent;
+        if (!text || text === getText('answerNotFound')) return;
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                updateStatus(getText('copySuccess'), 'success');
+            });
         }
     }
 
     function toggleLanguage() {
         currentLang = currentLang === 'ru' ? 'en' : 'ru';
-        updateLanguage();
-        updateFlag();
-        if (currentGame && gameDatabase) {
-            updateStatus(getText('gameDetected') + gameDatabase.gameConfig[currentGame].name, 'success');
-        } else {
+        updateTexts();
+        updateVersionInfo();
+    }
+
+    function updateTexts() {
+        overlayEl.querySelector('.overlay-title').textContent = getText('title');
+        dom.detectBtn.textContent = getText('detectBtn');
+        dom.searchBtn.textContent = getText('searchBtn');
+        dom.copyBtn.textContent = getText('copyBtn');
+        overlayEl.querySelector('.question-label').textContent = getText('questionLabel');
+        overlayEl.querySelector('.answer-label').textContent = getText('answerLabel');
+    }
+
+    function createOverlay() {
+        ensureStyle();
+        overlayEl = document.createElement('div');
+        overlayEl.id = OVERLAY_ID;
+        overlayEl.innerHTML = `
+            <div class="overlay-background-text" id="game-watermark">WE GO ON AND ON AND ON AND ON AND ON AND ON EVERY TIME SINCE WE LIVE. AND WE STILL LOVE JACKBOX GAMES ALL THE TIME. so...</div>
+            <div class="overlay-header">
+                <div class="header-left">
+                    <span class="overlay-title">${getText('title')}</span>
+                    <span class="db-info"><span id="db-version">v0.0</span><span>•</span><span id="db-age">--</span></span>
+                </div>
+                <div class="overlay-controls">
+                    <button class="overlay-btn flag-btn" id="lang-flag-btn">${currentLang === 'ru' ? '🇷🇺' : '🇬🇧'}</button>
+                    <button class="overlay-btn minimize-btn">_</button>
+                    <button class="overlay-btn close-btn">×</button>
+                </div>
+            </div>
+            <div class="overlay-content">
+                <div class="game-indicator">
+                    <span class="indicator-dot" id="status-dot"></span>
+                    <span id="game-name">${getText('notDetected')}</span>
+                    <span id="game-confidence"></span>
+                </div>
+                <div class="question-box">
+                    <div class="question-header">
+                        <span class="question-label">${getText('questionLabel')}</span>
+                        <span id="question-length">0${getText('symbols')}</span>
+                    </div>
+                    <div class="question-text" id="question-text"></div>
+                </div>
+                <div class="answer-box" id="answer-box">
+                    <div class="answer-header">
+                        <span class="answer-label">${getText('answerLabel')}</span>
+                        <span id="answer-confidence"></span>
+                    </div>
+                    <div class="answer-text" id="answer-text"></div>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn detect-btn" id="detect-btn">${getText('detectBtn')}</button>
+                    <button class="action-btn search-btn" id="search-btn" disabled>${getText('searchBtn')}</button>
+                    <button class="action-btn copy-btn" id="copy-btn" disabled>${getText('copyBtn')}</button>
+                </div>
+                <div class="overlay-status" id="overlay-status"></div>
+            </div>
+        `;
+        document.body.appendChild(overlayEl);
+        cacheDom();
+        displayQuestion(null);
+        dom.detectBtn.onclick = detectGame;
+        dom.searchBtn.onclick = searchAnswer;
+        dom.copyBtn.onclick = copyAnswer;
+        dom.flagBtn.onclick = toggleLanguage;
+        overlayEl.querySelector('.close-btn').onclick = () => cleanup();
+        overlayEl.querySelector('.minimize-btn').onclick = () => overlayEl.classList.toggle('overlay-minimized');
+        enableDrag();
+    }
+
+    function enableDrag() {
+        const header = overlayEl.querySelector('.overlay-header');
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let initialX = 0;
+        let initialY = 0;
+        const move = (e) => {
+            if (!isDragging) return;
+            overlayEl.style.left = initialX + e.clientX - startX + 'px';
+            overlayEl.style.top = initialY + e.clientY - startY + 'px';
+            overlayEl.style.right = 'auto';
+        };
+        const up = () => {
+            isDragging = false;
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
+        };
+        header.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.overlay-btn')) return;
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = overlayEl.getBoundingClientRect();
+            initialX = rect.left;
+            initialY = rect.top;
+            window.addEventListener('pointermove', move);
+            window.addEventListener('pointerup', up);
+        });
+    }
+
+    function cleanup() {
+        if (autoCheckTimer) clearInterval(autoCheckTimer);
+        overlayEl?.remove();
+    }
+
+    async function init() {
+        createOverlay();
+        updateStatus(getText('loadingDB'), 'info');
+        const loaded = await loadDatabase();
+        if (loaded) {
+            autoCheckTimer = setInterval(autoCheckQuestion, CONFIG.checkInterval);
             updateStatus(getText('notDetected'), 'info');
         }
     }
 
-    function updateLanguage() {
-        const elements = {
-            '.overlay-title': 'title',
-            '#detect-btn': 'detectBtn',
-            '#search-btn': 'searchBtn',
-            '#copy-btn': 'copyBtn',
-            '.question-label': 'questionLabel',
-            '.answer-label': 'answerLabel'
-        };
-        
-        for (const [selector, key] of Object.entries(elements)) {
-            const el = document.querySelector(selector);
-            if (el) el.textContent = getText(key);
-        }
-    }
-
-    function updateFlag() {
-        const flagBtn = document.getElementById('lang-flag-btn');
-        if (flagBtn) {
-            flagBtn.textContent = currentLang === 'ru' ? '🇷🇺' : '🇬🇧';
-        }
-    }
-
-    function createOverlay() {
-        const overlay = document.createElement('div');
-        overlay.id = 'game-finder-overlay';
-        overlay.innerHTML = `
-            <div class="overlay-background-text" id="game-watermark">Here we go again! Waiting for so long is tiring thing. Not to mess you up.</div>
-            
-            <div class="overlay-header">
-                <div class="header-left">
-                    <span class="overlay-title">JBG-Finder v1.0</span>
-                    <span class="db-info">
-                        <span id="db-version">v0.0</span>
-                        <span class="db-separator">•</span>
-                        <span id="db-age">--</span>
-                    </span>
-                </div>
-                <div class="overlay-controls">
-                    <button class="overlay-btn flag-btn" id="lang-flag-btn" title="Switch language">${currentLang === 'ru' ? '🇷🇺' : '🇬🇧'}</button>
-                    <button class="overlay-btn minimize-btn" title="${getText('minimize')}">
-                        <svg width="10" height="10" viewBox="0 0 10 10"><rect width="10" height="2" fill="#fff"/></svg>
-                    </button>
-                    <button class="overlay-btn close-btn" title="${getText('close')}">
-                        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0L10 10M10 0L0 10" stroke="#fff" stroke-width="1.5"/></svg>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="overlay-content">
-                <div class="game-indicator">
-                    <span class="indicator-dot" id="status-dot"></span>
-                    <span class="game-name" id="game-name">Не определено</span>
-                    <span class="game-confidence" id="game-confidence"></span>
-                </div>
-                
-                <div class="question-box">
-                    <div class="question-header">
-                        <span class="question-label">📝 ВОПРОС</span>
-                        <span class="question-length" id="question-length">0 символов</span>
-                    </div>
-                    <div class="question-text" id="question-text">Нажмите "Определить игру" для сканирования...</div>
-                </div>
-                
-                <div class="answer-box" id="answer-box">
-                    <div class="answer-header">
-                        <span class="answer-label">💡 ОТВЕТ</span>
-                        <span class="answer-confidence" id="answer-confidence"></span>
-                    </div>
-                    <div class="answer-text" id="answer-text">Нажмите "Найти ответ" для поиска...</div>
-                </div>
-                
-                <div class="action-buttons">
-                    <button class="action-btn detect-btn" id="detect-btn">🔍 Определить игру</button>
-                    <button class="action-btn search-btn" id="search-btn" disabled>⚡ Найти ответ</button>
-                    <button class="action-btn copy-btn" id="copy-btn" disabled>📋 Копировать</button>
-                </div>
-                
-                <div class="overlay-status" id="overlay-status">Ожидание...</div>
-            </div>
-        `;
-
-        overlay.style.cssText = `
-            position: fixed !important;
-            top: 20px !important;
-            right: 20px !important;
-            width: 580px !important;
-            max-width: 95vw !important;
-            background: linear-gradient(145deg, #2b2b2b 0%, #1e1e1e 100%) !important;
-            backdrop-filter: blur(15px) !important;
-            border: 1px solid #3a3a3a !important;
-            border-radius: 0px !important;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
-            z-index: 999999 !important;
-            font-family: 'Segoe UI', sans-serif !important;
-            color: #e0e0e0 !important;
-            overflow: hidden !important;
-            user-select: none !important;
-            -webkit-user-select: none !important;
-        `;
-
-        document.body.appendChild(overlay);
-
-        const style = document.createElement('style');
-        style.textContent = `
-            #game-finder-overlay * {
-                box-sizing: border-box !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                user-select: none !important;
-                -webkit-user-select: none !important;
-            }
-            
-            .overlay-background-text {
-                position: absolute !important;
-                top: 50% !important;
-                left: 100% !important;
-                transform: translateY(-50%) !important;
-                font-size: 70px !important;
-                font-weight: 900 !important;
-                color: rgba(255, 255, 255, 0.05) !important;
-                pointer-events: none !important;
-                white-space: nowrap !important;
-                z-index: 0 !important;
-                animation: scrollText 30s linear infinite !important;
-            }
-            
-            @keyframes scrollText {
-                0% { left: 100%; }
-                100% { left: -200%; }
-            }
-            
-            .overlay-header {
-                display: flex !important;
-                justify-content: space-between !important;
-                align-items: stretch !important;
-                padding: 0 !important;
-                background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%) !important;
-                border-bottom: 1px solid #3a3a3a !important;
-                cursor: move !important;
-                height: 40px !important;
-            }
-            
-            .header-left {
-                display: flex !important;
-                align-items: center !important;
-                gap: 12px !important;
-                padding: 0 15px !important;
-            }
-            
-            .overlay-title {
-                font-size: 14px !important;
-                font-weight: 600 !important;
-                color: #ffffff !important;
-            }
-            
-            .db-info {
-                font-size: 11px !important;
-                color: #808080 !important;
-                display: flex !important;
-                align-items: center !important;
-                gap: 6px !important;
-            }
-            
-            .db-separator {
-                color: #505050 !important;
-            }
-            
-            .overlay-controls {
-                display: flex !important;
-                height: 100% !important;
-            }
-            
-            .overlay-btn {
-                width: 40px !important;
-                height: 40px !important;
-                border: none !important;
-                border-radius: 0px !important;
-                background: transparent !important;
-                color: #c0c0c0 !important;
-                cursor: pointer !important;
-                font-size: 14px !important;
-                transition: all 0.15s ease !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            }
-            
-            .overlay-btn:hover {
-                background: rgba(255, 255, 255, 0.1) !important;
-                color: #ffffff !important;
-            }
-            
-            .flag-btn {
-                font-size: 20px !important;
-            }
-            
-            .flag-btn:hover {
-                background: rgba(78, 205, 196, 0.2) !important;
-                color: #4ecdc4 !important;
-            }
-            
-            .minimize-btn:hover {
-                background: rgba(255, 255, 255, 0.15) !important;
-            }
-            
-            .close-btn:hover {
-                background: #e81123 !important;
-                color: #ffffff !important;
-            }
-            
-            .overlay-content {
-                padding: 18px !important;
-                position: relative !important;
-                z-index: 10 !important;
-            }
-            
-            .game-indicator {
-                display: flex !important;
-                align-items: center !important;
-                gap: 10px !important;
-                margin-bottom: 15px !important;
-                padding: 10px 14px !important;
-                background: rgba(45, 45, 45, 0.6) !important;
-                border: 1px solid #3a3a3a !important;
-            }
-            
-            .indicator-dot {
-                width: 10px !important;
-                height: 10px !important;
-                border-radius: 0px !important;
-                background: #505050 !important;
-                transition: all 0.3s ease !important;
-            }
-            
-            .indicator-dot.active {
-                background: #4ecdc4 !important;
-                box-shadow: 0 0 10px #4ecdc4 !important;
-            }
-            
-            .indicator-dot.searching {
-                background: #ffd93d !important;
-                box-shadow: 0 0 10px #ffd93d !important;
-                animation: pulse 1s infinite !important;
-            }
-            
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.5; }
-            }
-            
-            .game-name {
-                font-size: 14px !important;
-                color: #ffffff !important;
-                font-weight: 600 !important;
-                flex: 1 !important;
-            }
-            
-            .game-confidence {
-                font-size: 10px !important;
-                color: #808080 !important;
-                padding: 2px 6px !important;
-                background: rgba(255, 255, 255, 0.05) !important;
-                border: 1px solid #3a3a3a !important;
-            }
-            
-            .question-box, .answer-box {
-                margin-bottom: 15px !important;
-                padding: 14px !important;
-                background: rgba(35, 35, 35, 0.7) !important;
-                border: 1px solid #3a3a3a !important;
-            }
-            
-            .question-box {
-                border-left: 3px solid #4ecdc4 !important;
-            }
-            
-            .answer-box {
-                border-left: 3px solid #505050 !important;
-            }
-            
-            .answer-box.found {
-                border-left-color: #4ecdc4 !important;
-                background: rgba(78, 205, 196, 0.08) !important;
-            }
-            
-            .answer-box.not-found {
-                border-left-color: #ff6b6b !important;
-                background: rgba(255, 107, 107, 0.08) !important;
-            }
-            
-            .question-header, .answer-header {
-                display: flex !important;
-                justify-content: space-between !important;
-                align-items: center !important;
-                margin-bottom: 8px !important;
-            }
-            
-            .question-label, .answer-label {
-                font-size: 10px !important;
-                color: #808080 !important;
-                font-weight: 600 !important;
-                letter-spacing: 1px !important;
-                text-transform: uppercase !important;
-            }
-            
-            .question-length, .answer-confidence {
-                font-size: 9px !important;
-                color: #606060 !important;
-                padding: 2px 5px !important;
-                background: rgba(255, 255, 255, 0.05) !important;
-                border: 1px solid #3a3a3a !important;
-            }
-            
-            .question-text, .answer-text {
-                font-size: 13px !important;
-                color: #d0d0d0 !important;
-                line-height: 1.5 !important;
-                max-height: 120px !important;
-                overflow-y: auto !important;
-                font-weight: 400 !important;
-                word-wrap: break-word !important;
-            }
-            
-            .answer-text {
-                font-size: 15px !important;
-                font-weight: 600 !important;
-                color: #ffffff !important;
-            }
-            
-            .answer-box.found .answer-text {
-                color: #4ecdc4 !important;
-            }
-            
-            .answer-box.not-found .answer-text {
-                color: #ff6b6b !important;
-            }
-            
-            .action-buttons {
-                display: flex !important;
-                gap: 8px !important;
-                margin-bottom: 15px !important;
-                flex-wrap: nowrap !important;
-            }
-            
-            .action-btn {
-                flex: 1 !important;
-                min-width: 0 !important;
-                padding: 11px 14px !important;
-                border: none !important;
-                border-radius: 0px !important;
-                cursor: pointer !important;
-                font-size: 12px !important;
-                font-weight: 600 !important;
-                transition: all 0.15s ease !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                gap: 5px !important;
-                white-space: nowrap !important;
-                overflow: hidden !important;
-                text-overflow: ellipsis !important;
-            }
-            
-            .action-btn.detect-btn {
-                background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
-                color: #ffffff !important;
-            }
-            
-            .action-btn.search-btn {
-                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%) !important;
-                color: #ffffff !important;
-            }
-            
-            .action-btn.copy-btn {
-                background: #3a3a3a !important;
-                color: #c0c0c0 !important;
-                border: 1px solid #4a4a4a !important;
-            }
-            
-            .action-btn:hover:not(:disabled) {
-                transform: translateY(-1px) !important;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
-                filter: brightness(1.1) !important;
-            }
-            
-            .action-btn:disabled {
-                opacity: 0.35 !important;
-                cursor: not-allowed !important;
-                transform: none !important;
-                filter: none !important;
-            }
-            
-            .action-btn.search-btn:disabled {
-                background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%) !important;
-            }
-            
-            .overlay-status {
-                font-size: 10px !important;
-                color: #606060 !important;
-                text-align: center !important;
-                padding-top: 10px !important;
-                border-top: 1px solid #3a3a3a !important;
-                font-family: 'Consolas', monospace !important;
-            }
-            
-            .overlay-minimized {
-                height: 40px !important;
-                overflow: hidden !important;
-            }
-            
-            .overlay-minimized .overlay-content {
-                display: none !important;
-            }
-            
-            .question-text::-webkit-scrollbar,
-            .answer-text::-webkit-scrollbar {
-                width: 6px !important;
-            }
-            
-            .question-text::-webkit-scrollbar-track,
-            .answer-text::-webkit-scrollbar-track {
-                background: #2b2b2b !important;
-            }
-            
-            .question-text::-webkit-scrollbar-thumb,
-            .answer-text::-webkit-scrollbar-thumb {
-                background: #4a4a4a !important;
-            }
-            
-            .question-text::-webkit-scrollbar-thumb:hover,
-            .answer-text::-webkit-scrollbar-thumb:hover {
-                background: #5a5a5a !important;
-            }
-        `;
-        document.head.appendChild(style);
-
-        return overlay;
-    }
-
-    function autoCheckQuestion() {
-        if (!gameDatabase || !currentGame) return;
-        
-        const question = gameDatabase.extractQuestion(currentGame);
-        
-        if (question && question !== lastQuestion && question.length >= CONFIG.minQuestionLength) {
-            lastQuestion = question;
-            currentQuestion = question;
-            
-            const questionText = document.getElementById('question-text');
-            const questionLength = document.getElementById('question-length');
-            
-            if (questionText) {
-                questionText.textContent = question.length > 200 ? 
-                    question.substring(0, 200) + '...' : question;
-            }
-            
-            if (questionLength) {
-                questionLength.textContent = question.length + getText('symbols');
-            }
-            
-            const searchBtn = document.getElementById('search-btn');
-            if (searchBtn) searchBtn.disabled = false;
-            
-            updateStatus(getText('gameDetected') + gameDatabase.gameConfig[currentGame].name, 'success');
-        }
-    }
-
-    function detectGame() {
-        if (!gameDatabase) {
-            updateStatus(getText('dbError'), 'error');
-            return false;
-        }
-
-        updateStatus(getText('scanning'), 'searching');
-        let statusDot = document.getElementById('status-dot');
-        if (statusDot) statusDot.className = 'indicator-dot searching';
-
-        setTimeout(() => {
-            const detectionResult = gameDatabase.detectGame();
-            updateIndicator(detectionResult);
-            
-            if (detectionResult && detectionResult.gameId) {
-                updateStatus(getText('gameDetected') + detectionResult.name + 
-                    ' (' + getText('confidence') + detectionResult.confidence + '/2)', 'success');
-                const searchBtn = document.getElementById('search-btn');
-                if (searchBtn) searchBtn.disabled = false;
-                
-                const question = gameDatabase.extractQuestion(detectionResult.gameId);
-                if (question) {
-                    currentQuestion = question;
-                    lastQuestion = question;
-                    const questionText = document.getElementById('question-text');
-                    const questionLength = document.getElementById('question-length');
-                    if (questionText) {
-                        questionText.textContent = question.length > 200 ? 
-                            question.substring(0, 200) + '...' : question;
-                    }
-                    if (questionLength) {
-                        questionLength.textContent = question.length + getText('symbols');
-                    }
-                }
-            } else {
-                updateStatus(getText('detectFirst'), 'warning');
-                const searchBtn = document.getElementById('search-btn');
-                if (searchBtn) searchBtn.disabled = true;
-            }
-            
-            if (statusDot) {
-                statusDot.className = detectionResult && detectionResult.gameId ? 
-                    'indicator-dot active' : 'indicator-dot';
-            }
-        }, 500);
-
-        return true;
-    }
-
-    function searchAnswer() {
-        if (!gameDatabase || !currentGame || !currentQuestion) {
-            updateStatus(getText('detectFirst'), 'warning');
-            return;
-        }
-        
-        updateStatus(getText('scanning'), 'searching');
-        let statusDot = document.getElementById('status-dot');
-        if (statusDot) statusDot.className = 'indicator-dot searching';
-        
-        setTimeout(() => {
-            const result = gameDatabase.findAnswer(currentQuestion, currentGame);
-            const answerBox = document.getElementById('answer-box');
-            const answerText = document.getElementById('answer-text');
-            const answerConfidence = document.getElementById('answer-confidence');
-            const copyBtn = document.getElementById('copy-btn');
-            
-            if (result) {
-                if (answerText) answerText.textContent = result.answer;
-                if (answerBox) answerBox.className = 'answer-box found';
-                if (answerConfidence) answerConfidence.textContent = result.confidence + '%';
-                updateStatus(getText('answerFound') + result.confidence + '%)', 'success');
-                if (copyBtn) copyBtn.disabled = false;
-            } else {
-                if (answerText) answerText.textContent = getText('answerNotFound');
-                if (answerBox) answerBox.className = 'answer-box not-found';
-                if (answerConfidence) answerConfidence.textContent = '';
-                updateStatus(getText('answerNotFound'), 'error');
-                if (copyBtn) copyBtn.disabled = true;
-            }
-            
-            if (statusDot) {
-                statusDot.className = currentGame ? 'indicator-dot active' : 'indicator-dot';
-            }
-        }, 300);
-    }
-
-    function copyAnswer() {
-        const answerText = document.getElementById('answer-text');
-        if (answerText && answerText.textContent && 
-            answerText.textContent !== getText('answerNotFound')) {
-            navigator.clipboard.writeText(answerText.textContent).then(() => {
-                updateStatus(getText('copySuccess'), 'success');
-                setTimeout(() => updateStatus(getText('gameDetected') + 
-                    (currentGame && gameDatabase ? gameDatabase.gameConfig[currentGame].name : ''), 'info'), 2000);
-            });
-        }
-    }
-
-    async function initOverlay() {
-        const overlay = createOverlay();
-        updateStatus(getText('loadingDB'), 'info');
-        await loadDatabase();
-
-        const detectBtn = document.getElementById('detect-btn');
-        const searchBtn = document.getElementById('search-btn');
-        const copyBtn = document.getElementById('copy-btn');
-        const flagBtn = document.getElementById('lang-flag-btn');
-        
-        if (detectBtn) detectBtn.onclick = detectGame;
-        if (searchBtn) searchBtn.onclick = searchAnswer;
-        if (copyBtn) copyBtn.onclick = copyAnswer;
-        if (flagBtn) flagBtn.onclick = toggleLanguage;
-        
-        const closeBtn = overlay.querySelector('.close-btn');
-        const minimizeBtn = overlay.querySelector('.minimize-btn');
-        
-        if (closeBtn) closeBtn.onclick = () => overlay.remove();
-        if (minimizeBtn) minimizeBtn.onclick = () => overlay.classList.toggle('overlay-minimized');
-
-        const header = overlay.querySelector('.overlay-header');
-        let isDragging = false, startX, startY, initialX, initialY;
-
-        if (header) {
-            header.onmousedown = (e) => {
-                if (e.target.closest('.overlay-btn')) return;
-                isDragging = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                const rect = overlay.getBoundingClientRect();
-                initialX = rect.left;
-                initialY = rect.top;
-                e.preventDefault();
-            };
-        }
-
-        document.onmousemove = (e) => {
-            if (!isDragging) return;
-            overlay.style.left = (initialX + e.clientX - startX) + 'px';
-            overlay.style.top = (initialY + e.clientY - startY) + 'px';
-            overlay.style.right = 'auto';
-            e.preventDefault();
-        };
-
-        document.onmouseup = () => { isDragging = false; };
-
-        setInterval(autoCheckQuestion, CONFIG.checkInterval);
-
-        updateStatus(getText('notDetected'), 'info');
-    }
-
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initOverlay);
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        initOverlay();
+        init();
     }
 })();
