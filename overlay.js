@@ -1,4 +1,4 @@
-// overlay.js - Оверлей для Jackbox Games (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// overlay.js - Оверлей для Jackbox Games (ФИНАЛЬНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ)
 (function() {
     const existing = document.getElementById('game-finder-overlay');
     if (existing) existing.remove();
@@ -30,8 +30,6 @@
             dbError: 'Ошибка загрузки базы',
             confidence: 'уверенность: ',
             symbols: ' символов',
-            settings: '⚙️',
-            langSelect: 'Язык / Language',
             close: 'Закрыть',
             minimize: 'Свернуть'
         },
@@ -54,8 +52,6 @@
             dbError: 'Database Load Error',
             confidence: 'confidence: ',
             symbols: ' symbols',
-            settings: '⚙️',
-            langSelect: 'Language / Язык',
             close: 'Close',
             minimize: 'Minimize'
         }
@@ -66,7 +62,6 @@
     let lastQuestion = '';
     let gameDatabase = null;
     let currentLang = CONFIG.defaultLang;
-    let settingsOpen = false;
 
     async function loadDatabase() {
         return new Promise((resolve) => {
@@ -172,6 +167,40 @@
         }
     }
 
+    function toggleLanguage() {
+        currentLang = currentLang === 'ru' ? 'en' : 'ru';
+        updateLanguage();
+        updateFlag();
+        if (currentGame && gameDatabase) {
+            updateStatus(getText('gameDetected') + gameDatabase.gameConfig[currentGame].name, 'success');
+        } else {
+            updateStatus(getText('notDetected'), 'info');
+        }
+    }
+
+    function updateLanguage() {
+        const elements = {
+            '.overlay-title': 'title',
+            '#detect-btn': 'detectBtn',
+            '#search-btn': 'searchBtn',
+            '#copy-btn': 'copyBtn',
+            '.question-label': 'questionLabel',
+            '.answer-label': 'answerLabel'
+        };
+        
+        for (const [selector, key] of Object.entries(elements)) {
+            const el = document.querySelector(selector);
+            if (el) el.textContent = getText(key);
+        }
+    }
+
+    function updateFlag() {
+        const flagBtn = document.getElementById('lang-flag-btn');
+        if (flagBtn) {
+            flagBtn.textContent = currentLang === 'ru' ? '🇷🇺' : '🇬🇧';
+        }
+    }
+
     function createOverlay() {
         const overlay = document.createElement('div');
         overlay.id = 'game-finder-overlay';
@@ -188,7 +217,7 @@
                     </span>
                 </div>
                 <div class="overlay-controls">
-                    <button class="overlay-btn settings-btn" title="${getText('settings')}">⚙️</button>
+                    <button class="overlay-btn flag-btn" id="lang-flag-btn" title="Switch language">${currentLang === 'ru' ? '🇷🇺' : '🇬🇧'}</button>
                     <button class="overlay-btn minimize-btn" title="${getText('minimize')}">
                         <svg width="10" height="10" viewBox="0 0 10 10"><rect width="10" height="2" fill="#fff"/></svg>
                     </button>
@@ -228,22 +257,6 @@
                 </div>
                 
                 <div class="overlay-status" id="overlay-status">Ожидание...</div>
-                
-                <div class="settings-panel" id="settings-panel">
-                    <div class="settings-header">
-                        <span>⚙️ Настройки / Settings</span>
-                        <button class="settings-close-btn" id="settings-close-btn">×</button>
-                    </div>
-                    <div class="settings-content">
-                        <div class="setting-item">
-                            <span>${getText('langSelect')}</span>
-                            <select id="lang-select" class="lang-select">
-                                <option value="ru" ${currentLang === 'ru' ? 'selected' : ''}>Русский</option>
-                                <option value="en" ${currentLang === 'en' ? 'selected' : ''}>English</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
             </div>
         `;
 
@@ -358,7 +371,11 @@
                 color: #ffffff !important;
             }
             
-            .settings-btn:hover {
+            .flag-btn {
+                font-size: 20px !important;
+            }
+            
+            .flag-btn:hover {
                 background: rgba(78, 205, 196, 0.2) !important;
                 color: #4ecdc4 !important;
             }
@@ -567,82 +584,6 @@
                 font-family: 'Consolas', monospace !important;
             }
             
-            .settings-panel {
-                position: absolute !important;
-                top: 100% !important;
-                right: 0 !important;
-                width: 280px !important;
-                background: #2b2b2b !important;
-                border: 1px solid #3a3a3a !important;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
-                z-index: 999998 !important;
-                display: none !important;
-            }
-            
-            .settings-panel.show {
-                display: block !important;
-            }
-            
-            .settings-header {
-                display: flex !important;
-                justify-content: space-between !important;
-                align-items: center !important;
-                padding: 12px 15px !important;
-                background: #3a3a3a !important;
-                border-bottom: 1px solid #4a4a4a !important;
-            }
-            
-            .settings-header span {
-                font-size: 12px !important;
-                font-weight: 600 !important;
-                color: #ffffff !important;
-            }
-            
-            .settings-close-btn {
-                width: 24px !important;
-                height: 24px !important;
-                border: none !important;
-                background: transparent !important;
-                color: #c0c0c0 !important;
-                cursor: pointer !important;
-                font-size: 16px !important;
-            }
-            
-            .settings-close-btn:hover {
-                background: #e81123 !important;
-                color: #ffffff !important;
-            }
-            
-            .settings-content {
-                padding: 15px !important;
-            }
-            
-            .setting-item {
-                display: flex !important;
-                justify-content: space-between !important;
-                align-items: center !important;
-                margin-bottom: 10px !important;
-            }
-            
-            .setting-item span {
-                font-size: 12px !important;
-                color: #c0c0c0 !important;
-            }
-            
-            .lang-select {
-                padding: 6px 10px !important;
-                background: #3a3a3a !important;
-                border: 1px solid #4a4a4a !important;
-                color: #ffffff !important;
-                font-size: 12px !important;
-                cursor: pointer !important;
-            }
-            
-            .lang-select:focus {
-                outline: none !important;
-                border-color: #4ecdc4 !important;
-            }
-            
             .overlay-minimized {
                 height: 40px !important;
                 overflow: hidden !important;
@@ -653,26 +594,22 @@
             }
             
             .question-text::-webkit-scrollbar,
-            .answer-text::-webkit-scrollbar,
-            .settings-content::-webkit-scrollbar {
+            .answer-text::-webkit-scrollbar {
                 width: 6px !important;
             }
             
             .question-text::-webkit-scrollbar-track,
-            .answer-text::-webkit-scrollbar-track,
-            .settings-content::-webkit-scrollbar-track {
+            .answer-text::-webkit-scrollbar-track {
                 background: #2b2b2b !important;
             }
             
             .question-text::-webkit-scrollbar-thumb,
-            .answer-text::-webkit-scrollbar-thumb,
-            .settings-content::-webkit-scrollbar-thumb {
+            .answer-text::-webkit-scrollbar-thumb {
                 background: #4a4a4a !important;
             }
             
             .question-text::-webkit-scrollbar-thumb:hover,
-            .answer-text::-webkit-scrollbar-thumb:hover,
-            .settings-content::-webkit-scrollbar-thumb:hover {
+            .answer-text::-webkit-scrollbar-thumb:hover {
                 background: #5a5a5a !important;
             }
         `;
@@ -749,7 +686,6 @@
                 if (searchBtn) searchBtn.disabled = true;
             }
             
-            // Используем уже существующую переменную statusDot
             if (statusDot) {
                 statusDot.className = detectionResult && detectionResult.gameId ? 
                     'indicator-dot active' : 'indicator-dot';
@@ -790,7 +726,6 @@
                 if (copyBtn) copyBtn.disabled = true;
             }
             
-            // Используем внешнюю переменную statusDot
             if (statusDot) {
                 statusDot.className = currentGame ? 'indicator-dot active' : 'indicator-dot';
             }
@@ -809,35 +744,6 @@
         }
     }
 
-    function switchLanguage(lang) {
-        currentLang = lang;
-        
-        const elements = {
-            '.overlay-title': 'title',
-            '#detect-btn': 'detectBtn',
-            '#search-btn': 'searchBtn',
-            '#copy-btn': 'copyBtn',
-            '.question-label': 'questionLabel',
-            '.answer-label': 'answerLabel'
-        };
-        
-        for (const [selector, key] of Object.entries(elements)) {
-            const el = document.querySelector(selector);
-            if (el) el.textContent = getText(key);
-        }
-        
-        const settingsHeader = document.querySelector('.settings-header span');
-        if (settingsHeader) {
-            settingsHeader.textContent = '⚙️ ' + getText('langSelect');
-        }
-        
-        if (currentGame && gameDatabase) {
-            updateStatus(getText('gameDetected') + gameDatabase.gameConfig[currentGame].name, 'success');
-        } else {
-            updateStatus(getText('notDetected'), 'info');
-        }
-    }
-
     async function initOverlay() {
         const overlay = createOverlay();
         updateStatus(getText('loadingDB'), 'info');
@@ -846,56 +752,18 @@
         const detectBtn = document.getElementById('detect-btn');
         const searchBtn = document.getElementById('search-btn');
         const copyBtn = document.getElementById('copy-btn');
+        const flagBtn = document.getElementById('lang-flag-btn');
         
         if (detectBtn) detectBtn.onclick = detectGame;
         if (searchBtn) searchBtn.onclick = searchAnswer;
         if (copyBtn) copyBtn.onclick = copyAnswer;
+        if (flagBtn) flagBtn.onclick = toggleLanguage;
         
         const closeBtn = overlay.querySelector('.close-btn');
         const minimizeBtn = overlay.querySelector('.minimize-btn');
         
         if (closeBtn) closeBtn.onclick = () => overlay.remove();
         if (minimizeBtn) minimizeBtn.onclick = () => overlay.classList.toggle('overlay-minimized');
-        
-        const settingsBtn = overlay.querySelector('.settings-btn');
-        const settingsPanel = document.getElementById('settings-panel');
-        const settingsCloseBtn = document.getElementById('settings-close-btn');
-        const langSelect = document.getElementById('lang-select');
-        
-        if (settingsBtn && settingsPanel) {
-            settingsBtn.onclick = () => {
-                settingsOpen = !settingsOpen;
-                if (settingsOpen) {
-                    settingsPanel.classList.add('show');
-                } else {
-                    settingsPanel.classList.remove('show');
-                }
-            };
-        }
-        
-        if (settingsCloseBtn && settingsPanel) {
-            settingsCloseBtn.onclick = () => {
-                settingsOpen = false;
-                settingsPanel.classList.remove('show');
-            };
-        }
-        
-        if (langSelect) {
-            langSelect.onchange = (e) => {
-                switchLanguage(e.target.value);
-                settingsOpen = false;
-                if (settingsPanel) settingsPanel.classList.remove('show');
-            };
-        }
-        
-        document.addEventListener('click', (e) => {
-            if (settingsOpen && settingsPanel && 
-                !settingsPanel.contains(e.target) && 
-                settingsBtn && !settingsBtn.contains(e.target)) {
-                settingsOpen = false;
-                settingsPanel.classList.remove('show');
-            }
-        });
 
         const header = overlay.querySelector('.overlay-header');
         let isDragging = false, startX, startY, initialX, initialY;
