@@ -17,7 +17,7 @@
     // === ЯЗЫКОВЫЕ НАСТРОЙКИ ===
     const LANG = {
         ru: {
-            title: '🎮 Game Finder',
+            title: 'JBG-Finder v1.0',
             detectBtn: '🔍 Определить игру',
             searchBtn: '⚡ Найти ответ',
             copyBtn: '📋 Копировать',
@@ -41,7 +41,7 @@
             minimize: 'Свернуть'
         },
         en: {
-            title: '🎮 Game Finder',
+            title: 'JBG-Finder v1.0',
             detectBtn: '🔍 Detect Game',
             searchBtn: '⚡ Find Answer',
             copyBtn: '📋 Copy',
@@ -277,7 +277,7 @@
             z-index: 999999;
             font-family: 'Segoe UI', sans-serif;
             color: #e0e0e0;
-            overflow: visible;
+            overflow: hidden;
             user-select: none;
             -webkit-user-select: none;
         `;
@@ -296,19 +296,18 @@
             }
             
             .overlay-background-text {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                font-size: 70px;
-                font-weight: 900;
-                color: rgba(255, 255, 255, 0.08);
-                pointer-events: none;
-                white-space: nowrap;
-                text-transform: uppercase;
-                letter-spacing: 8px;
-                z-index: 0;
-            }
+				position: absolute;
+				top: 50%;
+				left: 100%; /* Начинаем справа за границей */
+				transform: translateY(-50%); /* Центрируем только по вертикали */
+				font-size: 70px;
+				font-weight: 900;
+				color: rgba(255, 255, 255, 0.05); /* Чуть прозрачнее, чтобы не мешал */
+				pointer-events: none;
+				white-space: nowrap; /* Запрещаем перенос строк */
+				z-index: 0;
+				animation: scrollText 30s linear infinite; /* Запускаем анимацию */
+			}
             
             .overlay-header {
                 display: flex;
@@ -685,6 +684,15 @@
             .settings-content::-webkit-scrollbar-thumb:hover {
                 background: #5a5a5a;
             }
+			
+			@keyframes scrollText {
+				0% {
+					left: 100%; /* Начинаем справа */
+				}
+				100% {
+					left: -200%; /* Уходим далеко влево */
+				}
+}
         `;
         document.head.appendChild(style);
 
