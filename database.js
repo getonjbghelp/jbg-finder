@@ -2,7 +2,7 @@
 // Сохраните этот файл как database.js
 
 const GameDatabase = {
-    version: "1.0",
+    version: "dbversion1.01",
     lastUpdated: "2026-02-17",
     buildDate: new Date("2026-02-17"),
     
@@ -16,7 +16,7 @@ const GameDatabase = {
         },
         fibbage: {
             name: 'Fibbage / Fibbage XL / Бредовуха XL',
-            requiredIndicators: ['#fibbage-page', '#question-text', '#chooselie-text', '#fibbage-submitlie', '#state-nothing fibbage-page', '#round-text'],
+            requiredIndicators: ['#fibbage-page', '#question-text', '#chooselie-text', '#fibbage-submitlie', '#round-text'],
             questionSelectors: ['#question-text'],
             backgroundColor: '#5a4a2d',
             minConfidence: 2
