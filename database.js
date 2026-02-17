@@ -2,9 +2,9 @@
 // Сохраните этот файл как database.js
 
 const GameDatabase = {
-    version: "dbversion1.01",
-    lastUpdated: "2026-02-17",
-    buildDate: new Date("2026-02-17"),
+    version: "DBnightlymidFEB",
+    lastUpdated: "2026-02-18",
+    buildDate: new Date("2026-02-18"),
     
     gameConfig: {
         pollposition: {
