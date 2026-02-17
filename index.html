@@ -3,49 +3,807 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Finder - Запуск</title>
+    <title>JBG Finder - Game Answer Helper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; color: #e0e0e0; }
-        .container { background: rgba(50,50,50,0.5); padding: 50px; border-radius: 20px; text-align: center; max-width: 700px; border: 1px solid rgba(255,255,255,0.1); }
-        h1 { color: #4ecdc4; margin-bottom: 20px; font-size: 2.5em; }
-        .code-block { background: #0a0a0a; padding: 20px; border-radius: 10px; text-align: left; margin: 20px 0; overflow-x: auto; border: 1px solid #303030; }
-        code { color: #4ecdc4; font-family: 'Courier New', monospace; font-size: 11px; }
-        .btn { background: linear-gradient(135deg, #4ecdc4, #44a08d); color: white; padding: 15px 30px; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; margin: 10px; }
-        .btn:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(78,205,196,0.4); }
-        .file-list { background: rgba(30,30,30,0.5); padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; }
-        .file-list h3 { color: #4ecdc4; margin-bottom: 10px; }
-        .file-list li { margin: 8px 0; color: #c0c0c0; list-style: none; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --accent-1: #6c5ce7;
+            --accent-2: #a29bfe;
+            --accent-3: #00b894;
+            --accent-4: #fd79a8;
+            --border: #222222;
+        }
+
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Анимированный фон */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(108, 92, 231, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 184, 148, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(253, 121, 168, 0.05) 0%, transparent 50%);
+            z-index: -1;
+            animation: bgPulse 15s ease-in-out infinite;
+        }
+
+        @keyframes bgPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Плавающие частицы */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-1);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 20s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.3;
+            }
+            90% {
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Language Switcher */
+        .lang-switch {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+            background: var(--bg-secondary);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .lang-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .lang-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .lang-btn.active {
+            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+            color: white;
+        }
+
+        /* Main Container */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 60px;
+        }
+
+        /* Left Panel - Content */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px 0;
+        }
+
+        /* Right Panel - Logo */
+        .right-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Logo Container */
+        .logo-container {
+            width: 450px;
+            height: 450px;
+            background: var(--bg-secondary);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            animation: logoFloat 6s ease-in-out infinite;
+        }
+
+        .logo-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                rgba(108, 92, 231, 0.1) 60deg,
+                transparent 120deg,
+                rgba(0, 184, 148, 0.1) 180deg,
+                transparent 240deg,
+                rgba(253, 121, 168, 0.1) 300deg,
+                transparent 360deg
+            );
+            animation: rotate 10s linear infinite;
+        }
+
+        .logo-container::after {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            background: var(--bg-secondary);
+            border-radius: 22px;
+        }
+
+        .logo-content {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-content img {
+            max-width: 80%;
+            max-height: 80%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 30px rgba(108, 92, 231, 0.3));
+        }
+
+        .logo-placeholder {
+            font-size: 120px;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            50% { 
+                transform: scale(1.1);
+                opacity: 1;
+            }
+        }
+
+        /* Typography with Random Gradient */
+        h1 {
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            background: linear-gradient(
+                135deg,
+                var(--accent-1) 0%,
+                var(--accent-3) 25%,
+                var(--accent-4) 50%,
+                var(--accent-2) 75%,
+                var(--accent-1) 100%
+            );
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 8s ease infinite;
+            line-height: 1.1;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 48px;
+            font-weight: 300;
+            line-height: 1.6;
+            max-width: 500px;
+        }
+
+        /* Feature Cards */
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 48px;
+        }
+
+        .feature-card {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(108, 92, 231, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent-1);
+            box-shadow: 0 20px 40px rgba(108, 92, 231, 0.2);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 300;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Action Buttons */
+        .actions {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 48px;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+            color: white;
+            box-shadow: 0 10px 30px rgba(108, 92, 231, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(108, 92, 231, 0.5);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent-1);
+            transform: translateY(-4px);
+        }
+
+        /* Code Block */
+        .code-section {
+            margin-top: 32px;
+        }
+
+        .code-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .code-block {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--accent-2);
+            overflow-x: auto;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .code-block::before {
+            content: 'JAVASCRIPT';
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 100px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent-1);
+            border-color: var(--accent-1);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 60px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        /* Language Content */
+        .lang-content {
+            display: none;
+        }
+
+        .lang-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 0 40px;
+            }
+
+            .right-panel {
+                display: none;
+            }
+
+            .left-panel {
+                padding: 60px 0;
+            }
+
+            h1 {
+                font-size: 42px;
+            }
+
+            .logo-container {
+                width: 350px;
+                height: 350px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 20px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .lang-switch {
+                top: 20px;
+                right: 20px;
+            }
+
+            h1 {
+                font-size: 36px;
+            }
+        }
+
+        /* Glow Effects */
+        .glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .glow-1 {
+            top: -150px;
+            right: -150px;
+            background: var(--accent-1);
+            animation: glowPulse 8s ease-in-out infinite;
+        }
+
+        .glow-2 {
+            bottom: -150px;
+            left: -150px;
+            background: var(--accent-3);
+            animation: glowPulse 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.2); }
+        }
+
+        /* Custom Logo Upload */
+        .logo-upload-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-align: center;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .logo-container:hover .logo-upload-hint {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
+    <!-- Background Effects -->
+    <div class="bg-gradient"></div>
+    <div class="particles" id="particles"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+
+    <!-- Language Switcher -->
+    <div class="lang-switch">
+        <button class="lang-btn active" onclick="switchLang('ru')">RU</button>
+        <button class="lang-btn" onclick="switchLang('en')">EN</button>
+    </div>
+
+    <!-- Main Container -->
     <div class="container">
-        <h1>🎮 Game Finder Overlay</h1>
-        <p style="color: #808080; margin-bottom: 30px;">Инструмент для поиска ответов в Jackbox Games</p>
-        
-        <div class="file-list">
-            <h3>📁 Структура файлов:</h3>
-            <li>📄 database.js — База данных вопросов</li>
-            <li>📄 overlay.js — Скрипт оверлея</li>
-            <li>📄 index.html — Эта страница</li>
+        <!-- Left Panel - Content -->
+        <div class="left-panel">
+            <!-- Russian Content -->
+            <div class="lang-content active" id="content-ru">
+                <h1>JBG Finder</h1>
+                <p class="subtitle">Интеллектуальный помощник для поиска ответов в играх Jackbox Party Pack. Быстро. Точно. Стильно.</p>
+
+                <div class="features">
+                    <div class="feature-card">
+                        <span class="feature-icon">1</span>
+                        <div class="feature-title">Авто-определение</div>
+                        <div class="feature-desc">Мгновенно распознаёт игру по DOM-элементам</div>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">2</span>
+                        <div class="feature-title">Мгновенный поиск</div>
+                        <div class="feature-desc">База данных с сотнями вопросов и ответов</div>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">3</span>
+                        <div class="feature-title">Полная приватность</div>
+                        <div class="feature-desc">Всё работает лишь на 2-х файлах, ваши данные не собираются</div>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">4</span>
+                        <div class="feature-title">Тёмный дизайн</div>
+                        <div class="feature-desc">Минимализм - наше всё</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="copyCode()">
+                        📋 Скопировать код
+                    </button>
+                    <button class="btn btn-secondary" onclick="openGitHub()">
+                        🔗 GitHub
+                    </button>
+                </div>
+
+                <div class="code-section">
+                    <div class="code-label">Bookmarklet для запуска</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode()">Copy</button>
+                        <code id="bookmarklet-code">javascript:(function(){var s=document.createElement('script');s.src='https://getonjbghelp.github.io/jbg-finder/overlay.js?t='+Date.now();document.body.appendChild(s);})();</code>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <p class="footer-text">© 2026. Для образовательных целей.</p>
+                </div>
+            </div>
+
+            <!-- English Content -->
+            <div class="lang-content" id="content-en">
+                <h1>JBG Finder</h1>
+                <p class="subtitle">Intelligent answer finder for Jackbox Party Pack games. Fast. Accurate. Stylish.</p>
+
+                <div class="features">
+                    <div class="feature-card">
+                        <span class="feature-icon">1</span>
+                        <div class="feature-title">Auto Detection</div>
+                        <div class="feature-desc">Instantly recognizes game by DOM elements</div>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">2</span>
+                        <div class="feature-title">Instant Search</div>
+                        <div class="feature-desc">Database with hundreds of Q&A pairs</div>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">3</span>
+                        <div class="feature-title">Full Privacy</div>
+                        <div class="feature-desc">Everything works only on 2 files, your data is not collected</div>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">4</span>
+                        <div class="feature-title">Dark Design</div>
+                        <div class="feature-desc">Full Minimalism</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="copyCode()">
+                        📋 Copy Code
+                    </button>
+                    <button class="btn btn-secondary" onclick="openGitHub()">
+                        🔗 GitHub
+                    </button>
+                </div>
+
+                <div class="code-section">
+                    <div class="code-label">Bookmarklet to Launch</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode()">Copy</button>
+                        <code id="bookmarklet-code-en">javascript:(function(){var s=document.createElement('script');s.src='https://getonjbghelp.github.io/jbg-finder/overlay.js?t='+Date.now();document.body.appendChild(s);})();</code>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <p class="footer-text">© 2026. For educational purposes only.</p>
+                </div>
+            </div>
         </div>
 
-        <h3 style="color: #4ecdc4; margin: 30px 0 15px;">📌 Команда для запуска:</h3>
-        <div class="code-block">
-            <code id="bookmarkletCode">Загрузка...</code>
+        <!-- Right Panel - Logo -->
+        <div class="right-panel">
+            <div class="logo-container">
+                <div class="logo-content" id="logo-content">
+                    <img src="https://eblo.id/uploads/C4uqESQ/logojack.png" alt="Logo">
+                </div>
+                <div class="logo-upload-hint">
+                    Hello!! ^_^
+                </div>
+            </div>
         </div>
-        
-        <button class="btn" onclick="copyCode()">📋 Копировать код</button>
     </div>
 
     <script>
-        const overlayScript = "javascript:(function(){var s=document.createElement('script');s.src='https://getonjbghelp.github.io/jbg-finder/overlay.js?t='+Date.now();document.body.appendChild(s);})();";
-        document.getElementById('bookmarkletCode').textContent = overlayScript;
+        // Language Switching
+        let currentLang = 'ru';
 
-        function copyCode() {
-            navigator.clipboard.writeText(overlayScript);
-            alert('Код скопирован! Откройте страницу с игрой и вставьте в консоль (F12)');
+        function switchLang(lang) {
+            currentLang = lang;
+            
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.lang-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`content-${lang}`).classList.add('active');
         }
+
+        // Copy Code
+        function copyCode() {
+            const code = currentLang === 'ru' 
+                ? document.getElementById('bookmarklet-code').textContent
+                : document.getElementById('bookmarklet-code-en').textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target.closest('.btn') || event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ ' + (currentLang === 'ru' ? 'Скопировано!' : 'Copied!');
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                }, 2000);
+            });
+        }
+
+        // Open GitHub
+        function openGitHub() {
+            window.open('https://github.com/getonjbghelp/jbg-finder', '_blank');
+        }
+
+        // Create Particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 40;
+            const colors = ['#6c5ce7', '#00b894', '#fd79a8', '#a29bfe'];
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 15 + 15) + 's';
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+        });
+
+        // Random gradient for title on each load
+        document.addEventListener('DOMContentLoaded', () => {
+            const h1 = document.querySelector('h1');
+            const gradients = [
+                'linear-gradient(135deg, #6c5ce7 0%, #00b894 50%, #fd79a8 100%)',
+                'linear-gradient(135deg, #a29bfe 0%, #6c5ce7 50%, #00b894 100%)',
+                'linear-gradient(135deg, #fd79a8 0%, #a29bfe 50%, #6c5ce7 100%)',
+                'linear-gradient(135deg, #00b894 0%, #fd79a8 50%, #a29bfe 100%)'
+            ];
+            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
+            h1.style.background = randomGradient;
+            h1.style.backgroundSize = '300% 300%';
+            h1.style.webkitBackgroundClip = 'text';
+            h1.style.webkitTextFillColor = 'transparent';
+        });
     </script>
 </body>
 </html>
