@@ -1,6 +1,4 @@
 // overlay.js - Оверлей для Jackbox Games (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-// Сохраните этот файл как overlay.js
-
 (function() {
     // Удаляем существующий оверлей
     const existing = document.getElementById('game-finder-overlay');
@@ -119,8 +117,8 @@
         if (!gameDatabase) return;
         
         const versionInfo = gameDatabase.getVersionInfo();
-        const versionEl = document.getElementById('db-version');
-        const ageEl = document.getElementById('db-age');
+        const versionEl = document.getElementById('gfg-db-version');
+        const ageEl = document.getElementById('gfg-db-age');
         
         if (versionEl) versionEl.textContent = 'v' + versionInfo.version;
         
@@ -135,7 +133,7 @@
 
     // === ОБНОВЛЕНИЕ СТАТУСА ===
     function updateStatus(message, type) {
-        const statusEl = document.getElementById('overlay-status');
+        const statusEl = document.getElementById('gfg-overlay-status');
         if (statusEl) {
             const colors = {
                 info: '#606060',
@@ -151,14 +149,14 @@
 
     // === ОБНОВЛЕНИЕ ИНДИКАТОРА ===
     function updateIndicator(detectionResult) {
-        const dot = document.getElementById('status-dot');
-        const name = document.getElementById('game-name');
-        const confidence = document.getElementById('game-confidence');
-        const watermark = document.getElementById('game-watermark');
+        const dot = document.getElementById('gfg-status-dot');
+        const name = document.getElementById('gfg-game-name');
+        const confidence = document.getElementById('gfg-game-confidence');
+        const watermark = document.getElementById('gfg-game-watermark');
         
         if (detectionResult && detectionResult.gameId) {
             const config = gameDatabase.gameConfig[detectionResult.gameId];
-            dot.className = 'indicator-dot active';
+            dot.className = 'gfg-indicator-dot active';
             name.textContent = config.name;
             confidence.textContent = detectionResult.confidence + '/2 ✓';
             confidence.title = 'Found: ' + detectionResult.foundIndicators.join(', ');
@@ -170,12 +168,12 @@
             
             currentGame = detectionResult.gameId;
         } else {
-            dot.className = 'indicator-dot';
+            dot.className = 'gfg-indicator-dot';
             name.textContent = getText('notDetected');
             confidence.textContent = '';
             
             if (watermark) {
-                watermark.textContent = 'GAME FINDER';
+                watermark.textContent = 'JBG-Finder v1.0';
                 watermark.style.color = 'rgba(255, 255, 255, 0.08)';
             }
             
@@ -188,69 +186,69 @@
         const overlay = document.createElement('div');
         overlay.id = 'game-finder-overlay';
         overlay.innerHTML = `
-            <div class="overlay-background-text" id="game-watermark">GAME FINDER</div>
+            <div class="gfg-background-text" id="gfg-game-watermark">HERE WE GO AGAIN THROUGH THE VALLEY OF SOMETHING IMPORTANT! OR NOT...?</div>
             
-            <div class="overlay-header">
-                <div class="header-left">
-                    <span class="overlay-title">🎮 Game Finder</span>
-                    <span class="db-info">
-                        <span id="db-version">v0.0</span>
-                        <span class="db-separator">•</span>
-                        <span id="db-age">--</span>
+            <div class="gfg-header">
+                <div class="gfg-header-left">
+                    <span class="gfg-overlay-title">JBG-Finder v1.0</span>
+                    <span class="gfg-db-info">
+                        <span id="gfg-db-version">v0.0</span>
+                        <span class="gfg-db-separator">•</span>
+                        <span id="gfg-db-age">--</span>
                     </span>
                 </div>
-                <div class="overlay-controls">
-                    <button class="overlay-btn settings-btn" title="${getText('settings')}">⚙️</button>
-                    <button class="overlay-btn minimize-btn" title="${getText('minimize')}">
+                <div class="gfg-overlay-controls">
+                    <button class="gfg-overlay-btn gfg-settings-btn" title="${getText('settings')}">⚙️</button>
+                    <button class="gfg-overlay-btn gfg-minimize-btn" title="${getText('minimize')}">
                         <svg width="10" height="10" viewBox="0 0 10 10"><rect width="10" height="2" fill="#fff"/></svg>
                     </button>
-                    <button class="overlay-btn close-btn" title="${getText('close')}">
+                    <button class="gfg-overlay-btn gfg-close-btn" title="${getText('close')}">
                         <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0L10 10M10 0L0 10" stroke="#fff" stroke-width="1.5"/></svg>
                     </button>
                 </div>
             </div>
             
-            <div class="overlay-content">
-                <div class="game-indicator">
-                    <span class="indicator-dot" id="status-dot"></span>
-                    <span class="game-name" id="game-name">Не определено</span>
-                    <span class="game-confidence" id="game-confidence"></span>
+            <div class="gfg-content">
+                <div class="gfg-game-indicator">
+                    <span class="gfg-indicator-dot" id="gfg-status-dot"></span>
+                    <span class="gfg-game-name" id="gfg-game-name">Не определено</span>
+                    <span class="gfg-game-confidence" id="gfg-game-confidence"></span>
                 </div>
                 
-                <div class="question-box">
-                    <div class="question-header">
-                        <span class="question-label">📝 ВОПРОС</span>
-                        <span class="question-length" id="question-length">0 символов</span>
+                <div class="gfg-question-box">
+                    <div class="gfg-question-header">
+                        <span class="gfg-question-label">📝 ВОПРОС</span>
+                        <span class="gfg-question-length" id="gfg-question-length">0 символов</span>
                     </div>
-                    <div class="question-text" id="question-text">Нажмите "Определить игру" для сканирования...</div>
+                    <div class="gfg-question-text" id="gfg-question-text">Нажмите "Определить игру" для сканирования...</div>
                 </div>
                 
-                <div class="answer-box" id="answer-box">
-                    <div class="answer-header">
-                        <span class="answer-label">💡 ОТВЕТ</span>
-                        <span class="answer-confidence" id="answer-confidence"></span>
+                <div class="gfg-answer-box" id="gfg-answer-box">
+                    <div class="gfg-answer-header">
+                        <span class="gfg-answer-label">💡 ОТВЕТ</span>
+                        <span class="gfg-answer-confidence" id="gfg-answer-confidence"></span>
                     </div>
-                    <div class="answer-text" id="answer-text">Нажмите "Найти ответ" для поиска...</div>
+                    <div class="gfg-answer-text" id="gfg-answer-text">Нажмите "Найти ответ" для поиска...</div>
                 </div>
                 
-                <div class="action-buttons">
-                    <button class="action-btn detect-btn" id="detect-btn">🔍 Определить игру</button>
-                    <button class="action-btn search-btn" id="search-btn" disabled>⚡ Найти ответ</button>
-                    <button class="action-btn copy-btn" id="copy-btn" disabled>📋 Копировать</button>
+                <div class="gfg-action-buttons">
+                    <button class="gfg-action-btn gfg-detect-btn" id="gfg-detect-btn">🔍 Определить игру</button>
+                    <button class="gfg-action-btn gfg-search-btn" id="gfg-search-btn" disabled>⚡ Найти ответ</button>
+                    <button class="gfg-action-btn gfg-copy-btn" id="gfg-copy-btn" disabled>📋 Копировать</button>
                 </div>
                 
-                <div class="overlay-status" id="overlay-status">Ожидание...</div>
+                <div class="gfg-overlay-status" id="gfg-overlay-status">Ожидание...</div>
                 
                 <!-- НАСТРОЙКИ -->
-                <div class="settings-panel" id="settings-panel">
-                    <div class="settings-header">
+                <div class="gfg-settings-panel" id="gfg-settings-panel">
+                    <div class="gfg-settings-header">
                         <span>⚙️ Настройки / Settings</span>
-                        <button class="settings-close-btn" id="settings-close-btn">×</button>
+                        <button class="gfg-settings-close-btn" id="gfg-settings-close-btn">×</button>
                     </div>
-                    <div class="settings-content">
-                        <div class="setting-item">
+                    <div class="gfg-settings-content">
+                        <div class="gfg-setting-item">
                             <span>${getText('langSelect')}</span>
-                            <select id="lang-select" class="lang-select">
+                            <select id="gfg-lang-select" class="gfg-lang-select">
                                 <option value="ru" ${currentLang === 'ru' ? 'selected' : ''}>Русский</option>
                                 <option value="en" ${currentLang === 'en' ? 'selected' : ''}>English</option>
                             </select>
@@ -260,439 +258,436 @@
             </div>
         `;
 
-        // Стили оверлея (ПРЯМОУГОЛЬНЫЙ, ТЁМНО-СЕРЫЙ)
+        // Стили оверлея (ИСПРАВЛЕННЫЕ)
         overlay.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 580px;
-            max-width: 95vw;
-            background: linear-gradient(145deg, #2b2b2b 0%, #1e1e1e 100%);
-            backdrop-filter: blur(15px);
-            border: 1px solid #3a3a3a;
-            border-radius: 0px;
-            box-shadow: 
-                0 10px 40px rgba(0, 0, 0, 0.8),
-                0 0 0 1px rgba(255, 255, 255, 0.05);
-            z-index: 999999;
-            font-family: 'Segoe UI', sans-serif;
-            color: #e0e0e0;
-            overflow: hidden;
-            user-select: none;
-            -webkit-user-select: none;
+            position: fixed !important;
+            top: 20px !important;
+            right: 20px !important;
+            width: 580px !important;
+            max-width: 95vw !important;
+            background: linear-gradient(145deg, #2b2b2b 0%, #1e1e1e 100%) !important;
+            backdrop-filter: blur(15px) !important;
+            border: 1px solid #3a3a3a !important;
+            border-radius: 0px !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+            z-index: 999999 !important;
+            font-family: 'Segoe UI', sans-serif !important;
+            color: #e0e0e0 !important;
+            overflow: visible !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
         `;
 
         document.body.appendChild(overlay);
 
-        // Добавляем CSS
+        // Добавляем CSS с уникальными префиксами
         const style = document.createElement('style');
         style.textContent = `
             #game-finder-overlay * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-                user-select: none;
-                -webkit-user-select: none;
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                user-select: none !important;
+                -webkit-user-select: none !important;
             }
             
-            .overlay-background-text {
-				position: absolute;
-				top: 50%;
-				left: 100%; /* Начинаем справа за границей */
-				transform: translateY(-50%); /* Центрируем только по вертикали */
-				font-size: 70px;
-				font-weight: 900;
-				color: rgba(255, 255, 255, 0.05); /* Чуть прозрачнее, чтобы не мешал */
-				pointer-events: none;
-				white-space: nowrap; /* Запрещаем перенос строк */
-				z-index: 0;
-				animation: scrollText 30s linear infinite; /* Запускаем анимацию */
-			}
-            
-            .overlay-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: stretch;
-                padding: 0;
-                background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-                border-bottom: 1px solid #3a3a3a;
-                cursor: move;
-                height: 40px;
+            .gfg-background-text {
+                position: absolute !important;
+                top: 50% !important;
+                left: 100% !important;
+                transform: translateY(-50%) !important;
+                font-size: 70px !important;
+                font-weight: 900 !important;
+                color: rgba(255, 255, 255, 0.05) !important;
+                pointer-events: none !important;
+                white-space: nowrap !important;
+                z-index: 0 !important;
+                animation: gfg-scrollText 30s linear infinite !important;
             }
             
-            .header-left {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 0 15px;
+            @keyframes gfg-scrollText {
+                0% { left: 100%; }
+                100% { left: -200%; }
             }
             
-            .overlay-title {
-                font-size: 14px;
-                font-weight: 600;
-                color: #ffffff;
+            .gfg-header {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: stretch !important;
+                padding: 0 !important;
+                background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%) !important;
+                border-bottom: 1px solid #3a3a3a !important;
+                cursor: move !important;
+                height: 40px !important;
             }
             
-            .db-info {
-                font-size: 11px;
-                color: #808080;
-                display: flex;
-                align-items: center;
-                gap: 6px;
+            .gfg-header-left {
+                display: flex !important;
+                align-items: center !important;
+                gap: 12px !important;
+                padding: 0 15px !important;
             }
             
-            .db-separator {
-                color: #505050;
+            .gfg-overlay-title {
+                font-size: 14px !important;
+                font-weight: 600 !important;
+                color: #ffffff !important;
             }
             
-            .overlay-controls {
-                display: flex;
-                height: 100%;
+            .gfg-db-info {
+                font-size: 11px !important;
+                color: #808080 !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 6px !important;
             }
             
-            .overlay-btn {
-                width: 40px;
-                height: 40px;
-                border: none;
-                border-radius: 0px;
-                background: transparent;
-                color: #c0c0c0;
-                cursor: pointer;
-                font-size: 14px;
-                transition: all 0.15s ease;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+            .gfg-db-separator {
+                color: #505050 !important;
             }
             
-            .overlay-btn:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: #ffffff;
+            .gfg-overlay-controls {
+                display: flex !important;
+                height: 100% !important;
             }
             
-            .settings-btn:hover {
-                background: rgba(78, 205, 196, 0.2);
-                color: #4ecdc4;
+            .gfg-overlay-btn {
+                width: 40px !important;
+                height: 40px !important;
+                border: none !important;
+                border-radius: 0px !important;
+                background: transparent !important;
+                color: #c0c0c0 !important;
+                cursor: pointer !important;
+                font-size: 14px !important;
+                transition: all 0.15s ease !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
             }
             
-            .minimize-btn:hover {
-                background: rgba(255, 255, 255, 0.15);
+            .gfg-overlay-btn:hover {
+                background: rgba(255, 255, 255, 0.1) !important;
+                color: #ffffff !important;
             }
             
-            .close-btn:hover {
-                background: #e81123;
-                color: #ffffff;
+            .gfg-settings-btn:hover {
+                background: rgba(78, 205, 196, 0.2) !important;
+                color: #4ecdc4 !important;
             }
             
-            .overlay-content {
-                padding: 18px;
-                position: relative;
-                z-index: 10;
+            .gfg-minimize-btn:hover {
+                background: rgba(255, 255, 255, 0.15) !important;
             }
             
-            .game-indicator {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                margin-bottom: 15px;
-                padding: 10px 14px;
-                background: rgba(45, 45, 45, 0.6);
-                border: 1px solid #3a3a3a;
+            .gfg-close-btn:hover {
+                background: #e81123 !important;
+                color: #ffffff !important;
             }
             
-            .indicator-dot {
-                width: 10px;
-                height: 10px;
-                border-radius: 0px;
-                background: #505050;
-                transition: all 0.3s ease;
+            .gfg-content {
+                padding: 18px !important;
+                position: relative !important;
+                z-index: 10 !important;
             }
             
-            .indicator-dot.active {
-                background: #4ecdc4;
-                box-shadow: 0 0 10px #4ecdc4;
+            .gfg-game-indicator {
+                display: flex !important;
+                align-items: center !important;
+                gap: 10px !important;
+                margin-bottom: 15px !important;
+                padding: 10px 14px !important;
+                background: rgba(45, 45, 45, 0.6) !important;
+                border: 1px solid #3a3a3a !important;
             }
             
-            .indicator-dot.searching {
-                background: #ffd93d;
-                box-shadow: 0 0 10px #ffd93d;
-                animation: pulse 1s infinite;
+            .gfg-indicator-dot {
+                width: 10px !important;
+                height: 10px !important;
+                border-radius: 0px !important;
+                background: #505050 !important;
+                transition: all 0.3s ease !important;
             }
             
-            @keyframes pulse {
+            .gfg-indicator-dot.active {
+                background: #4ecdc4 !important;
+                box-shadow: 0 0 10px #4ecdc4 !important;
+            }
+            
+            .gfg-indicator-dot.searching {
+                background: #ffd93d !important;
+                box-shadow: 0 0 10px #ffd93d !important;
+                animation: gfg-pulse 1s infinite !important;
+            }
+            
+            @keyframes gfg-pulse {
                 0%, 100% { opacity: 1; }
                 50% { opacity: 0.5; }
             }
             
-            .game-name {
-                font-size: 14px;
-                color: #ffffff;
-                font-weight: 600;
-                flex: 1;
+            .gfg-game-name {
+                font-size: 14px !important;
+                color: #ffffff !important;
+                font-weight: 600 !important;
+                flex: 1 !important;
             }
             
-            .game-confidence {
-                font-size: 10px;
-                color: #808080;
-                padding: 2px 6px;
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid #3a3a3a;
+            .gfg-game-confidence {
+                font-size: 10px !important;
+                color: #808080 !important;
+                padding: 2px 6px !important;
+                background: rgba(255, 255, 255, 0.05) !important;
+                border: 1px solid #3a3a3a !important;
             }
             
-            .question-box, .answer-box {
-                margin-bottom: 15px;
-                padding: 14px;
-                background: rgba(35, 35, 35, 0.7);
-                border: 1px solid #3a3a3a;
+            .gfg-question-box, .gfg-answer-box {
+                margin-bottom: 15px !important;
+                padding: 14px !important;
+                background: rgba(35, 35, 35, 0.7) !important;
+                border: 1px solid #3a3a3a !important;
             }
             
-            .question-box {
-                border-left: 3px solid #4ecdc4;
+            .gfg-question-box {
+                border-left: 3px solid #4ecdc4 !important;
             }
             
-            .answer-box {
-                border-left: 3px solid #505050;
+            .gfg-answer-box {
+                border-left: 3px solid #505050 !important;
             }
             
-            .answer-box.found {
-                border-left-color: #4ecdc4;
-                background: rgba(78, 205, 196, 0.08);
+            .gfg-answer-box.found {
+                border-left-color: #4ecdc4 !important;
+                background: rgba(78, 205, 196, 0.08) !important;
             }
             
-            .answer-box.not-found {
-                border-left-color: #ff6b6b;
-                background: rgba(255, 107, 107, 0.08);
+            .gfg-answer-box.not-found {
+                border-left-color: #ff6b6b !important;
+                background: rgba(255, 107, 107, 0.08) !important;
             }
             
-            .question-header, .answer-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 8px;
+            .gfg-question-header, .gfg-answer-header {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                margin-bottom: 8px !important;
             }
             
-            .question-label, .answer-label {
-                font-size: 10px;
-                color: #808080;
-                font-weight: 600;
-                letter-spacing: 1px;
-                text-transform: uppercase;
+            .gfg-question-label, .gfg-answer-label {
+                font-size: 10px !important;
+                color: #808080 !important;
+                font-weight: 600 !important;
+                letter-spacing: 1px !important;
+                text-transform: uppercase !important;
             }
             
-            .question-length, .answer-confidence {
-                font-size: 9px;
-                color: #606060;
-                padding: 2px 5px;
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid #3a3a3a;
+            .gfg-question-length, .gfg-answer-confidence {
+                font-size: 9px !important;
+                color: #606060 !important;
+                padding: 2px 5px !important;
+                background: rgba(255, 255, 255, 0.05) !important;
+                border: 1px solid #3a3a3a !important;
             }
             
-            .question-text, .answer-text {
-                font-size: 13px;
-                color: #d0d0d0;
-                line-height: 1.5;
-                max-height: 120px;
-                overflow-y: auto;
-                font-weight: 400;
-                word-wrap: break-word;
+            .gfg-question-text, .gfg-answer-text {
+                font-size: 13px !important;
+                color: #d0d0d0 !important;
+                line-height: 1.5 !important;
+                max-height: 120px !important;
+                overflow-y: auto !important;
+                font-weight: 400 !important;
+                word-wrap: break-word !important;
             }
             
-            .answer-text {
-                font-size: 15px;
-                font-weight: 600;
-                color: #ffffff;
+            .gfg-answer-text {
+                font-size: 15px !important;
+                font-weight: 600 !important;
+                color: #ffffff !important;
             }
             
-            .answer-box.found .answer-text {
-                color: #4ecdc4;
+            .gfg-answer-box.found .gfg-answer-text {
+                color: #4ecdc4 !important;
             }
             
-            .answer-box.not-found .answer-text {
-                color: #ff6b6b;
+            .gfg-answer-box.not-found .gfg-answer-text {
+                color: #ff6b6b !important;
             }
             
-            .action-buttons {
-                display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 8px;
-                margin-bottom: 15px;
+            .gfg-action-buttons {
+                display: flex !important;
+                gap: 8px !important;
+                margin-bottom: 15px !important;
+                flex-wrap: nowrap !important;
             }
             
-            .action-btn {
-                padding: 11px 14px;
-                border: none;
-                border-radius: 0px;
-                cursor: pointer;
-                font-size: 12px;
-                font-weight: 600;
-                transition: all 0.15s ease;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 5px;
+            .gfg-action-btn {
+                flex: 1 !important;
+                min-width: 0 !important;
+                padding: 11px 14px !important;
+                border: none !important;
+                border-radius: 0px !important;
+                cursor: pointer !important;
+                font-size: 12px !important;
+                font-weight: 600 !important;
+                transition: all 0.15s ease !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 5px !important;
+                white-space: nowrap !important;
             }
             
-            .action-btn.detect-btn {
-                background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-                color: #ffffff;
+            .gfg-action-btn.gfg-detect-btn {
+                background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+                color: #ffffff !important;
             }
             
-            .action-btn.search-btn {
-                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
-                color: #ffffff;
+            .gfg-action-btn.gfg-search-btn {
+                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%) !important;
+                color: #ffffff !important;
             }
             
-            .action-btn.copy-btn {
-                background: #3a3a3a;
-                color: #c0c0c0;
-                border: 1px solid #4a4a4a;
+            .gfg-action-btn.gfg-copy-btn {
+                background: #3a3a3a !important;
+                color: #c0c0c0 !important;
+                border: 1px solid #4a4a4a !important;
             }
             
-            .action-btn:hover:not(:disabled) {
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-                filter: brightness(1.1);
+            .gfg-action-btn:hover:not(:disabled) {
+                transform: translateY(-1px) !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+                filter: brightness(1.1) !important;
             }
             
-            .action-btn:disabled {
-                opacity: 0.35;
-                cursor: not-allowed;
-                transform: none;
-                filter: none;
+            .gfg-action-btn:disabled {
+                opacity: 0.35 !important;
+                cursor: not-allowed !important;
+                transform: none !important;
+                filter: none !important;
             }
             
-            .action-btn.search-btn:disabled {
-                background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
+            .gfg-action-btn.gfg-search-btn:disabled {
+                background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%) !important;
             }
             
-            .overlay-status {
-                font-size: 10px;
-                color: #606060;
-                text-align: center;
-                padding-top: 10px;
-                border-top: 1px solid #3a3a3a;
-                font-family: 'Consolas', monospace;
+            .gfg-overlay-status {
+                font-size: 10px !important;
+                color: #606060 !important;
+                text-align: center !important;
+                padding-top: 10px !important;
+                border-top: 1px solid #3a3a3a !important;
+                font-family: 'Consolas', monospace !important;
             }
             
-            /* НАСТРОЙКИ */
-            .settings-panel {
-                position: absolute;
-                top: 100%;
-                right: 0;
-                width: 280px;
-                background: #2b2b2b;
-                border: 1px solid #3a3a3a;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-                z-index: 100;
-                display: none;
+            /* НАСТРОЙКИ - ИСПРАВЛЕНО */
+            .gfg-settings-panel {
+                position: absolute !important;
+                top: 100% !important;
+                right: 0 !important;
+                width: 280px !important;
+                background: #2b2b2b !important;
+                border: 1px solid #3a3a3a !important;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+                z-index: 999998 !important;
+                display: none !important;
             }
             
-            .settings-panel.show {
-                display: block;
+            .gfg-settings-panel.gfg-show {
+                display: block !important;
             }
             
-            .settings-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 12px 15px;
-                background: #3a3a3a;
-                border-bottom: 1px solid #4a4a4a;
+            .gfg-settings-header {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                padding: 12px 15px !important;
+                background: #3a3a3a !important;
+                border-bottom: 1px solid #4a4a4a !important;
             }
             
-            .settings-header span {
-                font-size: 12px;
-                font-weight: 600;
-                color: #ffffff;
+            .gfg-settings-header span {
+                font-size: 12px !important;
+                font-weight: 600 !important;
+                color: #ffffff !important;
             }
             
-            .settings-close-btn {
-                width: 24px;
-                height: 24px;
-                border: none;
-                background: transparent;
-                color: #c0c0c0;
-                cursor: pointer;
-                font-size: 16px;
+            .gfg-settings-close-btn {
+                width: 24px !important;
+                height: 24px !important;
+                border: none !important;
+                background: transparent !important;
+                color: #c0c0c0 !important;
+                cursor: pointer !important;
+                font-size: 16px !important;
             }
             
-            .settings-close-btn:hover {
-                background: #e81123;
-                color: #ffffff;
+            .gfg-settings-close-btn:hover {
+                background: #e81123 !important;
+                color: #ffffff !important;
             }
             
-            .settings-content {
-                padding: 15px;
+            .gfg-settings-content {
+                padding: 15px !important;
             }
             
-            .setting-item {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 10px;
+            .gfg-setting-item {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                margin-bottom: 10px !important;
             }
             
-            .setting-item span {
-                font-size: 12px;
-                color: #c0c0c0;
+            .gfg-setting-item span {
+                font-size: 12px !important;
+                color: #c0c0c0 !important;
             }
             
-            .lang-select {
-                padding: 6px 10px;
-                background: #3a3a3a;
-                border: 1px solid #4a4a4a;
-                color: #ffffff;
-                font-size: 12px;
-                cursor: pointer;
+            .gfg-lang-select {
+                padding: 6px 10px !important;
+                background: #3a3a3a !important;
+                border: 1px solid #4a4a4a !important;
+                color: #ffffff !important;
+                font-size: 12px !important;
+                cursor: pointer !important;
             }
             
-            .lang-select:focus {
-                outline: none;
-                border-color: #4ecdc4;
+            .gfg-lang-select:focus {
+                outline: none !important;
+                border-color: #4ecdc4 !important;
             }
             
-            .overlay-minimized {
+            .gfg-minimized {
                 height: 40px !important;
-                overflow: hidden;
+                overflow: hidden !important;
             }
             
-            .overlay-minimized .overlay-content {
-                display: none;
+            .gfg-minimized .gfg-content {
+                display: none !important;
             }
             
             /* Scrollbar */
-            .question-text::-webkit-scrollbar,
-            .answer-text::-webkit-scrollbar,
-            .settings-content::-webkit-scrollbar {
-                width: 6px;
+            .gfg-question-text::-webkit-scrollbar,
+            .gfg-answer-text::-webkit-scrollbar,
+            .gfg-settings-content::-webkit-scrollbar {
+                width: 6px !important;
             }
             
-            .question-text::-webkit-scrollbar-track,
-            .answer-text::-webkit-scrollbar-track,
-            .settings-content::-webkit-scrollbar-track {
-                background: #2b2b2b;
+            .gfg-question-text::-webkit-scrollbar-track,
+            .gfg-answer-text::-webkit-scrollbar-track,
+            .gfg-settings-content::-webkit-scrollbar-track {
+                background: #2b2b2b !important;
             }
             
-            .question-text::-webkit-scrollbar-thumb,
-            .answer-text::-webkit-scrollbar-thumb,
-            .settings-content::-webkit-scrollbar-thumb {
-                background: #4a4a4a;
+            .gfg-question-text::-webkit-scrollbar-thumb,
+            .gfg-answer-text::-webkit-scrollbar-thumb,
+            .gfg-settings-content::-webkit-scrollbar-thumb {
+                background: #4a4a4a !important;
             }
             
-            .question-text::-webkit-scrollbar-thumb:hover,
-            .answer-text::-webkit-scrollbar-thumb:hover,
-            .settings-content::-webkit-scrollbar-thumb:hover {
-                background: #5a5a5a;
+            .gfg-question-text::-webkit-scrollbar-thumb:hover,
+            .gfg-answer-text::-webkit-scrollbar-thumb:hover,
+            .gfg-settings-content::-webkit-scrollbar-thumb:hover {
+                background: #5a5a5a !important;
             }
-			
-			@keyframes scrollText {
-				0% {
-					left: 100%; /* Начинаем справа */
-				}
-				100% {
-					left: -200%; /* Уходим далеко влево */
-				}
-}
         `;
         document.head.appendChild(style);
 
@@ -709,9 +704,8 @@
             lastQuestion = question;
             currentQuestion = question;
             
-            // Обновляем отображение вопроса
-            const questionText = document.getElementById('question-text');
-            const questionLength = document.getElementById('question-length');
+            const questionText = document.getElementById('gfg-question-text');
+            const questionLength = document.getElementById('gfg-question-length');
             
             if (questionText) {
                 questionText.textContent = question.length > 200 ? 
@@ -722,8 +716,7 @@
                 questionLength.textContent = question.length + getText('symbols');
             }
             
-            // Включаем кнопку поиска
-            const searchBtn = document.getElementById('search-btn');
+            const searchBtn = document.getElementById('gfg-search-btn');
             if (searchBtn) searchBtn.disabled = false;
             
             updateStatus(getText('gameDetected') + gameDatabase.gameConfig[currentGame].name, 'success');
@@ -738,7 +731,8 @@
         }
 
         updateStatus(getText('scanning'), 'searching');
-        document.getElementById('status-dot').className = 'indicator-dot searching';
+        const statusDot = document.getElementById('gfg-status-dot');
+        if (statusDot) statusDot.className = 'gfg-indicator-dot searching';
 
         setTimeout(() => {
             const detectionResult = gameDatabase.detectGame();
@@ -747,24 +741,34 @@
             if (detectionResult && detectionResult.gameId) {
                 updateStatus(getText('gameDetected') + detectionResult.name + 
                     ' (' + getText('confidence') + detectionResult.confidence + '/2)', 'success');
-                document.getElementById('search-btn').disabled = false;
+                const searchBtn = document.getElementById('gfg-search-btn');
+                if (searchBtn) searchBtn.disabled = false;
                 
                 const question = gameDatabase.extractQuestion(detectionResult.gameId);
                 if (question) {
                     currentQuestion = question;
                     lastQuestion = question;
-                    document.getElementById('question-text').textContent = 
-                        question.length > 200 ? question.substring(0, 200) + '...' : question;
-                    document.getElementById('question-length').textContent = 
-                        question.length + getText('symbols');
+                    const questionText = document.getElementById('gfg-question-text');
+                    const questionLength = document.getElementById('gfg-question-length');
+                    if (questionText) {
+                        questionText.textContent = question.length > 200 ? 
+                            question.substring(0, 200) + '...' : question;
+                    }
+                    if (questionLength) {
+                        questionLength.textContent = question.length + getText('symbols');
+                    }
                 }
             } else {
                 updateStatus(getText('detectFirst'), 'warning');
-                document.getElementById('search-btn').disabled = true;
+                const searchBtn = document.getElementById('gfg-search-btn');
+                if (searchBtn) searchBtn.disabled = true;
             }
             
-            document.getElementById('status-dot').className = detectionResult ? 
-                'indicator-dot active' : 'indicator-dot';
+            const statusDot = document.getElementById('gfg-status-dot');
+            if (statusDot) {
+                statusDot.className = detectionResult ? 
+                    'gfg-indicator-dot active' : 'gfg-indicator-dot';
+            }
         }, 500);
 
         return true;
@@ -778,38 +782,41 @@
         }
         
         updateStatus(getText('scanning'), 'searching');
-        document.getElementById('status-dot').className = 'indicator-dot searching';
+        const statusDot = document.getElementById('gfg-status-dot');
+        if (statusDot) statusDot.className = 'gfg-indicator-dot searching';
         
         setTimeout(() => {
             const result = gameDatabase.findAnswer(currentQuestion, currentGame);
-            const answerBox = document.getElementById('answer-box');
-            const answerText = document.getElementById('answer-text');
-            const answerConfidence = document.getElementById('answer-confidence');
-            const copyBtn = document.getElementById('copy-btn');
+            const answerBox = document.getElementById('gfg-answer-box');
+            const answerText = document.getElementById('gfg-answer-text');
+            const answerConfidence = document.getElementById('gfg-answer-confidence');
+            const copyBtn = document.getElementById('gfg-copy-btn');
             
             if (result) {
-                answerText.textContent = result.answer;
-                answerBox.className = 'answer-box found';
-                answerConfidence.textContent = result.confidence + '%';
+                if (answerText) answerText.textContent = result.answer;
+                if (answerBox) answerBox.className = 'gfg-answer-box gfg-found';
+                if (answerConfidence) answerConfidence.textContent = result.confidence + '%';
                 updateStatus(getText('answerFound') + result.confidence + '%)', 'success');
-                copyBtn.disabled = false;
+                if (copyBtn) copyBtn.disabled = false;
             } else {
-                answerText.textContent = getText('answerNotFound');
-                answerBox.className = 'answer-box not-found';
-                answerConfidence.textContent = '';
+                if (answerText) answerText.textContent = getText('answerNotFound');
+                if (answerBox) answerBox.className = 'gfg-answer-box gfg-not-found';
+                if (answerConfidence) answerConfidence.textContent = '';
                 updateStatus(getText('answerNotFound'), 'error');
-                copyBtn.disabled = true;
+                if (copyBtn) copyBtn.disabled = true;
             }
             
-            document.getElementById('status-dot').className = 'indicator-dot active';
+            const statusDot = document.getElementById('gfg-status-dot');
+            if (statusDot) statusDot.className = 'gfg-indicator-dot active';
         }, 300);
     }
 
     // === КОПИРОВАНИЕ ОТВЕТА ===
     function copyAnswer() {
-        const answerText = document.getElementById('answer-text').textContent;
-        if (answerText && answerText !== getText('answerNotFound')) {
-            navigator.clipboard.writeText(answerText).then(() => {
+        const answerText = document.getElementById('gfg-answer-text');
+        if (answerText && answerText.textContent && 
+            answerText.textContent !== getText('answerNotFound')) {
+            navigator.clipboard.writeText(answerText.textContent).then(() => {
                 updateStatus(getText('copySuccess'), 'success');
                 setTimeout(() => updateStatus(getText('gameDetected') + 
                     (currentGame ? gameDatabase.gameConfig[currentGame].name : ''), 'info'), 2000);
@@ -821,16 +828,25 @@
     function switchLanguage(lang) {
         currentLang = lang;
         
-        // Обновляем все тексты
-        document.querySelector('.overlay-title').textContent = getText('title');
-        document.getElementById('detect-btn').textContent = getText('detectBtn');
-        document.getElementById('search-btn').textContent = getText('searchBtn');
-        document.getElementById('copy-btn').textContent = getText('copyBtn');
-        document.querySelector('.question-label').textContent = getText('questionLabel');
-        document.querySelector('.answer-label').textContent = getText('answerLabel');
-        document.querySelector('.settings-header span').textContent = '⚙️ ' + getText('langSelect');
+        const elements = {
+            '.gfg-overlay-title': 'title',
+            '#gfg-detect-btn': 'detectBtn',
+            '#gfg-search-btn': 'searchBtn',
+            '#gfg-copy-btn': 'copyBtn',
+            '.gfg-question-label': 'questionLabel',
+            '.gfg-answer-label': 'answerLabel'
+        };
         
-        // Обновляем статус
+        for (const [selector, key] of Object.entries(elements)) {
+            const el = document.querySelector(selector);
+            if (el) el.textContent = getText(key);
+        }
+        
+        const settingsHeader = document.querySelector('.gfg-settings-header span');
+        if (settingsHeader) {
+            settingsHeader.textContent = '⚙️ ' + getText('langSelect');
+        }
+        
         if (currentGame && gameDatabase) {
             updateStatus(getText('gameDetected') + gameDatabase.gameConfig[currentGame].name, 'success');
         }
@@ -843,58 +859,80 @@
         await loadDatabase();
 
         // Кнопки действий
-        document.getElementById('detect-btn').onclick = detectGame;
-        document.getElementById('search-btn').onclick = searchAnswer;
-        document.getElementById('copy-btn').onclick = copyAnswer;
+        const detectBtn = document.getElementById('gfg-detect-btn');
+        const searchBtn = document.getElementById('gfg-search-btn');
+        const copyBtn = document.getElementById('gfg-copy-btn');
+        
+        if (detectBtn) detectBtn.onclick = detectGame;
+        if (searchBtn) searchBtn.onclick = searchAnswer;
+        if (copyBtn) copyBtn.onclick = copyAnswer;
         
         // Кнопки управления
-        overlay.querySelector('.close-btn').onclick = () => overlay.remove();
-        overlay.querySelector('.minimize-btn').onclick = () => overlay.classList.toggle('overlay-minimized');
+        const closeBtn = overlay.querySelector('.gfg-close-btn');
+        const minimizeBtn = overlay.querySelector('.gfg-minimize-btn');
+        
+        if (closeBtn) closeBtn.onclick = () => overlay.remove();
+        if (minimizeBtn) minimizeBtn.onclick = () => overlay.classList.toggle('gfg-minimized');
         
         // Настройки
-        const settingsBtn = overlay.querySelector('.settings-btn');
-        const settingsPanel = document.getElementById('settings-panel');
-        const settingsCloseBtn = document.getElementById('settings-close-btn');
-        const langSelect = document.getElementById('lang-select');
+        const settingsBtn = overlay.querySelector('.gfg-settings-btn');
+        const settingsPanel = document.getElementById('gfg-settings-panel');
+        const settingsCloseBtn = document.getElementById('gfg-settings-close-btn');
+        const langSelect = document.getElementById('gfg-lang-select');
         
-        settingsBtn.onclick = () => {
-            settingsOpen = !settingsOpen;
-            settingsPanel.classList.toggle('show', settingsOpen);
-        };
+        if (settingsBtn && settingsPanel) {
+            settingsBtn.onclick = () => {
+                settingsOpen = !settingsOpen;
+                if (settingsOpen) {
+                    settingsPanel.classList.add('gfg-show');
+                } else {
+                    settingsPanel.classList.remove('gfg-show');
+                }
+            };
+        }
         
-        settingsCloseBtn.onclick = () => {
-            settingsOpen = false;
-            settingsPanel.classList.remove('show');
-        };
+        if (settingsCloseBtn && settingsPanel) {
+            settingsCloseBtn.onclick = () => {
+                settingsOpen = false;
+                settingsPanel.classList.remove('gfg-show');
+            };
+        }
         
-        langSelect.onchange = (e) => {
-            switchLanguage(e.target.value);
-            settingsOpen = false;
-            settingsPanel.classList.remove('show');
-        };
+        if (langSelect) {
+            langSelect.onchange = (e) => {
+                switchLanguage(e.target.value);
+                settingsOpen = false;
+                if (settingsPanel) settingsPanel.classList.remove('gfg-show');
+            };
+        }
         
         // Закрытие настроек при клике вне
         document.addEventListener('click', (e) => {
-            if (settingsOpen && !settingsPanel.contains(e.target) && !settingsBtn.contains(e.target)) {
+            if (settingsOpen && settingsPanel && 
+                !settingsPanel.contains(e.target) && 
+                settingsBtn && !settingsBtn.contains(e.target)) {
                 settingsOpen = false;
-                settingsPanel.classList.remove('show');
+                settingsPanel.classList.remove('gfg-show');
             }
         });
 
-        // Перетаскивание (БЕЗ ВЫДЕЛЕНИЯ ТЕКСТА)
-        const header = overlay.querySelector('.overlay-header');
+        // Перетаскивание (ИСПРАВЛЕННОЕ)
+        const header = overlay.querySelector('.gfg-header');
         let isDragging = false, startX, startY, initialX, initialY;
 
-        header.onmousedown = (e) => {
-            if (e.target.closest('.overlay-btn')) return;
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            const rect = overlay.getBoundingClientRect();
-            initialX = rect.left;
-            initialY = rect.top;
-            e.preventDefault();
-        };
+        if (header) {
+            header.onmousedown = (e) => {
+                // Игнорируем клики по кнопкам
+                if (e.target.closest('.gfg-overlay-btn')) return;
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                const rect = overlay.getBoundingClientRect();
+                initialX = rect.left;
+                initialY = rect.top;
+                e.preventDefault();
+            };
+        }
 
         document.onmousemove = (e) => {
             if (!isDragging) return;
