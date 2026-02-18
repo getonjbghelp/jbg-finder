@@ -14,7 +14,7 @@
 
     const LANG = {
         ru: {
-            title: 'JBG-Finder v1.0',
+            title: 'JBG-Finder BETA',
             detectBtn: '🔍 Определить игру',
             searchBtn: '⚡ Найти ответ',
             copyBtn: '📋 Копировать',
@@ -37,7 +37,7 @@
             notEnoughSymbols: 'Вопрос слишком короткий'
         },
         en: {
-            title: 'JBG-Finder v1.0',
+            title: 'JBG-Finder BETA',
             detectBtn: '🔍 Detect Game',
             searchBtn: '⚡ Find Answer',
             copyBtn: '📋 Copy',
@@ -206,7 +206,7 @@
         currentGame = result.gameId;
         if (dom.statusDot) dom.statusDot.className = 'indicator-dot active';
         if (dom.gameName) dom.gameName.textContent = config.name || getText('notDetected');
-        if (dom.gameConfidence) dom.gameConfidence.textContent = (result.confidence ?? 0) + '/2';
+        if (dom.gameConfidence) dom.gameConfidence.textContent = (result.confidence ?? 0) + ' needed matches';
         if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
     }
 
