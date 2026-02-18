@@ -334,7 +334,7 @@
                     <span class="db-info"><span id="db-version">v0.0</span><span>•</span><span id="db-age">--</span></span>
                 </div>
                 <div class="overlay-controls">
-                    <button class="overlay-btn flag-btn" id="lang-flag-btn">${currentLang === 'ru' ? 'RU' : 'EN'}</button>
+                    <button class="overlay-btn flag-btn" id="lang-flag-btn">${currentLang === 'ru' ? '🌏︎' : '🌏︎'}</button>
                     <button class="overlay-btn minimize-btn">_</button>
                     <button class="overlay-btn close-btn">×</button>
                 </div>
