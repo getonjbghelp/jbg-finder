@@ -10,7 +10,7 @@ const GameDatabase = {
         pollposition: {
             name: 'Guesspionage (Нашшпионаж) - !No Audience and Final Round! (!Без Зрителей и Финального Раунда!)',
             requiredIndicators: ['#pollposition-page', '.page-pollposition', '.pollposition-preload', '.pollposition-text.question-text', '.pollposition-submitpercentage', '.percent-display', '.pollposition-chooseupordown', 'table.table-striped.table-bordered'],
-			questionSelectors: ['.pollposition-text.question-text', '.pollposition-text.survey-text', '.pollposition-text.question-text.pollposition-range-buffer', '.pollposition-text.selection-text'],
+			questionSelectors: ['.pollposition-text.question-text.pollposition-range-buffer'],
             backgroundColor: '#2d5a27',
             minConfidence: 2
         },
