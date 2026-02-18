@@ -1731,7 +1731,7 @@ const GameDatabase = {
 			{ question: "When in Fort Mitchell, Kentucky, visit the Vent Haven Museum, a unique landmark which now houses over 800 <BLANK>.", answer: "ventriloquist dummies" },
 			{ question: "According to the American Canine Hybrid Club, the name for a chihuahua-dachshund mix.", answer: "chiweenie" },
 			{ question: "People for the Ethical Treatment of Animals was once offered George Clooney’s used towel by a supporter who owned it. PETA then wrote to Clooney to ask if they could use it to make <BLANK>.", answer: "Clooney-flavored tofu" },
- 			{question: "In 2009, scientists exploring Loch Ness in a submarine unexpectedly discovered hundreds of thousands of <BLANK> at the bottom.", answer: "golf balls" }
+ 			{ question: "In 2009, scientists exploring Loch Ness in a submarine unexpectedly discovered hundreds of thousands of <BLANK> at the bottom.", answer: "golf balls" }
         ]
     },
 
