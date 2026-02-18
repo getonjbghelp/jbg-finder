@@ -19,14 +19,14 @@ const GameDatabase = {
             requiredIndicators: ['#fibbage-page', '#question-text', '#chooselie-text', '#fibbage-submitlie', '#round-text'],
             questionSelectors: ['#question-text'],
             backgroundColor: '#5a4a2d',
-            minConfidence: 2
+            minConfidence: 4
         },
         fibbage2: {
             name: 'Fibbage 2 / Бредовуха 2',
             requiredIndicators: ['#bloop-fieldset', '#bloop31', '#bloop30', '#round-text', '#button-fieldset', '#fibbage-lie-input', '#fibbage-lie', '#question-text', '#fibbage-submitlie', '#fibbage-lieforme', '#player', '#fibbage-submit-alert', '#defib', '#fibbage-defib', '#like-text', '#like-checkbox', '#chooselikes-choice', '#round-main', '#fibbage-sameplayers', '#fibbage-newplayers'],
             questionSelectors: ['#question-text'],
             backgroundColor: '#5a2d4a',
-            minConfidence: 4
+            minConfidence: 3
         }
     },
 
