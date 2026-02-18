@@ -7,13 +7,13 @@ const GameDatabase = {
     buildDate: new Date("2026-02-18"),
     
     gameConfig: {
-        pollposition: {
-            name: 'Guesspionage (Нашшпионаж) - !No Audience and Final Round! (!Без Зрителей и Финального Раунда!)',
-            requiredIndicators: ['#pollposition-page', '.page-pollposition', '.pollposition-preload', '.pollposition-text.question-text', '.pollposition-submitpercentage', '.percent-display', '.pollposition-chooseupordown', 'table.table-striped.table-bordered'],
+        guesspy: {
+			name: 'Guesspionage (Нашшпионаж) - !No Audience and Final Round! (!Без Зрителей и Финального Раунда!)',
+			requiredIndicators: ['#pollposition-page', '.page-pollposition', '.pollposition-preload', '.pollposition-text.question-text', '.pollposition-submitpercentage', '.percent-display', '.pollposition-chooseupordown', 'table.table-striped.table-bordered'],
 			questionSelectors: ['.pollposition-text.question-text.pollposition-range-buffer'],
-            backgroundColor: '#2d5a27',
-            minConfidence: 2
-        },
+			backgroundColor: '#2d5a27',
+			minConfidence: 2
+		},
         fibbage: {
             name: 'Fibbage (Fibbage XL, Бредовуха XL)',
             requiredIndicators: ['#fibbage-page', '#question-text', '#chooselie-text', '#fibbage-submitlie', '#round-text'],
@@ -31,7 +31,7 @@ const GameDatabase = {
     },
 
     questions: {
-        pollposition: [
+        guesspy: [
             { question: "Какой процент людей подтирается стоя?", answer: "42%" },
 			{ question: "Какой процент людей скорее является фанатом Властелина колец, нежели Гарри Поттера?", answer: "27%" },
 			{ question: "Какой процент людей оставлял в книге жалоб и предложений свой отзыв?", answer: "30%" },
