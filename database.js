@@ -19,26 +19,15 @@ const GameDatabase = {
             minConfidence: 3,
             keywords: ['процент', 'percentage', 'poll', 'vote', 'guess']
         },
-        fibbage: {
-            name: 'Fibbage (Бредовуха)',
+        fibbage12collab: {
+            name: 'Fibbage 1-2 (Бредовуха 1-2)',
             requiredIndicators: [
                 '#fibbage-page', '#question-text', '#chooselie-text',
                 '#fibbage-submitlie', '#round-text', '[data-game="fibbage"]',
-                '[class*="fibbage"]', '.lie-input', '.fibbage-answer'
-            ],
-            questionSelectors: [
-                '#question-text'
-            ],
-            backgroundColor: '#5a4a2d',
-            minConfidence: 5,
-            keywords: ['question', 'lie', 'Andrey', 'answer']
-        },
-        fibbage2: {
-            name: 'Fibbage 2 (Бредовуха 2)',
-            requiredIndicators: [
-                '#bloop-fieldset', '#bloop31', '#bloop30', '#round-text',
+                '.lie-input', '.fibbage-answer', 
+				'#bloop-fieldset', '#bloop31', '#bloop30', '#round-text',
                 '#button-fieldset', '#fibbage-lie-input', '#fibbage-lie',
-                '#question-text', '#fibbage-submitlie', '#fibbage-lieforme',
+                '#fibbage-submitlie', '#fibbage-lieforme',
                 '#player', '#fibbage-submit-alert', '#defib', '#fibbage-defib',
                 '#like-text', '#like-checkbox', '#chooselikes-choice',
                 '#round-main', '#fibbage-sameplayers', '#fibbage-newplayers',
@@ -48,10 +37,11 @@ const GameDatabase = {
             questionSelectors: [
                 '#question-text'
             ],
-            backgroundColor: '#5a2d4a',
-            minConfidence: 4,
-            keywords: ['взгляд', 'by', 'какой', 'ответ']
+            backgroundColor: '#5a4a2d',
+            minConfidence: 5,
+            keywords: ['question', 'lie', 'Andrey', 'answer']
         }
+        
     },
 
     questions: {
@@ -1113,7 +1103,7 @@ const GameDatabase = {
 			{ question: "What percentage of people prefer waffles over pancakes?", answer: "51%" },
 			{ question: "What percentage of guys have been lost for more than an hour before asking for directions?", answer: "31%" }
         ],
-        fibbage: [
+        fibbage12collab: [
             { question: "Мужчина из Флориды задохнулся от тараканов, которых он ел, пытаясь выиграть _______.", answer: "питона" },
 			{ question: "7 апреля 2012 года одна из кампаний на Kickstarter достигла своей цели: собрать 30 000 долларов на производство ботинок для _______.", answer: "атеистов" },
 			{ question: "В Японии обитают крабы с узором на панцире, который напоминает _______.", answer: "человеческое лицо" },
@@ -1802,9 +1792,7 @@ const GameDatabase = {
 			{ question: "Cheap Chic Weddings is an annual contest in which participants make wedding dresses out of _______.", answer: "toilet paper"},
 			{ question: "At 2:45 a.m. one day in June 2013, a man in Orlando, Florida was arrested for walking up to a police officer and punching his _______.", answer: "horse"},
 			{ question: "Located near the town of Stanley, there’s a small village in England called No _______.", answer: "Place"},
-			{ question: "A man in Florida was arrested for calling 911 to complain that he wasn’t allowed to bring his _______ into a strip club.", answer: "cat"}
-        ],
-        fibbage2: [
+			{ question: "A man in Florida was arrested for calling 911 to complain that he wasn’t allowed to bring his _______ into a strip club.", answer: "cat"},
             { question: "Игрок НХЛ Дастин Пеннер был вынужден пропустить хоккейный матч из-за того, что он повредил спину, когда _______.", answer: "ел блины"},
 			{ question: "В 2007 году заместитель мэра индийского Нью-Дели скончался от травм, полученных при попытке отбиться от _______.", answer: "обезьян"},
 			{ question: "В период с 1978 по 1980 год француз Мишель Лотито медленно, но верно съедал _______.", answer: "самолёт"},
