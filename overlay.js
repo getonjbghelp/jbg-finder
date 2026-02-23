@@ -193,22 +193,40 @@
         } catch (_) {}
     }
 
-    function updateIndicator(result) {
-        if (!result || !result.gameId || !gameDatabase?.gameConfig?.[result.gameId]) {
-            currentGame = null;
-            if (dom.statusDot) dom.statusDot.className = 'indicator-dot';
-            if (dom.gameName) dom.gameName.textContent = getText('notDetected');
-            if (dom.gameConfidence) dom.gameConfidence.textContent = '';
-            if (dom.watermark) dom.watermark.textContent = getText('notDetected');
-            return;
-        }
-        const config = gameDatabase.gameConfig[result.gameId];
-        currentGame = result.gameId;
-        if (dom.statusDot) dom.statusDot.className = 'indicator-dot active';
-        if (dom.gameName) dom.gameName.textContent = config.name || getText('notDetected');
-        if (dom.gameConfidence) dom.gameConfidence.textContent = (result.confidence ?? 0) + ' needed matches';
-        if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
+	function updateIndicator(result) {
+    if (!result || !result.gameId || !gameDatabase?.gameConfig?.[result.gameId]) {
+        currentGame = null;
+
+        if (dom.statusDot) 
+            dom.statusDot.className = 'indicator-dot';
+
+        if (dom.gameName) 
+            dom.gameName.textContent = 'Игра не опеределена!';
+
+        if (dom.gameConfidence) 
+            dom.gameConfidence.textContent = '';
+
+        if (dom.watermark) 
+            dom.watermark.textContent = 'Игра не опеределена!';
+
+        return;
     }
+
+    const config = gameDatabase.gameConfig[result.gameId];
+    currentGame = result.gameId;
+
+    if (dom.statusDot) 
+        dom.statusDot.className = 'indicator-dot active';
+
+    if (dom.gameName) 
+        dom.gameName.textContent = config.name || 'Игра не опеределена!';
+
+    if (dom.gameConfidence) 
+        dom.gameConfidence.textContent = (result.confidence ?? 0) + ' needed matches';
+
+    if (dom.watermark) 
+        dom.watermark.textContent = (config.name || '').toUpperCase();
+}
 
     function displayQuestion(q) {
         if (!dom.questionText || !dom.questionLength || !dom.searchBtn) return;
@@ -239,34 +257,86 @@
         } catch (_) {}
     }
 
-    function detectGame() {
-        if (!gameDatabase || typeof gameDatabase.detectGame !== 'function') {
-            updateStatus(getText('dbError'), 'error');
-            return;
+	function detectGame() {
+    if (!window.GAME_DATABASE) return null;
+
+    const pageText = document.body ? document.body.innerText.toLowerCase() : "";
+    const pageHTML = document.documentElement.innerHTML.toLowerCase();
+    const pageTitle = (document.title || "").toLowerCase();
+
+    const metaContent = Array.from(document.querySelectorAll("meta"))
+        .map(m => (m.content || "").toLowerCase())
+        .join(" ");
+
+    const headings = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6"))
+        .map(h => h.innerText.toLowerCase())
+        .join(" ");
+
+    const altAndTitles = Array.from(document.querySelectorAll("[alt],[title],[aria-label]"))
+        .map(el =>
+            (el.getAttribute("alt") || "") + " " +
+            (el.getAttribute("title") || "") + " " +
+            (el.getAttribute("aria-label") || "")
+        )
+        .join(" ")
+        .toLowerCase();
+
+    const dataAttributes = Array.from(document.querySelectorAll("*"))
+        .map(el =>
+            Array.from(el.attributes)
+                .filter(attr => attr.name.startsWith("data-"))
+                .map(attr => attr.value)
+                .join(" ")
+        )
+        .join(" ")
+        .toLowerCase();
+
+    const fullContent = `
+        ${pageTitle}
+        ${metaContent}
+        ${headings}
+        ${altAndTitles}
+        ${dataAttributes}
+        ${pageText}
+        ${pageHTML}
+    `;
+
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const game of window.GAME_DATABASE) {
+        if (!game.name) continue;
+
+        const gameName = game.name.toLowerCase();
+        let score = 0;
+
+        // Полное совпадение названия
+        if (pageTitle.includes(gameName)) score += 50;
+        if (headings.includes(gameName)) score += 40;
+        if (fullContent.includes(gameName)) score += 25;
+
+        // Частичное совпадение слов
+        const words = gameName.split(/\s+/);
+        for (const word of words) {
+            if (word.length < 3) continue;
+            if (fullContent.includes(word)) score += 5;
         }
-        updateStatus(getText('scanning'), 'searching');
-        try {
-            const result = gameDatabase.detectGame();
-            updateIndicator(result);
-            if (result?.gameId) {
-                const name = gameDatabase.gameConfig?.[result.gameId]?.name || getText('notDetected');
-                updateStatus(getText('gameDetected') + name, 'success');
-                if (typeof gameDatabase.extractQuestion === 'function') {
-                    const q = gameDatabase.extractQuestion(result.gameId);
-                    if (q) {
-                        currentQuestion = q;
-                        lastQuestion = q;
-                        displayQuestion(q);
-                    }
-                }
-            } else {
-                updateStatus(getText('detectFirst'), 'warning');
-                displayQuestion(null);
-            }
-        } catch (_) {
-            updateStatus(getText('dbError'), 'error');
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = game;
         }
     }
+
+    // Порог уверенности
+    if (bestScore > 20) {
+        confidence++;
+        return bestMatch;
+    }
+
+    confidence = Math.max(0, confidence - 1);
+    return null;
+}
 
     function searchAnswer() {
         if (!gameDatabase || !currentGame || !currentQuestion || typeof gameDatabase.findAnswer !== 'function') {
@@ -431,4 +501,3 @@
         init();
     }
 })();
-
