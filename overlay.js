@@ -71,6 +71,9 @@
 
     const dom = {};
 
+    // Переменные для перетаскивания (mouse-версия)
+    let dragHandlers = null;
+
     function getText(key) {
         return (LANG[currentLang] && LANG[currentLang][key]) || 
                (LANG.ru && LANG.ru[key]) || key;
@@ -612,6 +615,85 @@
         overlayEl.querySelector('.answer-label').textContent = getText('answerLabel');
     }
 
+    // Новая функция перетаскивания (на mouse-событиях, как в overlay.js)
+    function enableDrag() {
+        const header = overlayEl.querySelector('.overlay-header');
+        let dragActive = false;
+        let startX, startY, startLeft, startTop;
+
+        function onMouseDown(e) {
+            if (e.target.closest('.overlay-btn')) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            const rect = overlayEl.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            dragActive = true;
+            overlayEl.style.userSelect = 'none';
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
+        function onMouseMove(e) {
+            if (!dragActive) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            let newLeft = startLeft + dx;
+            let newTop = startTop + dy;
+
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+            const elW = overlayEl.offsetWidth;
+            const elH = overlayEl.offsetHeight;
+
+            newLeft = Math.max(0, Math.min(newLeft, winW - elW));
+            newTop = Math.max(0, Math.min(newTop, winH - elH));
+
+            overlayEl.style.left = newLeft + 'px';
+            overlayEl.style.top = newTop + 'px';
+            overlayEl.style.right = 'auto';
+        }
+
+        function onMouseUp(e) {
+            if (!dragActive) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            dragActive = false;
+            overlayEl.style.userSelect = '';
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        header.addEventListener('mousedown', onMouseDown);
+
+        // Сохраняем обработчики для возможности отключения
+        dragHandlers = {
+            header,
+            onMouseDown,
+            onMouseMove,
+            onMouseUp
+        };
+    }
+
+    function disableDrag() {
+        if (dragHandlers) {
+            dragHandlers.header.removeEventListener('mousedown', dragHandlers.onMouseDown);
+            document.removeEventListener('mousemove', dragHandlers.onMouseMove);
+            document.removeEventListener('mouseup', dragHandlers.onMouseUp);
+            dragHandlers = null;
+        }
+    }
+
     function createOverlay() {
         ensureStyle();
         
@@ -676,75 +758,11 @@
         overlayEl.querySelector('.minimize-btn').onclick = () => 
             overlayEl.classList.toggle('overlay-minimized');
         
-        enableDrag();
-    }
-
-    // Перетаскивание без рывков
-    function enableDrag() {
-        const header = overlayEl.querySelector('.overlay-header');
-        let dragActive = false;
-        let startX, startY, startLeft, startTop;
-
-        const onPointerDown = (e) => {
-            if (e.target.closest('.overlay-btn')) return;
-            
-            e.preventDefault();
-            e.stopPropagation();
-
-            const rect = overlayEl.getBoundingClientRect();
-            startLeft = rect.left;
-            startTop = rect.top;
-            startX = e.clientX;
-            startY = e.clientY;
-
-            dragActive = true;
-            overlayEl.setPointerCapture(e.pointerId);
-            overlayEl.style.userSelect = 'none';
-        };
-
-        const onPointerMove = (e) => {
-            if (!dragActive) return;
-            
-            e.preventDefault();
-            e.stopPropagation();
-
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-
-            let newLeft = startLeft + dx;
-            let newTop = startTop + dy;
-
-            const winW = window.innerWidth;
-            const winH = window.innerHeight;
-            const elW = overlayEl.offsetWidth;
-            const elH = overlayEl.offsetHeight;
-
-            newLeft = Math.max(0, Math.min(newLeft, winW - elW));
-            newTop = Math.max(0, Math.min(newTop, winH - elH));
-
-            overlayEl.style.left = newLeft + 'px';
-            overlayEl.style.top = newTop + 'px';
-            overlayEl.style.right = 'auto';
-        };
-
-        const onPointerUp = (e) => {
-            if (!dragActive) return;
-            
-            e.preventDefault();
-            e.stopPropagation();
-
-            dragActive = false;
-            overlayEl.releasePointerCapture(e.pointerId);
-            overlayEl.style.userSelect = '';
-        };
-
-        header.addEventListener('pointerdown', onPointerDown);
-        header.addEventListener('pointermove', onPointerMove);
-        header.addEventListener('pointerup', onPointerUp);
-        header.addEventListener('pointercancel', onPointerUp);
+        enableDrag(); // новая версия
     }
 
     function cleanup() {
+        disableDrag();   // убираем обработчики перетаскивания
         overlayEl?.remove();
     }
 
