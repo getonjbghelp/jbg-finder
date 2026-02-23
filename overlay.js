@@ -8,10 +8,8 @@
 
     const CONFIG = {
         databaseURL: 'https://getonjbghelp.github.io/jbg-finder/database.js',
-        checkInterval: 1500,
         minQuestionLength: 15,
-        defaultLang: 'ru',
-        autoDetect: true
+        defaultLang: 'ru'
     };
 
     const LANG = {
@@ -37,8 +35,7 @@
             close: 'Закрыть',
             minimize: 'Свернуть',
             notEnoughSymbols: 'Вопрос слишком короткий',
-            indicators: 'индикаторов',
-            autoScan: 'Автоскан'
+            indicators: 'индикаторов'
         },
         en: {
             title: 'JBG-Finder BETA',
@@ -62,19 +59,15 @@
             close: 'Close',
             minimize: 'Minimize',
             notEnoughSymbols: 'Question too short',
-            indicators: 'indicators',
-            autoScan: 'Auto-scan'
+            indicators: 'indicators'
         }
     };
 
     let currentGame = null;
     let currentQuestion = '';
-    let lastQuestion = '';
     let gameDatabase = null;
     let currentLang = CONFIG.defaultLang;
-    let autoCheckTimer = null;
     let overlayEl = null;
-    let isAutoScanning = CONFIG.autoDetect;
 
     const dom = {};
 
@@ -324,18 +317,6 @@
                 color: #808080;
                 margin-left: auto;
             }
-            .auto-scan-toggle {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-size: 11px;
-                color: #808080;
-                cursor: pointer;
-                user-select: none;
-            }
-            .auto-scan-toggle.active {
-                color: #4ecdc4;
-            }
             .confidence-badge {
                 background: rgba(78,205,196,0.2);
                 color: #4ecdc4;
@@ -379,7 +360,6 @@
         dom.dbVersion = overlayEl.querySelector('#db-version');
         dom.dbAge = overlayEl.querySelector('#db-age');
         dom.indicatorCount = overlayEl.querySelector('#indicator-count');
-        dom.autoScanToggle = overlayEl.querySelector('#auto-scan-toggle');
     }
 
     function updateStatus(message, type) {
@@ -522,31 +502,6 @@
         dom.searchBtn.disabled = q.length < CONFIG.minQuestionLength;
     }
 
-    function autoCheckQuestion() {
-        if (!isAutoScanning) return;
-        
-        if (!gameDatabase || !currentGame || typeof gameDatabase.extractQuestion !== 'function') return;
-        if (document.visibilityState !== 'visible') return;
-        
-        try {
-            const rawQuestion = gameDatabase.extractQuestion(currentGame);
-            
-            if (!rawQuestion || rawQuestion.length < CONFIG.minQuestionLength) {
-                return;
-            }
-            
-            const cleanQuestion = findCleanQuestion(rawQuestion);
-            
-            if (cleanQuestion && cleanQuestion !== lastQuestion) {
-                lastQuestion = cleanQuestion;
-                currentQuestion = cleanQuestion;
-                displayQuestion(cleanQuestion);
-                
-                setTimeout(searchAnswer, 500);
-            }
-        } catch (_) {}
-    }
-
     function detectGame() {
         if (!gameDatabase || typeof gameDatabase.detectGame !== 'function') {
             updateStatus(getText('dbError'), 'error');
@@ -563,6 +518,7 @@
                 const gameName = gameDatabase.gameConfig[result.gameId]?.name || getText('notDetected');
                 updateStatus(`${getText('gameDetected')} ${gameName}`, 'success');
                 
+                // Извлекаем вопрос и отображаем его (без автоматического поиска ответа)
                 setTimeout(() => {
                     const rawQuestion = gameDatabase.extractQuestion(result.gameId);
                     
@@ -571,17 +527,22 @@
                         
                         if (cleanQuestion) {
                             currentQuestion = cleanQuestion;
-                            lastQuestion = cleanQuestion;
                             displayQuestion(cleanQuestion);
-                            
-                            if (isAutoScanning) {
-                                setTimeout(searchAnswer, 500);
-                            }
+                        } else {
+                            // Если нет чистого совпадения, показываем исходный сырой вопрос
+                            currentQuestion = rawQuestion;
+                            displayQuestion(rawQuestion);
                         }
+                    } else {
+                        // Если вопрос не извлечён или слишком короткий, очищаем поле
+                        currentQuestion = '';
+                        displayQuestion(null);
                     }
                 }, 300);
             } else {
                 updateStatus(getText('notDetected'), 'warning');
+                currentQuestion = '';
+                displayQuestion(null);
             }
             
             return result;
@@ -642,15 +603,6 @@
         updateVersionInfo();
     }
 
-    function toggleAutoScan() {
-        isAutoScanning = !isAutoScanning;
-        if (dom.autoScanToggle) {
-            dom.autoScanToggle.classList.toggle('active', isAutoScanning);
-            dom.autoScanToggle.textContent = `${isAutoScanning ? '✓' : '○'} ${getText('autoScan')}`;
-        }
-        updateStatus(isAutoScanning ? 'Auto-scan ON' : 'Auto-scan OFF', 'info');
-    }
-
     function updateTexts() {
         overlayEl.querySelector('.overlay-title').textContent = getText('title');
         dom.detectBtn.textContent = getText('detectBtn');
@@ -658,9 +610,6 @@
         dom.copyBtn.textContent = getText('copyBtn');
         overlayEl.querySelector('.question-label').textContent = getText('questionLabel');
         overlayEl.querySelector('.answer-label').textContent = getText('answerLabel');
-        if (dom.autoScanToggle) {
-            dom.autoScanToggle.textContent = `${isAutoScanning ? '✓' : '○'} ${getText('autoScan')}`;
-        }
     }
 
     function createOverlay() {
@@ -711,11 +660,6 @@
                     <button class="action-btn search-btn" id="search-btn" disabled>${getText('searchBtn')}</button>
                     <button class="action-btn copy-btn" id="copy-btn" disabled>${getText('copyBtn')}</button>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div class="auto-scan-toggle active" id="auto-scan-toggle">
-                        ✓ ${getText('autoScan')}
-                    </div>
-                </div>
                 <div class="overlay-status" id="overlay-status"></div>
             </div>
         `;
@@ -728,7 +672,6 @@
         dom.searchBtn.onclick = searchAnswer;
         dom.copyBtn.onclick = copyAnswer;
         dom.flagBtn.onclick = toggleLanguage;
-        dom.autoScanToggle.onclick = toggleAutoScan;
         overlayEl.querySelector('.close-btn').onclick = () => cleanup();
         overlayEl.querySelector('.minimize-btn').onclick = () => 
             overlayEl.classList.toggle('overlay-minimized');
@@ -736,7 +679,7 @@
         enableDrag();
     }
 
-    // Полностью переработанное перетаскивание без рывков
+    // Перетаскивание без рывков
     function enableDrag() {
         const header = overlayEl.querySelector('.overlay-header');
         let dragActive = false;
@@ -756,7 +699,7 @@
 
             dragActive = true;
             overlayEl.setPointerCapture(e.pointerId);
-            overlayEl.style.userSelect = 'none'; // запрещаем выделение
+            overlayEl.style.userSelect = 'none';
         };
 
         const onPointerMove = (e) => {
@@ -771,7 +714,6 @@
             let newLeft = startLeft + dx;
             let newTop = startTop + dy;
 
-            // Ограничиваем видимой областью (опционально)
             const winW = window.innerWidth;
             const winH = window.innerHeight;
             const elW = overlayEl.offsetWidth;
@@ -782,7 +724,7 @@
 
             overlayEl.style.left = newLeft + 'px';
             overlayEl.style.top = newTop + 'px';
-            overlayEl.style.right = 'auto'; // убираем right, чтобы left работал
+            overlayEl.style.right = 'auto';
         };
 
         const onPointerUp = (e) => {
@@ -803,7 +745,6 @@
     }
 
     function cleanup() {
-        if (autoCheckTimer) clearInterval(autoCheckTimer);
         overlayEl?.remove();
     }
 
@@ -813,12 +754,6 @@
         
         const loaded = await loadDatabase();
         if (loaded) {
-            autoCheckTimer = setInterval(autoCheckQuestion, CONFIG.checkInterval);
-            
-            if (CONFIG.autoDetect) {
-                setTimeout(detectGame, 1000);
-            }
-            
             updateStatus(getText('notDetected'), 'info');
         }
     }
