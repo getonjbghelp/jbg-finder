@@ -13,8 +13,7 @@ const GameDatabase = {
                 '[data-game="guesspionage"]', '[class*="pollposition"]'
             ],
             questionSelectors: [
-                '.pollposition-text', '.survey-text', '.question-text',
-                '[class*="question"]', '[data-question]', 'h1', 'h2', 'h3'
+                'pollposition-text.question-text.pollposition-range-buffer'
             ],
             backgroundColor: '#2d5a27',
             minConfidence: 3,
@@ -28,8 +27,7 @@ const GameDatabase = {
                 '[class*="fibbage"]', '.lie-input', '.fibbage-answer'
             ],
             questionSelectors: [
-                '#question-text', '.question-text', '[class*="question"]',
-                '[data-question]', 'h1', 'h2', 'h3'
+                '#question-text'
             ],
             backgroundColor: '#5a4a2d',
             minConfidence: 4,
@@ -48,8 +46,7 @@ const GameDatabase = {
                 '[class*="fibbage2"]', '[class*="bloop"]'
             ],
             questionSelectors: [
-                '#question-text', '.question-text', '[class*="question"]',
-                '[data-question]', 'h1', 'h2', 'h3'
+                '#question-text'
             ],
             backgroundColor: '#5a2d4a',
             minConfidence: 5,
