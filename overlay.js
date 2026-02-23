@@ -9,10 +9,9 @@
     const CONFIG = {
         databaseURL: 'https://getonjbghelp.github.io/jbg-finder/database.js',
         checkInterval: 1500,
-        minQuestionLength: 10,
+        minQuestionLength: 15,
         defaultLang: 'ru',
-        autoDetect: true,
-        maxScanDepth: 3
+        autoDetect: true
     };
 
     const LANG = {
@@ -76,6 +75,9 @@
     let autoCheckTimer = null;
     let overlayEl = null;
     let isAutoScanning = CONFIG.autoDetect;
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
 
     const dom = {};
 
@@ -107,7 +109,7 @@
                 color: #e0e0e0;
                 overflow: hidden;
                 user-select: none;
-                transition: all 0.3s ease;
+                transition: box-shadow 0.3s ease;
             }
             .overlay-background-text {
                 position: absolute;
@@ -332,6 +334,7 @@
                 font-size: 11px;
                 color: #808080;
                 cursor: pointer;
+                user-select: none;
             }
             .auto-scan-toggle.active {
                 color: #4ecdc4;
@@ -464,10 +467,48 @@
             dom.indicatorCount.textContent = `${result.foundIndicators.length} ${getText('indicators')}`;
         }
         
-        // Применяем цвет игры
         if (config.backgroundColor && overlayEl) {
             overlayEl.style.boxShadow = `0 10px 40px ${config.backgroundColor}40`;
         }
+    }
+
+    // ✅ ИСПРАВЛЕНИЕ #2: Поиск чистого вопроса из базы без показа мусора
+    function findCleanQuestion(rawText) {
+        if (!gameDatabase || !currentGame || !rawText || rawText.length < CONFIG.minQuestionLength) {
+            return null;
+        }
+
+        const questions = gameDatabase.questions[currentGame];
+        if (!questions) return null;
+
+        const normalizedRaw = gameDatabase.normalizeText(rawText);
+
+        // Ищем совпадение в базе данных
+        for (const item of questions) {
+            const normalizedDB = gameDatabase.normalizeText(item.question);
+            
+            // Точное совпадение
+            if (normalizedRaw === normalizedDB) {
+                return item.question;
+            }
+            
+            // Частичное совпадение (первые 50 символов)
+            if (normalizedRaw.includes(normalizedDB.substring(0, 50)) ||
+                normalizedDB.includes(normalizedRaw.substring(0, 50))) {
+                return item.question;
+            }
+            
+            // Совпадение по ключевым словам
+            const rawWords = normalizedRaw.split(' ').filter(w => w.length > 3);
+            const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
+            const matchCount = rawWords.filter(w => dbWords.includes(w)).length;
+            
+            if (matchCount >= Math.min(5, rawWords.length * 0.6)) {
+                return item.question;
+            }
+        }
+
+        return null;
     }
 
     function displayQuestion(q) {
@@ -488,21 +529,31 @@
         dom.searchBtn.disabled = q.length < CONFIG.minQuestionLength;
     }
 
+    // ✅ ИСПРАВЛЕНИЕ #3: Уважение настройки автоскана
     function autoCheckQuestion() {
+        // Проверяем флаг автоскана
+        if (!isAutoScanning) return;
+        
         if (!gameDatabase || !currentGame || typeof gameDatabase.extractQuestion !== 'function') return;
         if (document.visibilityState !== 'visible') return;
         
         try {
-            const q = gameDatabase.extractQuestion(currentGame);
-            if (q && q !== lastQuestion && q.length >= CONFIG.minQuestionLength) {
-                lastQuestion = q;
-                currentQuestion = q;
-                displayQuestion(q);
+            const rawQuestion = gameDatabase.extractQuestion(currentGame);
+            
+            if (!rawQuestion || rawQuestion.length < CONFIG.minQuestionLength) {
+                return;
+            }
+            
+            // ✅ Ищем чистый вопрос в базе (без показа мусора пользователю)
+            const cleanQuestion = findCleanQuestion(rawQuestion);
+            
+            if (cleanQuestion && cleanQuestion !== lastQuestion) {
+                lastQuestion = cleanQuestion;
+                currentQuestion = cleanQuestion;
+                displayQuestion(cleanQuestion);
                 
-                // Автоматический поиск ответа при новом вопросе
-                if (isAutoScanning) {
-                    setTimeout(searchAnswer, 500);
-                }
+                // Автоматический поиск ответа
+                setTimeout(searchAnswer, 500);
             }
         } catch (_) {}
     }
@@ -522,16 +573,21 @@
             if (result) {
                 updateStatus(`${getText('gameDetected')} ${result.name}`, 'success');
                 
-                // Сразу извлекаем вопрос
                 setTimeout(() => {
-                    const q = gameDatabase.extractQuestion(result.gameId);
-                    if (q) {
-                        currentQuestion = q;
-                        lastQuestion = q;
-                        displayQuestion(q);
+                    const rawQuestion = gameDatabase.extractQuestion(result.gameId);
+                    
+                    if (rawQuestion && rawQuestion.length >= CONFIG.minQuestionLength) {
+                        // ✅ Ищем чистый вопрос в базе
+                        const cleanQuestion = findCleanQuestion(rawQuestion);
                         
-                        if (isAutoScanning) {
-                            setTimeout(searchAnswer, 500);
+                        if (cleanQuestion) {
+                            currentQuestion = cleanQuestion;
+                            lastQuestion = cleanQuestion;
+                            displayQuestion(cleanQuestion);
+                            
+                            if (isAutoScanning) {
+                                setTimeout(searchAnswer, 500);
+                            }
                         }
                     }
                 }, 300);
@@ -597,10 +653,12 @@
         updateVersionInfo();
     }
 
+    // ✅ ИСПРАВЛЕНИЕ #3: Переключение автоскана работает корректно
     function toggleAutoScan() {
         isAutoScanning = !isAutoScanning;
         if (dom.autoScanToggle) {
             dom.autoScanToggle.classList.toggle('active', isAutoScanning);
+            dom.autoScanToggle.textContent = `${isAutoScanning ? '✓' : '○'} ${getText('autoScan')}`;
         }
         updateStatus(isAutoScanning ? 'Auto-scan ON' : 'Auto-scan OFF', 'info');
     }
@@ -690,35 +748,45 @@
         enableDrag();
     }
 
+    // ✅ ИСПРАВЛЕНИЕ #1: Исправлено перетаскивание без рывков
     function enableDrag() {
         const header = overlayEl.querySelector('.overlay-header');
-        let isDragging = false;
-        let startX = 0, startY = 0, initialX = 0, initialY = 0;
         
-        const move = (e) => {
-            if (!isDragging) return;
-            overlayEl.style.left = (initialX + e.clientX - startX) + 'px';
-            overlayEl.style.top = (initialY + e.clientY - startY) + 'px';
-            overlayEl.style.right = 'auto';
-        };
-        
-        const up = () => {
-            isDragging = false;
-            window.removeEventListener('pointermove', move);
-            window.removeEventListener('pointerup', up);
-        };
-        
-        header.addEventListener('pointerdown', (e) => {
+        const onPointerDown = (e) => {
             if (e.target.closest('.overlay-btn')) return;
+            
             isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
+            
+            // Получаем текущие координаты окна
             const rect = overlayEl.getBoundingClientRect();
-            initialX = rect.left;
-            initialY = rect.top;
-            window.addEventListener('pointermove', move);
-            window.addEventListener('pointerup', up);
-        });
+            
+            // Вычисляем смещение курсора относительно левого верхнего угла окна
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            
+            // Убираем right позиционирование, чтобы left работал корректно
+            overlayEl.style.right = 'auto';
+            
+            overlayEl.setPointerCapture(e.pointerId);
+        };
+        
+        const onPointerMove = (e) => {
+            if (!isDragging) return;
+            
+            // Позиционируем окно по курсору с учётом смещения
+            overlayEl.style.left = (e.clientX - dragOffsetX) + 'px';
+            overlayEl.style.top = (e.clientY - dragOffsetY) + 'px';
+        };
+        
+        const onPointerUp = (e) => {
+            isDragging = false;
+            overlayEl.releasePointerCapture(e.pointerId);
+        };
+        
+        header.addEventListener('pointerdown', onPointerDown);
+        header.addEventListener('pointermove', onPointerMove);
+        header.addEventListener('pointerup', onPointerUp);
+        header.addEventListener('pointercancel', onPointerUp);
     }
 
     function cleanup() {
@@ -734,7 +802,6 @@
         if (loaded) {
             autoCheckTimer = setInterval(autoCheckQuestion, CONFIG.checkInterval);
             
-            // Автодетект при загрузке
             if (CONFIG.autoDetect) {
                 setTimeout(detectGame, 1000);
             }
