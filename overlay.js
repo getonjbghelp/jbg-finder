@@ -8,10 +8,9 @@
 
     const CONFIG = {
         databaseURL: 'https://getonjbghelp.github.io/jbg-finder/database.js',
-        checkInterval: 1500,
-        minQuestionLength: 15,
-        defaultLang: 'ru',
-        autoDetect: true
+        checkInterval: 2000,
+        minQuestionLength: 1,
+        defaultLang: 'ru'
     };
 
     const LANG = {
@@ -36,9 +35,7 @@
             symbols: ' символов',
             close: 'Закрыть',
             minimize: 'Свернуть',
-            notEnoughSymbols: 'Вопрос слишком короткий',
-            indicators: 'индикаторов',
-            autoScan: 'Автоскан'
+            notEnoughSymbols: 'Вопрос слишком короткий'
         },
         en: {
             title: 'JBG-Finder BETA',
@@ -61,9 +58,7 @@
             symbols: ' symbols',
             close: 'Close',
             minimize: 'Minimize',
-            notEnoughSymbols: 'Question too short',
-            indicators: 'indicators',
-            autoScan: 'Auto-scan'
+            notEnoughSymbols: 'Question too short'
         }
     };
 
@@ -74,16 +69,11 @@
     let currentLang = CONFIG.defaultLang;
     let autoCheckTimer = null;
     let overlayEl = null;
-    let isAutoScanning = CONFIG.autoDetect;
-    let isDragging = false;
-    let dragOffsetX = 0;
-    let dragOffsetY = 0;
 
     const dom = {};
 
     function getText(key) {
-        return (LANG[currentLang] && LANG[currentLang][key]) || 
-               (LANG.ru && LANG.ru[key]) || key;
+        return (LANG[currentLang] && LANG[currentLang][key]) || (LANG.ru && LANG.ru[key]) || key;
     }
 
     function ensureStyle() {
@@ -97,19 +87,18 @@
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                width: 600px;
+                width: 580px;
                 max-width: 95vw;
                 background: linear-gradient(145deg, #2b2b2b 0%, #1e1e1e 100%);
                 backdrop-filter: blur(15px);
                 border: 1px solid #3a3a3a;
-                border-radius: 8px;
+                border-radius: 6px;
                 box-shadow: 0 10px 40px rgba(0,0,0,0.8);
                 z-index: 999999;
                 font-family: 'Segoe UI', sans-serif;
                 color: #e0e0e0;
                 overflow: hidden;
                 user-select: none;
-                transition: box-shadow 0.3s ease;
             }
             .overlay-background-text {
                 position: absolute;
@@ -132,8 +121,8 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                height: 45px;
-                padding: 0 10px;
+                height: 40px;
+                padding: 0 8px;
                 background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
                 border-bottom: 1px solid #3a3a3a;
                 cursor: move;
@@ -141,10 +130,10 @@
             .header-left {
                 display: flex;
                 align-items: center;
-                gap: 12px;
+                gap: 10px;
             }
             .overlay-title {
-                font-size: 15px;
+                font-size: 14px;
                 font-weight: 600;
                 color: #fff;
             }
@@ -171,85 +160,74 @@
                 align-items: center;
                 justify-content: center;
                 transition: all 0.2s ease;
-                border-radius: 4px;
             }
             .overlay-btn:hover {
-                background: rgba(255,255,255,0.08);
+                background: rgba(255,255,255,0.06);
                 color: #fff;
             }
             .flag-btn { font-size: 20px; }
             .overlay-content {
-                padding: 16px;
+                padding: 14px;
                 position: relative;
                 z-index: 10;
             }
             .game-indicator {
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                margin-bottom: 14px;
-                padding: 10px 12px;
+                gap: 10px;
+                margin-bottom: 12px;
+                padding: 8px 10px;
                 background: rgba(45,45,45,0.6);
                 border: 1px solid #3a3a3a;
-                border-radius: 6px;
             }
             .indicator-dot {
-                width: 14px;
-                height: 14px;
+                width: 12px;
+                height: 12px;
                 border-radius: 50%;
                 background: #505050;
-                transition: all 0.3s ease;
-                box-shadow: 0 0 5px rgba(0,0,0,0.3);
+                transition: all 0.25s ease;
             }
             .indicator-dot.active {
                 background: #4ecdc4;
-                box-shadow: 0 0 12px #4ecdc4;
-                animation: pulse 2s infinite;
-            }
-            @keyframes pulse {
-                0%, 100% { box-shadow: 0 0 12px #4ecdc4; }
-                50% { box-shadow: 0 0 20px #4ecdc4; }
+                box-shadow: 0 0 8px #4ecdc4;
             }
             .question-box, .answer-box {
-                margin-bottom: 14px;
-                padding: 14px;
+                margin-bottom: 12px;
+                padding: 12px;
                 background: rgba(35,35,35,0.75);
                 border: 1px solid #3a3a3a;
-                border-radius: 6px;
-                transition: all 0.3s ease;
             }
             .question-box {
-                border-left: 4px solid #4ecdc4;
+                border-left: 3px solid #4ecdc4;
             }
             .answer-box {
-                border-left: 4px solid #505050;
+                border-left: 3px solid #505050;
             }
             .answer-box.found {
                 border-left-color: #4ecdc4;
-                background: rgba(78,205,196,0.08);
+                background: rgba(78,205,196,0.06);
             }
             .answer-box.not-found {
                 border-left-color: #ff6b6b;
-                background: rgba(255,107,107,0.08);
+                background: rgba(255,107,107,0.06);
             }
             .question-header, .answer-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
             }
             .question-text, .answer-text {
-                font-size: 14px;
+                font-size: 13px;
                 color: #d0d0d0;
-                line-height: 1.6;
-                max-height: 140px;
+                line-height: 1.5;
+                max-height: 120px;
                 overflow-y: auto;
                 word-break: break-word;
             }
             .answer-text {
                 font-weight: 600;
                 color: #fff;
-                font-size: 15px;
             }
             .answer-box.found .answer-text {
                 color: #4ecdc4;
@@ -259,106 +237,52 @@
             }
             .action-buttons {
                 display: flex;
-                gap: 10px;
-                margin-bottom: 14px;
+                gap: 8px;
+                margin-bottom: 12px;
             }
             .action-btn {
                 flex: 1;
-                padding: 12px 14px;
+                padding: 10px 12px;
                 border: none;
-                border-radius: 6px;
+                border-radius: 4px;
                 cursor: pointer;
-                font-size: 13px;
+                font-size: 12px;
                 font-weight: 600;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 6px;
-                transition: all 0.2s ease;
             }
             .detect-btn {
                 background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
                 color: #fff;
             }
-            .detect-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 15px rgba(78,205,196,0.4);
-            }
             .search-btn {
                 background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
                 color: #fff;
-            }
-            .search-btn:hover:not(:disabled) {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 15px rgba(255,107,107,0.4);
             }
             .copy-btn {
                 background: #3a3a3a;
                 color: #c0c0c0;
                 border: 1px solid #4a4a4a;
             }
-            .copy-btn:hover:not(:disabled) {
-                background: #4a4a4a;
-                color: #fff;
-            }
             .action-btn:disabled {
                 opacity: 0.35;
                 cursor: not-allowed;
-                transform: none !important;
-                box-shadow: none !important;
             }
             .overlay-status {
-                font-size: 11px;
+                font-size: 10px;
                 color: #606060;
                 text-align: center;
-                padding-top: 10px;
+                padding-top: 8px;
                 border-top: 1px solid #3a3a3a;
                 font-family: 'Consolas', monospace;
             }
             .overlay-minimized {
-                height: 45px;
+                height: 40px;
                 overflow: hidden;
             }
             .overlay-minimized .overlay-content {
                 display: none;
-            }
-            .indicator-count {
-                font-size: 11px;
-                color: #808080;
-                margin-left: auto;
-            }
-            .auto-scan-toggle {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-size: 11px;
-                color: #808080;
-                cursor: pointer;
-                user-select: none;
-            }
-            .auto-scan-toggle.active {
-                color: #4ecdc4;
-            }
-            .confidence-badge {
-                background: rgba(78,205,196,0.2);
-                color: #4ecdc4;
-                padding: 2px 8px;
-                border-radius: 10px;
-                font-size: 11px;
-            }
-            .scrollbar-custom::-webkit-scrollbar {
-                width: 6px;
-            }
-            .scrollbar-custom::-webkit-scrollbar-track {
-                background: rgba(0,0,0,0.2);
-                border-radius: 3px;
-            }
-            .scrollbar-custom::-webkit-scrollbar-thumb {
-                background: #4a4a4a;
-                border-radius: 3px;
-            }
-            .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-                background: #5a5a5a;
             }
         `;
         document.head.appendChild(style);
@@ -381,8 +305,6 @@
         dom.watermark = overlayEl.querySelector('#game-watermark');
         dom.dbVersion = overlayEl.querySelector('#db-version');
         dom.dbAge = overlayEl.querySelector('#db-age');
-        dom.indicatorCount = overlayEl.querySelector('#indicator-count');
-        dom.autoScanToggle = overlayEl.querySelector('#auto-scan-toggle');
     }
 
     function updateStatus(message, type) {
@@ -449,8 +371,7 @@
             if (dom.statusDot) dom.statusDot.className = 'indicator-dot';
             if (dom.gameName) dom.gameName.textContent = getText('notDetected');
             if (dom.gameConfidence) dom.gameConfidence.textContent = '';
-            if (dom.watermark) dom.watermark.textContent = getText('notDetected').toUpperCase();
-            if (dom.indicatorCount) dom.indicatorCount.textContent = '';
+            if (dom.watermark) dom.watermark.textContent = getText('notDetected');
             return;
         }
 
@@ -459,56 +380,8 @@
 
         if (dom.statusDot) dom.statusDot.className = 'indicator-dot active';
         if (dom.gameName) dom.gameName.textContent = config.name || getText('notDetected');
-        if (dom.gameConfidence) {
-            dom.gameConfidence.innerHTML = `<span class="confidence-badge">${getText('confidence')} ${result.confidence}</span>`;
-        }
+        if (dom.gameConfidence) dom.gameConfidence.textContent = (result.confidence ?? 0) + ' needed matches';
         if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
-        if (dom.indicatorCount && result.foundIndicators) {
-            dom.indicatorCount.textContent = `${result.foundIndicators.length} ${getText('indicators')}`;
-        }
-        
-        if (config.backgroundColor && overlayEl) {
-            overlayEl.style.boxShadow = `0 10px 40px ${config.backgroundColor}40`;
-        }
-    }
-
-    // ✅ ИСПРАВЛЕНИЕ #2: Поиск чистого вопроса из базы без показа мусора
-    function findCleanQuestion(rawText) {
-        if (!gameDatabase || !currentGame || !rawText || rawText.length < CONFIG.minQuestionLength) {
-            return null;
-        }
-
-        const questions = gameDatabase.questions[currentGame];
-        if (!questions) return null;
-
-        const normalizedRaw = gameDatabase.normalizeText(rawText);
-
-        // Ищем совпадение в базе данных
-        for (const item of questions) {
-            const normalizedDB = gameDatabase.normalizeText(item.question);
-            
-            // Точное совпадение
-            if (normalizedRaw === normalizedDB) {
-                return item.question;
-            }
-            
-            // Частичное совпадение (первые 50 символов)
-            if (normalizedRaw.includes(normalizedDB.substring(0, 50)) ||
-                normalizedDB.includes(normalizedRaw.substring(0, 50))) {
-                return item.question;
-            }
-            
-            // Совпадение по ключевым словам
-            const rawWords = normalizedRaw.split(' ').filter(w => w.length > 3);
-            const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
-            const matchCount = rawWords.filter(w => dbWords.includes(w)).length;
-            
-            if (matchCount >= Math.min(5, rawWords.length * 0.6)) {
-                return item.question;
-            }
-        }
-
-        return null;
     }
 
     function displayQuestion(q) {
@@ -529,31 +402,16 @@
         dom.searchBtn.disabled = q.length < CONFIG.minQuestionLength;
     }
 
-    // ✅ ИСПРАВЛЕНИЕ #3: Уважение настройки автоскана
     function autoCheckQuestion() {
-        // Проверяем флаг автоскана
-        if (!isAutoScanning) return;
-        
         if (!gameDatabase || !currentGame || typeof gameDatabase.extractQuestion !== 'function') return;
         if (document.visibilityState !== 'visible') return;
         
         try {
-            const rawQuestion = gameDatabase.extractQuestion(currentGame);
-            
-            if (!rawQuestion || rawQuestion.length < CONFIG.minQuestionLength) {
-                return;
-            }
-            
-            // ✅ Ищем чистый вопрос в базе (без показа мусора пользователю)
-            const cleanQuestion = findCleanQuestion(rawQuestion);
-            
-            if (cleanQuestion && cleanQuestion !== lastQuestion) {
-                lastQuestion = cleanQuestion;
-                currentQuestion = cleanQuestion;
-                displayQuestion(cleanQuestion);
-                
-                // Автоматический поиск ответа
-                setTimeout(searchAnswer, 500);
+            const q = gameDatabase.extractQuestion(currentGame);
+            if (q && q !== lastQuestion && q.length >= CONFIG.minQuestionLength) {
+                lastQuestion = q;
+                currentQuestion = q;
+                displayQuestion(q);
             }
         } catch (_) {}
     }
@@ -574,21 +432,11 @@
                 updateStatus(`${getText('gameDetected')} ${result.name}`, 'success');
                 
                 setTimeout(() => {
-                    const rawQuestion = gameDatabase.extractQuestion(result.gameId);
-                    
-                    if (rawQuestion && rawQuestion.length >= CONFIG.minQuestionLength) {
-                        // ✅ Ищем чистый вопрос в базе
-                        const cleanQuestion = findCleanQuestion(rawQuestion);
-                        
-                        if (cleanQuestion) {
-                            currentQuestion = cleanQuestion;
-                            lastQuestion = cleanQuestion;
-                            displayQuestion(cleanQuestion);
-                            
-                            if (isAutoScanning) {
-                                setTimeout(searchAnswer, 500);
-                            }
-                        }
+                    const q = gameDatabase.extractQuestion(result.gameId);
+                    if (q) {
+                        currentQuestion = q;
+                        lastQuestion = q;
+                        displayQuestion(q);
                     }
                 }, 300);
             } else {
@@ -642,7 +490,6 @@
         if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(text).then(() => {
                 updateStatus(getText('copySuccess'), 'success');
-                setTimeout(() => updateStatus('', 'info'), 2000);
             });
         }
     }
@@ -653,16 +500,6 @@
         updateVersionInfo();
     }
 
-    // ✅ ИСПРАВЛЕНИЕ #3: Переключение автоскана работает корректно
-    function toggleAutoScan() {
-        isAutoScanning = !isAutoScanning;
-        if (dom.autoScanToggle) {
-            dom.autoScanToggle.classList.toggle('active', isAutoScanning);
-            dom.autoScanToggle.textContent = `${isAutoScanning ? '✓' : '○'} ${getText('autoScan')}`;
-        }
-        updateStatus(isAutoScanning ? 'Auto-scan ON' : 'Auto-scan OFF', 'info');
-    }
-
     function updateTexts() {
         overlayEl.querySelector('.overlay-title').textContent = getText('title');
         dom.detectBtn.textContent = getText('detectBtn');
@@ -670,9 +507,6 @@
         dom.copyBtn.textContent = getText('copyBtn');
         overlayEl.querySelector('.question-label').textContent = getText('questionLabel');
         overlayEl.querySelector('.answer-label').textContent = getText('answerLabel');
-        if (dom.autoScanToggle) {
-            dom.autoScanToggle.textContent = `${isAutoScanning ? '✓' : '○'} ${getText('autoScan')}`;
-        }
     }
 
     function createOverlay() {
@@ -681,7 +515,7 @@
         overlayEl = document.createElement('div');
         overlayEl.id = OVERLAY_ID;
         overlayEl.innerHTML = `
-            <div class="overlay-background-text" id="game-watermark">JACKBOX GAMES FINDER</div>
+            <div class="overlay-background-text" id="game-watermark">WE GO ON AND ON AND ON AND ON AND ON AND ON EVERY TIME SINCE WE LIVE. AND WE STILL LOVE JACKBOX GAMES ALL THE TIME. so... </div>
             <div class="overlay-header">
                 <div class="header-left">
                     <span class="overlay-title">${getText('title')}</span>
@@ -692,7 +526,7 @@
                     </span>
                 </div>
                 <div class="overlay-controls">
-                    <button class="overlay-btn flag-btn" id="lang-flag-btn">🌏</button>
+                    <button class="overlay-btn flag-btn" id="lang-flag-btn">${currentLang === 'ru' ? '🌏' : '🌏︎'}</button>
                     <button class="overlay-btn minimize-btn">_</button>
                     <button class="overlay-btn close-btn">×</button>
                 </div>
@@ -702,31 +536,25 @@
                     <span class="indicator-dot" id="status-dot"></span>
                     <span id="game-name">${getText('notDetected')}</span>
                     <span id="game-confidence"></span>
-                    <span class="indicator-count" id="indicator-count"></span>
                 </div>
                 <div class="question-box">
                     <div class="question-header">
                         <span class="question-label">${getText('questionLabel')}</span>
                         <span id="question-length">0${getText('symbols')}</span>
                     </div>
-                    <div class="question-text scrollbar-custom" id="question-text"></div>
+                    <div class="question-text" id="question-text"></div>
                 </div>
                 <div class="answer-box" id="answer-box">
                     <div class="answer-header">
                         <span class="answer-label">${getText('answerLabel')}</span>
                         <span id="answer-confidence"></span>
                     </div>
-                    <div class="answer-text scrollbar-custom" id="answer-text"></div>
+                    <div class="answer-text" id="answer-text"></div>
                 </div>
                 <div class="action-buttons">
                     <button class="action-btn detect-btn" id="detect-btn">${getText('detectBtn')}</button>
                     <button class="action-btn search-btn" id="search-btn" disabled>${getText('searchBtn')}</button>
                     <button class="action-btn copy-btn" id="copy-btn" disabled>${getText('copyBtn')}</button>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div class="auto-scan-toggle active" id="auto-scan-toggle">
-                        ✓ ${getText('autoScan')}
-                    </div>
                 </div>
                 <div class="overlay-status" id="overlay-status"></div>
             </div>
@@ -740,7 +568,6 @@
         dom.searchBtn.onclick = searchAnswer;
         dom.copyBtn.onclick = copyAnswer;
         dom.flagBtn.onclick = toggleLanguage;
-        dom.autoScanToggle.onclick = toggleAutoScan;
         overlayEl.querySelector('.close-btn').onclick = () => cleanup();
         overlayEl.querySelector('.minimize-btn').onclick = () => 
             overlayEl.classList.toggle('overlay-minimized');
@@ -748,45 +575,62 @@
         enableDrag();
     }
 
-    // ✅ ИСПРАВЛЕНИЕ #1: Исправлено перетаскивание без рывков
+    // ✅ ПОЛНОСТЬЮ ПЕРЕРАБОТАНОЕ ПЕРЕТАСКИВАНИЕ
     function enableDrag() {
         const header = overlayEl.querySelector('.overlay-header');
-        
+        let isDragging = false;
+        let offsetX = 0;
+        let offsetY = 0;
+
         const onPointerDown = (e) => {
+            // Игнорируем клики по кнопкам
             if (e.target.closest('.overlay-btn')) return;
             
+            e.preventDefault();
             isDragging = true;
             
-            // Получаем текущие координаты окна
+            // Получаем текущие координаты элемента
             const rect = overlayEl.getBoundingClientRect();
             
             // Вычисляем смещение курсора относительно левого верхнего угла окна
-            dragOffsetX = e.clientX - rect.left;
-            dragOffsetY = e.clientY - rect.top;
+            // Это ключевой момент - запоминаем где именно внутри окна был клик
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
             
-            // Убираем right позиционирование, чтобы left работал корректно
+            // Переключаем на absolute позиционирование для корректного перемещения
             overlayEl.style.right = 'auto';
+            overlayEl.style.left = rect.left + 'px';
+            overlayEl.style.top = rect.top + 'px';
             
-            overlayEl.setPointerCapture(e.pointerId);
+            // Захватываем pointer для надёжного отслеживания даже вне элемента
+            header.setPointerCapture(e.pointerId);
         };
-        
+
         const onPointerMove = (e) => {
             if (!isDragging) return;
+            e.preventDefault();
             
-            // Позиционируем окно по курсору с учётом смещения
-            overlayEl.style.left = (e.clientX - dragOffsetX) + 'px';
-            overlayEl.style.top = (e.clientY - dragOffsetY) + 'px';
+            // Новая позиция = позиция курсора минус смещение внутри окна
+            // Это обеспечивает плавное перетаскивание без рывков
+            const newX = e.clientX - offsetX;
+            const newY = e.clientY - offsetY;
+            
+            overlayEl.style.left = newX + 'px';
+            overlayEl.style.top = newY + 'px';
         };
-        
+
         const onPointerUp = (e) => {
+            if (!isDragging) return;
             isDragging = false;
-            overlayEl.releasePointerCapture(e.pointerId);
+            header.releasePointerCapture(e.pointerId);
         };
-        
+
+        // Используем pointer events для лучшей совместимости (мышь + тач)
         header.addEventListener('pointerdown', onPointerDown);
         header.addEventListener('pointermove', onPointerMove);
         header.addEventListener('pointerup', onPointerUp);
         header.addEventListener('pointercancel', onPointerUp);
+        header.addEventListener('pointerleave', onPointerUp);
     }
 
     function cleanup() {
@@ -801,11 +645,6 @@
         const loaded = await loadDatabase();
         if (loaded) {
             autoCheckTimer = setInterval(autoCheckQuestion, CONFIG.checkInterval);
-            
-            if (CONFIG.autoDetect) {
-                setTimeout(detectGame, 1000);
-            }
-            
             updateStatus(getText('notDetected'), 'info');
         }
     }
