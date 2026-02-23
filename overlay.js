@@ -14,7 +14,7 @@
         autoDetect: true
     };
 
-    const LANG = {a
+    const LANG = {
         ru: {
             title: 'JBG-Finder BETA',
             detectBtn: '🔍 Определить игру',
@@ -75,9 +75,6 @@
     let autoCheckTimer = null;
     let overlayEl = null;
     let isAutoScanning = CONFIG.autoDetect;
-    let isDragging = false;
-    let dragOffsetX = 0;
-    let dragOffsetY = 0;
 
     const dom = {};
 
@@ -472,7 +469,7 @@
         }
     }
 
-    // ✅ ИСПРАВЛЕНИЕ #2: Поиск чистого вопроса из базы без показа мусора
+    // Поиск чистого вопроса из базы без показа мусора
     function findCleanQuestion(rawText) {
         if (!gameDatabase || !currentGame || !rawText || rawText.length < CONFIG.minQuestionLength) {
             return null;
@@ -483,22 +480,18 @@
 
         const normalizedRaw = gameDatabase.normalizeText(rawText);
 
-        // Ищем совпадение в базе данных
         for (const item of questions) {
             const normalizedDB = gameDatabase.normalizeText(item.question);
             
-            // Точное совпадение
             if (normalizedRaw === normalizedDB) {
                 return item.question;
             }
             
-            // Частичное совпадение (первые 50 символов)
             if (normalizedRaw.includes(normalizedDB.substring(0, 50)) ||
                 normalizedDB.includes(normalizedRaw.substring(0, 50))) {
                 return item.question;
             }
             
-            // Совпадение по ключевым словам
             const rawWords = normalizedRaw.split(' ').filter(w => w.length > 3);
             const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
             const matchCount = rawWords.filter(w => dbWords.includes(w)).length;
@@ -529,9 +522,7 @@
         dom.searchBtn.disabled = q.length < CONFIG.minQuestionLength;
     }
 
-    // ✅ ИСПРАВЛЕНИЕ #3: Уважение настройки автоскана
     function autoCheckQuestion() {
-        // Проверяем флаг автоскана
         if (!isAutoScanning) return;
         
         if (!gameDatabase || !currentGame || typeof gameDatabase.extractQuestion !== 'function') return;
@@ -544,7 +535,6 @@
                 return;
             }
             
-            // ✅ Ищем чистый вопрос в базе (без показа мусора пользователю)
             const cleanQuestion = findCleanQuestion(rawQuestion);
             
             if (cleanQuestion && cleanQuestion !== lastQuestion) {
@@ -552,7 +542,6 @@
                 currentQuestion = cleanQuestion;
                 displayQuestion(cleanQuestion);
                 
-                // Автоматический поиск ответа
                 setTimeout(searchAnswer, 500);
             }
         } catch (_) {}
@@ -570,14 +559,14 @@
             const result = gameDatabase.detectGame();
             updateIndicator(result);
             
-            if (result) {
-                updateStatus(`${getText('gameDetected')} ${result.name}`, 'success');
+            if (result && result.gameId) {
+                const gameName = gameDatabase.gameConfig[result.gameId]?.name || getText('notDetected');
+                updateStatus(`${getText('gameDetected')} ${gameName}`, 'success');
                 
                 setTimeout(() => {
                     const rawQuestion = gameDatabase.extractQuestion(result.gameId);
                     
                     if (rawQuestion && rawQuestion.length >= CONFIG.minQuestionLength) {
-                        // ✅ Ищем чистый вопрос в базе
                         const cleanQuestion = findCleanQuestion(rawQuestion);
                         
                         if (cleanQuestion) {
@@ -653,7 +642,6 @@
         updateVersionInfo();
     }
 
-    // ✅ ИСПРАВЛЕНИЕ #3: Переключение автоскана работает корректно
     function toggleAutoScan() {
         isAutoScanning = !isAutoScanning;
         if (dom.autoScanToggle) {
@@ -748,71 +736,71 @@
         enableDrag();
     }
 
-    // ✅ ИСПРАВЛЕНИЕ #1: Исправлено перетаскивание без рывков
+    // Полностью переработанное перетаскивание без рывков
     function enableDrag() {
-    const header = overlayEl.querySelector('.overlay-header');
-    let dragActive = false;
-    let startX, startY, startLeft, startTop;
+        const header = overlayEl.querySelector('.overlay-header');
+        let dragActive = false;
+        let startX, startY, startLeft, startTop;
 
-    const onPointerDown = (e) => {
-        if (e.target.closest('.overlay-btn')) return;
-        
-        e.preventDefault();
-        e.stopPropagation();
+        const onPointerDown = (e) => {
+            if (e.target.closest('.overlay-btn')) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
 
-        const rect = overlayEl.getBoundingClientRect();
-        startLeft = rect.left;
-        startTop = rect.top;
-        startX = e.clientX;
-        startY = e.clientY;
+            const rect = overlayEl.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            startX = e.clientX;
+            startY = e.clientY;
 
-        dragActive = true;
-        overlayEl.setPointerCapture(e.pointerId);
-        overlayEl.style.userSelect = 'none'; // запрещаем выделение
-    };
+            dragActive = true;
+            overlayEl.setPointerCapture(e.pointerId);
+            overlayEl.style.userSelect = 'none'; // запрещаем выделение
+        };
 
-    const onPointerMove = (e) => {
-        if (!dragActive) return;
-        
-        e.preventDefault();
-        e.stopPropagation();
+        const onPointerMove = (e) => {
+            if (!dragActive) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
 
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
 
-        let newLeft = startLeft + dx;
-        let newTop = startTop + dy;
+            let newLeft = startLeft + dx;
+            let newTop = startTop + dy;
 
-        // Ограничиваем видимой областью (опционально)
-        const winW = window.innerWidth;
-        const winH = window.innerHeight;
-        const elW = overlayEl.offsetWidth;
-        const elH = overlayEl.offsetHeight;
+            // Ограничиваем видимой областью (опционально)
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+            const elW = overlayEl.offsetWidth;
+            const elH = overlayEl.offsetHeight;
 
-        newLeft = Math.max(0, Math.min(newLeft, winW - elW));
-        newTop = Math.max(0, Math.min(newTop, winH - elH));
+            newLeft = Math.max(0, Math.min(newLeft, winW - elW));
+            newTop = Math.max(0, Math.min(newTop, winH - elH));
 
-        overlayEl.style.left = newLeft + 'px';
-        overlayEl.style.top = newTop + 'px';
-        overlayEl.style.right = 'auto'; // убираем right, чтобы left работал
-    };
+            overlayEl.style.left = newLeft + 'px';
+            overlayEl.style.top = newTop + 'px';
+            overlayEl.style.right = 'auto'; // убираем right, чтобы left работал
+        };
 
-    const onPointerUp = (e) => {
-        if (!dragActive) return;
-        
-        e.preventDefault();
-        e.stopPropagation();
+        const onPointerUp = (e) => {
+            if (!dragActive) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
 
-        dragActive = false;
-        overlayEl.releasePointerCapture(e.pointerId);
-        overlayEl.style.userSelect = '';
-    };
+            dragActive = false;
+            overlayEl.releasePointerCapture(e.pointerId);
+            overlayEl.style.userSelect = '';
+        };
 
-    header.addEventListener('pointerdown', onPointerDown);
-    header.addEventListener('pointermove', onPointerMove);
-    header.addEventListener('pointerup', onPointerUp);
-    header.addEventListener('pointercancel', onPointerUp);
-}
+        header.addEventListener('pointerdown', onPointerDown);
+        header.addEventListener('pointermove', onPointerMove);
+        header.addEventListener('pointerup', onPointerUp);
+        header.addEventListener('pointercancel', onPointerUp);
+    }
 
     function cleanup() {
         if (autoCheckTimer) clearInterval(autoCheckTimer);
