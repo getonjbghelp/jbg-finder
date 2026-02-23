@@ -1,32 +1,59 @@
-// database.js - База данных для Jackbox Games
-// Сохраните этот файл как database.js
-
 const GameDatabase = {
-    version: "DB18FEBEXP",
-    lastUpdated: "2026-02-18",
-    buildDate: new Date("2026-02-18"),
+    version: "DB23FEBEXP",
+    lastUpdated: "2026-02-23",
+    buildDate: new Date("2026-02-23"),
     
     gameConfig: {
         guesspy: {
-			name: 'Guesspionage (Нашшпионаж) - !No Audience and Final Round! (!Без Зрителей и Финального Раунда!)',
-			requiredIndicators: ['#pollposition-page', '.page-pollposition', '.pollposition-preload', '.pollposition-text.question-text', '.pollposition-submitpercentage', '.percent-display', '.pollposition-chooseupordown', 'table.table-striped.table-bordered'],
-			questionSelectors: ['.pollposition-text.question-text.pollposition-range-buffer'],
-			backgroundColor: '#2d5a27',
-			minConfidence: 2
-		},
+            name: 'Guesspionage (Нашшпионаж)',
+            requiredIndicators: [
+                '#pollposition-page', '.page-pollposition', '.pollposition-preload',
+                '.pollposition-player', '.pollposition-submitpercentage', '.percent-display',
+                '.pollposition-chooseupordown', 'table.table-striped', 'table.table-bordered',
+                '[data-game="guesspionage"]', '[class*="pollposition"]'
+            ],
+            questionSelectors: [
+                '.pollposition-text', '.survey-text', '.question-text',
+                '[class*="question"]', '[data-question]', 'h1', 'h2', 'h3'
+            ],
+            backgroundColor: '#2d5a27',
+            minConfidence: 3,
+            keywords: ['процент', 'percentage', 'poll', 'vote', 'guess']
+        },
         fibbage: {
-            name: 'Fibbage (Fibbage XL, Бредовуха XL)',
-            requiredIndicators: ['#fibbage-page', '#question-text', '#chooselie-text', '#fibbage-submitlie', '#round-text'],
-            questionSelectors: ['#question-text'],
+            name: 'Fibbage (Бредовуха)',
+            requiredIndicators: [
+                '#fibbage-page', '#question-text', '#chooselie-text',
+                '#fibbage-submitlie', '#round-text', '[data-game="fibbage"]',
+                '[class*="fibbage"]', '.lie-input', '.fibbage-answer'
+            ],
+            questionSelectors: [
+                '#question-text', '.question-text', '[class*="question"]',
+                '[data-question]', 'h1', 'h2', 'h3'
+            ],
             backgroundColor: '#5a4a2d',
-            minConfidence: 4
+            minConfidence: 4,
+            keywords: ['fibbage', 'lie', 'бредовуха', 'ответ']
         },
         fibbage2: {
             name: 'Fibbage 2 (Бредовуха 2)',
-            requiredIndicators: ['#bloop-fieldset', '#bloop31', '#bloop30', '#round-text', '#button-fieldset', '#fibbage-lie-input', '#fibbage-lie', '#question-text', '#fibbage-submitlie', '#fibbage-lieforme', '#player', '#fibbage-submit-alert', '#defib', '#fibbage-defib', '#like-text', '#like-checkbox', '#chooselikes-choice', '#round-main', '#fibbage-sameplayers', '#fibbage-newplayers', '#page-fibbage', '#fibbage-preload'],
-            questionSelectors: ['#question-text'],
+            requiredIndicators: [
+                '#bloop-fieldset', '#bloop31', '#bloop30', '#round-text',
+                '#button-fieldset', '#fibbage-lie-input', '#fibbage-lie',
+                '#question-text', '#fibbage-submitlie', '#fibbage-lieforme',
+                '#player', '#fibbage-submit-alert', '#defib', '#fibbage-defib',
+                '#like-text', '#like-checkbox', '#chooselikes-choice',
+                '#round-main', '#fibbage-sameplayers', '#fibbage-newplayers',
+                '#page-fibbage', '#fibbage-preload', '[data-game="fibbage2"]',
+                '[class*="fibbage2"]', '[class*="bloop"]'
+            ],
+            questionSelectors: [
+                '#question-text', '.question-text', '[class*="question"]',
+                '[data-question]', 'h1', 'h2', 'h3'
+            ],
             backgroundColor: '#5a2d4a',
-            minConfidence: 5
+            minConfidence: 5,
+            keywords: ['fibbage', 'бредовуха', 'lie', 'ответ']
         }
     },
 
@@ -2787,32 +2814,91 @@ const GameDatabase = {
     },
 
     detectGame: function() {
+        const pageContent = this.getPageContent();
+        
         for (const [gameId, config] of Object.entries(this.gameConfig)) {
             let confidence = 0;
             const foundIndicators = [];
             
+            // Поиск по DOM индикаторам
             for (const selector of config.requiredIndicators) {
-                const element = document.querySelector(selector);
-                if (element && element.innerText.trim().length > 0) {
-                    confidence++;
-                    foundIndicators.push(selector);
+                try {
+                    const elements = document.querySelectorAll(selector);
+                    for (const element of elements) {
+                        if (this.isElementVisible(element)) {
+                            confidence += 2;
+                            foundIndicators.push({ selector, type: 'dom' });
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    // Игнорируем неверные селекторы
                 }
             }
             
-            for (const selector of config.questionSelectors) {
-                const element = document.querySelector(selector);
-                if (element && element.innerText.trim().length > 20) {
-                    confidence++;
-                    foundIndicators.push(selector + ' (text)');
-                    break;
+            // Поиск по ключевым словам в контенте страницы
+            for (const keyword of config.keywords) {
+                if (pageContent.toLowerCase().includes(keyword.toLowerCase())) {
+                    confidence += 1;
+                    foundIndicators.push({ keyword, type: 'text' });
                 }
+            }
+            
+            // Поиск по заголовку страницы
+            const title = document.title.toLowerCase();
+            if (title.includes(gameId.toLowerCase()) || 
+                title.includes(config.name.toLowerCase())) {
+                confidence += 3;
+                foundIndicators.push({ source: 'title', type: 'metadata' });
+            }
+            
+            // Поиск по URL
+            const url = window.location.href.toLowerCase();
+            if (url.includes(gameId.toLowerCase())) {
+                confidence += 2;
+                foundIndicators.push({ source: 'url', type: 'metadata' });
+            }
+            
+            // Проверка вопроса
+            const question = this.extractQuestion(gameId);
+            if (question && question.length > 15) {
+                confidence += 2;
+                foundIndicators.push({ source: 'question', type: 'content' });
             }
             
             if (confidence >= config.minConfidence) {
-                return { gameId, confidence, foundIndicators, name: config.name };
+                return {
+                    gameId,
+                    confidence,
+                    foundIndicators,
+                    name: config.name,
+                    backgroundColor: config.backgroundColor
+                };
             }
         }
+        
         return null;
+    },
+
+    getPageContent: function() {
+        const elements = [
+            document.body,
+            ...document.querySelectorAll('h1, h2, h3, h4, h5, h6'),
+            ...document.querySelectorAll('[class*="question"], [class*="text"], [class*="content"]'),
+            ...document.querySelectorAll('[data-game], [data-question]')
+        ];
+        
+        return elements.map(el => el?.innerText || '').join(' ').toLowerCase();
+    },
+
+    isElementVisible: function(element) {
+        if (!element) return false;
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none' && 
+               style.visibility !== 'hidden' && 
+               style.opacity !== '0' &&
+               element.offsetWidth > 0 &&
+               element.offsetHeight > 0;
     },
 
     extractQuestion: function(gameId) {
@@ -2820,11 +2906,31 @@ const GameDatabase = {
         if (!config) return null;
 
         for (const selector of config.questionSelectors) {
-            const element = document.querySelector(selector);
-            if (element && element.innerText.trim().length > 15) {
-                return element.innerText.trim();
+            try {
+                const element = document.querySelector(selector);
+                if (element && this.isElementVisible(element)) {
+                    const text = element.innerText.trim();
+                    if (text.length > 15 && text.length < 500) {
+                        return text;
+                    }
+                }
+            } catch (e) {
+                // Игнорируем неверные селекторы
             }
         }
+        
+        // Резервный поиск по любым текстовым элементам
+        const potentialQuestions = document.querySelectorAll('p, div, span');
+        for (const el of potentialQuestions) {
+            if (this.isElementVisible(el)) {
+                const text = el.innerText.trim();
+                if (text.length > 30 && text.length < 500 && 
+                    (text.includes('?') || text.includes('_______') || text.includes('...'))) {
+                    return text;
+                }
+            }
+        }
+        
         return null;
     },
 
@@ -2832,21 +2938,40 @@ const GameDatabase = {
         const questions = this.questions[gameId];
         if (!questions || !question) return null;
 
-        const normalizedQuestion = question.toLowerCase().replace(/[^\w\sа-яё]/gi, '').replace(/\s+/g, ' ').trim();
+        const normalizedQuestion = this.normalizeText(question);
 
         for (const item of questions) {
-            const normalizedDB = item.question.toLowerCase().replace(/[^\w\sа-яё]/gi, '').replace(/\s+/g, ' ').trim();
+            const normalizedDB = this.normalizeText(item.question);
             
+            // Точное совпадение
             if (normalizedQuestion === normalizedDB) {
                 return { answer: item.answer, confidence: 100 };
             }
             
+            // Частичное совпадение (первые 50 символов)
             if (normalizedQuestion.includes(normalizedDB.substring(0, 50)) ||
                 normalizedDB.includes(normalizedQuestion.substring(0, 50))) {
                 return { answer: item.answer, confidence: 75 };
             }
+            
+            // Совпадение по ключевым словам
+            const questionWords = normalizedQuestion.split(' ').filter(w => w.length > 3);
+            const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
+            const matchCount = questionWords.filter(w => dbWords.includes(w)).length;
+            
+            if (matchCount >= Math.min(5, questionWords.length * 0.6)) {
+                return { answer: item.answer, confidence: 60 };
+            }
         }
+        
         return null;
+    },
+
+    normalizeText: function(text) {
+        return text.toLowerCase()
+            .replace(/[^\w\sа-яёa-z]/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
     },
 
     getVersionInfo: function() {
