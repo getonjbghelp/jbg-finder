@@ -30,8 +30,8 @@ const GameDatabase = {
                 '#question-text'
             ],
             backgroundColor: '#5a4a2d',
-            minConfidence: 4,
-            keywords: ['fibbage', 'lie', 'бредовуха', 'ответ']
+            minConfidence: 5,
+            keywords: ['question', 'lie', 'Andrey', 'answer']
         },
         fibbage2: {
             name: 'Fibbage 2 (Бредовуха 2)',
@@ -42,15 +42,15 @@ const GameDatabase = {
                 '#player', '#fibbage-submit-alert', '#defib', '#fibbage-defib',
                 '#like-text', '#like-checkbox', '#chooselikes-choice',
                 '#round-main', '#fibbage-sameplayers', '#fibbage-newplayers',
-                '#page-fibbage', '#fibbage-preload', '[data-game="fibbage2"]',
-                '[class*="fibbage2"]', '[class*="bloop"]'
+                '#page-fibbage', '#fibbage-preload', 'content-region',
+                'fibbage-enterlie-field', 'state-enterlie.fibbage-page'
             ],
             questionSelectors: [
                 '#question-text'
             ],
             backgroundColor: '#5a2d4a',
-            minConfidence: 5,
-            keywords: ['fibbage', 'бредовуха', 'lie', 'ответ']
+            minConfidence: 4,
+            keywords: ['взгляд', 'by', 'какой', 'ответ']
         }
     },
 
