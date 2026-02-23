@@ -5,7 +5,7 @@ const GameDatabase = {
     
     gameConfig: {
         guesspy: {
-            name: 'Guesspionage (Нашшпионаж)',
+            name: 'Guesspionage - Out Of Range ((Нашшпионаж - Вне Рамок)',
             requiredIndicators: [
                 '#pollposition-page', '.page-pollposition', '.pollposition-preload',
                 '.pollposition-player', '.pollposition-submitpercentage', '.percent-display',
