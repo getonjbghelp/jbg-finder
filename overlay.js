@@ -20,7 +20,7 @@
             copyBtn: '📋 Копировать',
             questionLabel: '📝 ВОПРОС',
             answerLabel: '💡 ОТВЕТ',
-            notDetected: 'Не определено',
+            notDetected: 'Игра не опеределена!',
             scanning: 'Сканирование...',
             gameDetected: 'Игра: ',
             answerFound: 'Ответ найден! (',
@@ -197,35 +197,20 @@
     if (!result || !result.gameId || !gameDatabase?.gameConfig?.[result.gameId]) {
         currentGame = null;
 
-        if (dom.statusDot) 
-            dom.statusDot.className = 'indicator-dot';
-
-        if (dom.gameName) 
-            dom.gameName.textContent = 'Игра не опеределена!';
-
-        if (dom.gameConfidence) 
-            dom.gameConfidence.textContent = '';
-
-        if (dom.watermark) 
-            dom.watermark.textContent = 'Игра не опеределена!';
-
+        if (dom.statusDot) dom.statusDot.className = 'indicator-dot';
+        if (dom.gameName) dom.gameName.textContent = getText('notDetected');
+        if (dom.gameConfidence) dom.gameConfidence.textContent = '';
+        if (dom.watermark) dom.watermark.textContent = getText('notDetected');
         return;
     }
 
     const config = gameDatabase.gameConfig[result.gameId];
     currentGame = result.gameId;
 
-    if (dom.statusDot) 
-        dom.statusDot.className = 'indicator-dot active';
-
-    if (dom.gameName) 
-        dom.gameName.textContent = config.name || 'Игра не опеределена!';
-
-    if (dom.gameConfidence) 
-        dom.gameConfidence.textContent = (result.confidence ?? 0) + ' needed matches';
-
-    if (dom.watermark) 
-        dom.watermark.textContent = (config.name || '').toUpperCase();
+    if (dom.statusDot) dom.statusDot.className = 'indicator-dot active';
+    if (dom.gameName) dom.gameName.textContent = config.name || getText('notDetected');
+    if (dom.gameConfidence) dom.gameConfidence.textContent = (result.confidence ?? 0) + ' needed matches';
+    if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
 }
 
     function displayQuestion(q) {
