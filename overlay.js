@@ -2,31 +2,17 @@
     const OVERLAY_ID = 'game-finder-overlay';
     const STYLE_ID = 'game-finder-overlay-style';
 
-    // === ЛОГГИРОВАНИЕ ===
+    // Logging
     const LOG_PREFIX = '[JBG-Finder]';
-    const LOG_ENABLED = true; // Можно отключить для продакшена
+    const LOG_ENABLED = true;
+    function log(...a){ if(LOG_ENABLED) console.log(LOG_PREFIX, ...a); }
+    function logError(...a){ if(LOG_ENABLED) console.error(LOG_PREFIX, ...a); }
+    function logWarn(...a){ if(LOG_ENABLED) console.warn(LOG_PREFIX, ...a); }
+    function logDebug(...a){ if(LOG_ENABLED) console.debug(LOG_PREFIX, ...a); }
 
-    function log(...args) {
-        if (LOG_ENABLED) console.log(LOG_PREFIX, ...args);
-    }
-    function logError(...args) {
-        if (LOG_ENABLED) console.error(LOG_PREFIX, ...args);
-    }
-    function logDebug(...args) {
-        if (LOG_ENABLED) console.debug(LOG_PREFIX, ...args);
-    }
-    function logWarn(...args) {
-        if (LOG_ENABLED) console.warn(LOG_PREFIX, ...args);
-    }
-
-    // Удаляем существующий оверлей
+    // Remove existing overlay
     const existing = document.getElementById(OVERLAY_ID);
-    if (existing) {
-        log('Removing existing overlay...');
-        existing.remove();
-    }
-
-    log('Initializing JBG-Finder overlay...');
+    if (existing) existing.remove();
 
     const CONFIG = {
         databaseURL: "https://getonjbghelp.github.io/jbg-finder/database.js",
@@ -59,8 +45,7 @@
             close: 'Закрыть',
             minimize: 'Свернуть',
             notEnoughSymbols: 'Вопрос слишком короткий',
-            indicators: 'индикаторов',
-            debugMode: 'Режим отладки: ВКЛ'
+            indicators: 'индикаторов'
         },
         en: {
             title: 'JBG-Finder BETA',
@@ -84,8 +69,7 @@
             close: 'Close',
             minimize: 'Minimize',
             notEnoughSymbols: 'Question too short',
-            indicators: 'indicators',
-            debugMode: 'Debug Mode: ON'
+            indicators: 'indicators'
         }
     };
 
@@ -96,85 +80,46 @@
     let overlayEl = null;
     let dbLoadAttempts = 0;
     let isDatabaseLoaded = false;
-
     const dom = {};
 
     function getText(key) {
         return (LANG[currentLang] && LANG[currentLang][key]) || (LANG.ru && LANG.ru[key]) || key;
     }
 
+    // --- Styles ---
     function ensureStyle() {
         if (document.getElementById(STYLE_ID)) return;
-        log('Creating overlay styles...');
         const style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = `
-            /* styles (kept same as before for familiarity) */
-            #${OVERLAY_ID} * { box-sizing: border-box !important; }
-            #${OVERLAY_ID} {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                width: 600px;
-                max-width: 95vw;
-                background: linear-gradient(145deg, #2b2b2b 0%, #1e1e1e 100%);
-                backdrop-filter: blur(15px);
-                border: 1px solid #3a3a3a;
-                border-radius: 8px;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-                z-index: 999999;
-                font-family: 'Segoe UI', sans-serif;
-                color: #e0e0e0;
-                overflow: hidden;
-                user-select: none;
-                transition: box-shadow 0.3s ease;
-            }
-            .overlay-header { display:flex; justify-content:space-between; align-items:center; height:45px; padding:0 10px; background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%); border-bottom: 1px solid #3a3a3a; cursor: move; }
-            .overlay-title { font-size:15px; font-weight:600; color:#fff; }
-            .db-info { font-size:11px; color:#808080; display:flex; gap:6px; align-items:center; }
-            .db-status { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:600; }
-            .db-status.loaded { background:#4ecdc4; color:#fff; }
-            .db-status.error { background:#ff6b6b; color:#fff; }
-            .overlay-controls { display:flex; height:100%; }
-            .overlay-btn { width:40px; height:40px; border:none; background:transparent; color:#c0c0c0; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all .2s ease; border-radius:4px; }
-            .overlay-btn:hover { background: rgba(255,255,255,0.08); color:#fff; }
-            .overlay-content { padding:16px; position:relative; z-index:10; }
-            .game-indicator { display:flex; align-items:center; gap:12px; margin-bottom:14px; padding:10px 12px; background: rgba(45,45,45,0.6); border:1px solid #3a3a3a; border-radius:6px; }
-            .indicator-dot { width:14px; height:14px; border-radius:50%; background:#505050; transition:all .3s ease; box-shadow:0 0 5px rgba(0,0,0,0.3); }
-            .indicator-dot.active { background:#4ecdc4; box-shadow: 0 0 12px #4ecdc4; animation:pulse 2s infinite; }
-            @keyframes pulse { 0%,100%{box-shadow:0 0 12px #4ecdc4} 50%{box-shadow:0 0 20px #4ecdc4} }
-            .question-box, .answer-box { margin-bottom:14px; padding:14px; background:rgba(35,35,35,0.75); border:1px solid #3a3a3a; border-radius:6px; transition:all .3s ease; }
-            .question-box { border-left:4px solid #4ecdc4; }
-            .answer-box { border-left:4px solid #505050; }
-            .answer-box.found { border-left-color:#4ecdc4; background: rgba(78,205,196,0.08); }
-            .answer-box.not-found { border-left-color:#ff6b6b; background: rgba(255,107,107,0.08); }
-            .question-header, .answer-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-            .question-text, .answer-text { font-size:14px; color:#d0d0d0; line-height:1.6; max-height:140px; overflow-y:auto; word-break:break-word; }
-            .answer-text { font-weight:600; color:#fff; font-size:15px; }
-            .action-buttons { display:flex; gap:10px; margin-bottom:14px; }
-            .action-btn { flex:1; padding:12px 14px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; transition:all .2s ease; }
-            .detect-btn { background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); color:#fff; }
-            .search-btn { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%); color:#fff; }
-            .copy-btn { background:#3a3a3a; color:#c0c0c0; border:1px solid #4a4a4a; }
-            .overlay-status { font-size:11px; color:#606060; text-align:center; padding-top:10px; border-top:1px solid #3a3a3a; font-family:Consolas, monospace; }
-            .overlay-minimized { height:45px; overflow:hidden; }
-            .overlay-minimized .overlay-content { display:none; }
-            .indicator-count { font-size:11px; color:#808080; margin-left:auto; }
-            .confidence-badge { background: rgba(78,205,196,0.2); color:#4ecdc4; padding:2px 8px; border-radius:10px; font-size:11px; }
-            .scrollbar-custom::-webkit-scrollbar { width:6px; } .scrollbar-custom::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius:3px; } .scrollbar-custom::-webkit-scrollbar-thumb { background:#4a4a4a; border-radius:3px; } .scrollbar-custom::-webkit-scrollbar-thumb:hover { background:#5a5a5a; }
+            /* compact styles kept from previous UI */
+            #${OVERLAY_ID}{position:fixed;top:20px;right:20px;width:600px;max-width:95vw;background:#1e1e1e;border:1px solid #3a3a3a;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.8);z-index:999999;color:#e0e0e0;font-family:Segoe UI, sans-serif}
+            .overlay-header{display:flex;justify-content:space-between;align-items:center;height:45px;padding:0 10px;background:#2a2a2a;border-bottom:1px solid #3a3a3a;cursor:move}
+            .overlay-title{font-size:15px;font-weight:600}
+            .overlay-content{padding:16px}
+            .question-box,.answer-box{margin-bottom:14px;padding:14px;background:rgba(35,35,35,.75);border-radius:6px;border:1px solid #3a3a3a}
+            .question-box{border-left:4px solid #4ecdc4}
+            .answer-box{border-left:4px solid #505050}
+            .answer-box.found{border-left-color:#4ecdc4;background:rgba(78,205,196,.06)}
+            .answer-box.not-found{border-left-color:#ff6b6b;background:rgba(255,107,107,.06)}
+            .question-text,.answer-text{font-size:14px;color:#d0d0d0;line-height:1.6;max-height:140px;overflow:auto;word-break:break-word}
+            .action-buttons{display:flex;gap:10px;margin-bottom:14px}
+            .action-btn{flex:1;padding:12px;border-radius:6px;border:none;cursor:pointer;font-weight:600}
+            .detect-btn{background:linear-gradient(135deg,#4ecdc4,#44a08d);color:#fff}
+            .search-btn{background:linear-gradient(135deg,#ff6b6b,#ee5a5a);color:#fff}
+            .copy-btn{background:#3a3a3a;color:#c0c0c0;border:1px solid #4a4a4a}
+            .overlay-status{font-size:11px;color:#606060;text-align:center;padding-top:10px;border-top:1px solid #3a3a3a;font-family:Consolas,monospace}
         `;
         document.head.appendChild(style);
-        log('Styles created successfully');
     }
 
+    // --- DOM cache ---
     function cacheDom() {
         if (!overlayEl) return;
-        log('Caching DOM elements...');
         dom.status = overlayEl.querySelector('#overlay-status');
         dom.detectBtn = overlayEl.querySelector('#detect-btn');
         dom.searchBtn = overlayEl.querySelector('#search-btn');
         dom.copyBtn = overlayEl.querySelector('#copy-btn');
-        dom.flagBtn = overlayEl.querySelector('#lang-flag-btn');
         dom.questionText = overlayEl.querySelector('#question-text');
         dom.questionLength = overlayEl.querySelector('#question-length');
         dom.answerText = overlayEl.querySelector('#answer-text');
@@ -182,65 +127,59 @@
         dom.answerConfidence = overlayEl.querySelector('#answer-confidence');
         dom.statusDot = overlayEl.querySelector('#status-dot');
         dom.gameName = overlayEl.querySelector('#game-name');
-        dom.gameConfidence = overlayEl.querySelector('#game-confidence');
-        dom.watermark = overlayEl.querySelector('#game-watermark');
         dom.dbVersion = overlayEl.querySelector('#db-version');
         dom.dbAge = overlayEl.querySelector('#db-age');
-        dom.indicatorCount = overlayEl.querySelector('#indicator-count');
         dom.dbStatus = overlayEl.querySelector('#db-status');
-        log('DOM elements cached:', Object.keys(dom));
     }
 
     function updateStatus(message, type) {
-        if (!dom.status) {
-            logWarn('Status element not found!');
-            return;
-        }
-        const colors = { info: '#606060', success: '#4ecdc4', warning: '#ffd93d', error: '#ff6b6b', searching: '#ffd93d' };
+        if (!dom.status) return;
+        const colors = { info:'#606060', success:'#4ecdc4', warning:'#ffd93d', error:'#ff6b6b', searching:'#ffd93d' };
         dom.status.textContent = message;
         dom.status.style.color = colors[type] || colors.info;
-        logDebug('Status updated:', message, type);
     }
 
     function updateDBStatus(loaded) {
         if (!dom.dbStatus) return;
         dom.dbStatus.textContent = loaded ? '✓' : '✗';
         dom.dbStatus.className = 'db-status ' + (loaded ? 'loaded' : 'error');
-        logDebug('DB status updated:', loaded);
     }
 
+    // --- Load database script ---
     async function loadDatabase() {
-        log('=== DATABASE LOAD STARTED ===');
-        log('Database URL:', CONFIG.databaseURL);
-        log('Attempt:', dbLoadAttempts + 1);
-
+        log('loadDatabase attempt', dbLoadAttempts + 1);
         if (window.GameDatabase) {
-            log('Database already loaded in window.GameDatabase');
             gameDatabase = window.GameDatabase;
+            isDatabaseLoaded = true;
             updateStatus(getText('dbLoaded'), 'success');
             updateDBStatus(true);
-            updateVersionInfo();
-            isDatabaseLoaded = true;
+            try { updateVersionInfo(); } catch (e) {}
             return true;
         }
-
         dbLoadAttempts++;
         return new Promise((resolve) => {
             const script = document.createElement('script');
             script.src = CONFIG.databaseURL + '?t=' + Date.now();
             script.async = true;
+            const timeout = setTimeout(() => {
+                logError('DB load timeout');
+                script.remove();
+                updateStatus(getText('dbError') + ' (Timeout)', 'error');
+                updateDBStatus(false);
+                resolve(false);
+            }, CONFIG.loadTimeout);
 
             script.onload = () => {
-                log('Script loaded successfully');
+                clearTimeout(timeout);
                 if (window.GameDatabase) {
                     gameDatabase = window.GameDatabase;
+                    isDatabaseLoaded = true;
                     updateStatus(getText('dbLoaded'), 'success');
                     updateDBStatus(true);
-                    updateVersionInfo();
-                    isDatabaseLoaded = true;
+                    try { updateVersionInfo(); } catch (e) {}
                     resolve(true);
                 } else {
-                    logError('✗ GameDatabase NOT found after script load');
+                    logError('GameDatabase not found after load');
                     updateStatus(getText('dbError') + ' (DB not initialized)', 'error');
                     updateDBStatus(false);
                     if (dbLoadAttempts < CONFIG.retryAttempts) {
@@ -248,37 +187,21 @@
                     } else resolve(false);
                 }
             };
-
             script.onerror = (e) => {
-                logError('✗ Script load error:', e);
-                updateStatus(getText('dbError') + ' (Network error)', 'error');
+                clearTimeout(timeout);
+                logError('DB script error', e);
+                updateStatus(getText('dbError') + ' (Network)', 'error');
                 updateDBStatus(false);
                 if (dbLoadAttempts < CONFIG.retryAttempts) {
                     setTimeout(() => loadDatabase().then(resolve), 1000);
                 } else resolve(false);
             };
-
-            const timeout = setTimeout(() => {
-                logError('✗ Database load timeout after', CONFIG.loadTimeout, 'ms');
-                script.remove();
-                updateStatus(getText('dbError') + ' (Timeout)', 'error');
-                updateDBStatus(false);
-                resolve(false);
-            }, CONFIG.loadTimeout);
-
-            script.addEventListener('load', () => clearTimeout(timeout));
-            script.addEventListener('error', () => clearTimeout(timeout));
-
             document.head.appendChild(script);
-            log('Script tag appended to document head');
         });
     }
 
     function updateVersionInfo() {
-        if (!gameDatabase || typeof gameDatabase.getVersionInfo !== 'function') {
-            logWarn('getVersionInfo not available');
-            return;
-        }
+        if (!gameDatabase || typeof gameDatabase.getVersionInfo !== 'function') return;
         try {
             const info = gameDatabase.getVersionInfo() || {};
             if (dom.dbVersion) dom.dbVersion.textContent = info.version || 'v?';
@@ -288,289 +211,17 @@
                 dom.dbAge.style.color = info.isOutdated ? '#ff6b6b' : '#4ecdc4';
             }
         } catch (e) {
-            logError('Error updating version info:', e);
+            logError('updateVersionInfo error', e);
         }
     }
 
-    function updateIndicator(result) {
-        log('=== UPDATE INDICATOR ===');
-        log('Result:', result);
-
-        if (!result || !result.gameId || !gameDatabase?.gameConfig?.[result.gameId]) {
-            currentGame = null;
-            if (dom.statusDot) dom.statusDot.className = 'indicator-dot';
-            if (dom.gameName) dom.gameName.textContent = getText('notDetected');
-            if (dom.gameConfidence) dom.gameConfidence.textContent = '';
-            if (dom.watermark) dom.watermark.textContent = getText('notDetected').toUpperCase();
-            if (dom.indicatorCount) dom.indicatorCount.textContent = '';
-            return;
-        }
-
-        const config = gameDatabase.gameConfig[result.gameId];
-        currentGame = result.gameId;
-
-        if (dom.statusDot) dom.statusDot.className = 'indicator-dot active';
-        if (dom.gameName) dom.gameName.textContent = config.name || getText('notDetected');
-        if (dom.gameConfidence) dom.gameConfidence.innerHTML = `<span class="confidence-badge">${getText('confidence')} ${result.confidence}</span>`;
-        if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
-        if (dom.indicatorCount && result.foundIndicators) dom.indicatorCount.textContent = `${result.foundIndicators.length} ${getText('indicators')}`;
-
-        if (config.backgroundColor && overlayEl) overlayEl.style.boxShadow = `0 10px 40px ${config.backgroundColor}40`;
-    }
-
-    // Локальная безопасная нормализация (используется только если DB не предоставляет свою)
+    // Safe local normalization (display only)
     function safeNormalize(text) {
         if (!text || typeof text !== 'string') return '';
-        return text
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase()
-            .replace(/[^a-z0-9\u0400-\u04FF\s]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9\u0400-\u04FF\s]/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
-    // findCleanQuestion — пытается сопоставить извлечённый вопрос с базой без галлюцинаций
-    function findCleanQuestion(rawText) {
-        log('=== FIND CLEAN QUESTION ===');
-        if (!gameDatabase || !currentGame || !rawText || rawText.length < CONFIG.minQuestionLength) {
-            logWarn('Cannot find clean question - invalid input');
-            return null;
-        }
-
-        const questions = gameDatabase.questions?.[currentGame];
-        if (!questions) {
-            logError('No questions found for game:', currentGame);
-            return null;
-        }
-
-        // язык
-        const questionLang = /[\u0400-\u04FF]/.test(rawText) ? 'ru' : 'en';
-
-        // build list of candidates based on DB structure
-        let questionItems = [];
-        if (Array.isArray(questions)) {
-            questionItems = questions.filter(item => {
-                if (!item?.question) return false;
-                return questionLang === 'ru' ? /[\u0400-\u04FF]/.test(item.question) : !/[\u0400-\u04FF]/.test(item.question);
-            });
-            if (!questionItems.length) questionItems = questions.slice();
-        } else {
-            if (questions[questionLang]) questionItems = questions[questionLang].slice();
-            else questionItems = [...(questions.ru || []), ...(questions.en || [])];
-        }
-
-        const normalize = (gameDatabase && typeof gameDatabase.normalizeText === 'function')
-            ? (t => (gameDatabase.normalizeText(t) || '').toString())
-            : safeNormalize;
-
-        const normalizedRaw = normalize(rawText);
-        logDebug('Normalized raw (preview):', normalizedRaw.substring(0, 120));
-
-        for (const item of questionItems) {
-            if (!item?.question) continue;
-            const normalizedDB = normalize(item.question);
-
-            // 1) точное совпадение
-            if (normalizedRaw === normalizedDB) {
-                log('Exact match');
-                return item.question;
-            }
-
-            // 2) подстроковое включение (только когда одна строка содержит другую целиком)
-            if (normalizedRaw.includes(normalizedDB) || normalizedDB.includes(normalizedRaw)) {
-                log('Substring match');
-                return item.question;
-            }
-
-            // 3) сравнение по словам с осторожностью (чтобы отключить шаблонные совпадения)
-            const rawWords = normalizedRaw.split(' ').filter(w => w.length > 3);
-            const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
-            if (!rawWords.length || !dbWords.length) continue;
-
-            const matchCount = rawWords.filter(w => dbWords.includes(w)).length;
-            const rawThreshold = Math.ceil(rawWords.length * 0.8);
-            const dbThreshold = Math.ceil(dbWords.length * 0.8);
-
-            // проверяем последний значимый слово — чтобы не путать "…есть уксус" и "…есть матрёшки"
-            const lastRaw = rawWords[rawWords.length - 1] || null;
-            const lastDb = dbWords[dbWords.length - 1] || null;
-
-            if (
-                matchCount >= 5 &&
-                (matchCount >= rawThreshold || matchCount >= dbThreshold) &&
-                lastRaw && lastDb && lastRaw === lastDb
-            ) {
-                log('Word-match with last-word check');
-                return item.question;
-            }
-        }
-
-        logWarn('No matching question found');
-        return null;
-    }
-
-    function displayQuestion(q) {
-        log('=== DISPLAY QUESTION ===');
-        if (!dom.questionText || !dom.questionLength || !dom.searchBtn) {
-            logError('Question DOM elements not found!');
-            return;
-        }
-
-        if (!q) {
-            dom.questionText.textContent = currentLang === 'ru'
-                ? 'Нажмите на "Найти вопрос и игру" когда у вас на экране УЖЕ ЕСТЬ вопрос. В других случаях это вызовет нестабильную работу...'
-                : 'Click on "Detect Game and Question" when you ALREADY have a question on the screen. In other cases it will cause unstable work...';
-            dom.questionLength.textContent = '0' + getText('symbols');
-            dom.searchBtn.disabled = true;
-            return;
-        }
-
-        const text = q.length > 200 ? q.slice(0, 200) + '...' : q;
-        dom.questionText.textContent = text;
-        dom.questionLength.textContent = q.length + getText('symbols');
-        dom.searchBtn.disabled = q.length < CONFIG.minQuestionLength;
-    }
-
-    function detectGame() {
-        log('=== DETECT GAME CLICKED ===');
-        if (!gameDatabase || typeof gameDatabase.detectGame !== 'function') {
-            logError('Database or detectGame function not available!');
-            updateStatus(getText('dbError'), 'error');
-            return null;
-        }
-
-        updateStatus(getText('scanning'), 'searching');
-
-        try {
-            const result = gameDatabase.detectGame();
-            logDebug('detectGame result:', result);
-            updateIndicator(result);
-
-            if (result && result.gameId) {
-                const gameName = gameDatabase.gameConfig?.[result.gameId]?.name || getText('notDetected');
-                updateStatus(`${getText('gameDetected')} ${gameName}`, 'success');
-
-                // извлекаем сырой вопрос через DB (extractQuestion должен быть в DB)
-                setTimeout(() => {
-                    try {
-                        const rawQuestion = (typeof gameDatabase.extractQuestion === 'function')
-                            ? gameDatabase.extractQuestion(result.gameId)
-                            : null;
-                        logDebug('Raw question (preview):', rawQuestion ? rawQuestion.substring(0, 120) : null);
-
-                        if (rawQuestion && rawQuestion.length >= CONFIG.minQuestionLength) {
-                            const clean = findCleanQuestion(rawQuestion);
-                            currentQuestion = clean || rawQuestion;
-                            displayQuestion(currentQuestion);
-                        } else {
-                            currentQuestion = '';
-                            displayQuestion(null);
-                        }
-                    } catch (e) {
-                        logError('Error extracting question:', e);
-                        currentQuestion = '';
-                        displayQuestion(null);
-                    }
-                }, 250);
-            } else {
-                updateStatus(getText('notDetected'), 'warning');
-                currentQuestion = '';
-                displayQuestion(null);
-            }
-
-            return result;
-        } catch (e) {
-            logError('Error in detectGame:', e);
-            updateStatus(getText('dbError') + ': ' + (e.message || e), 'error');
-            return null;
-        }
-    }
-
-    function searchAnswer() {
-        log('=== SEARCH ANSWER CLICKED ===');
-        if (!gameDatabase || !currentGame || !currentQuestion) {
-            logError('Cannot search - missing dependencies');
-            updateStatus(getText('detectFirst'), 'warning');
-            return;
-        }
-        if (typeof gameDatabase.findAnswer !== 'function') {
-            logError('GameDatabase.findAnswer is not a function');
-            updateStatus(getText('dbError'), 'error');
-            return;
-        }
-
-        updateStatus(getText('scanning'), 'searching');
-
-        try {
-            const result = gameDatabase.findAnswer(currentQuestion, currentGame);
-            logDebug('findAnswer result:', result);
-
-            displayQuestion(currentQuestion);
-
-            if (result?.answer) {
-                dom.answerText.textContent = result.answer;
-                dom.answerBox.classList.remove('not-found');
-                dom.answerBox.classList.add('found');
-                dom.answerConfidence.textContent = (result.confidence ?? 0) + '%';
-                dom.copyBtn.disabled = false;
-                updateStatus(`${getText('answerFound')} ${(result.confidence ?? 0)}%)`, 'success');
-            } else {
-                dom.answerText.textContent = getText('answerNotFound');
-                dom.answerBox.classList.remove('found');
-                dom.answerBox.classList.add('not-found');
-                dom.answerConfidence.textContent = '';
-                dom.copyBtn.disabled = true;
-                updateStatus(getText('answerNotFound'), 'error');
-            }
-        } catch (e) {
-            logError('Error in searchAnswer:', e);
-            updateStatus(getText('dbError') + ': ' + (e.message || e), 'error');
-        }
-    }
-
-    // -----------------------------
-    // UI: update text, draggable, createOverlay
-    // -----------------------------
-    function updateUItext() {
-        if (!overlayEl) return;
-        try {
-            if (dom.detectBtn) dom.detectBtn.textContent = getText('detectBtn');
-            if (dom.searchBtn) dom.searchBtn.textContent = getText('searchBtn');
-            if (dom.copyBtn) dom.copyBtn.textContent = getText('copyBtn');
-            const titleEl = overlayEl.querySelector('.overlay-title');
-            if (titleEl) titleEl.textContent = getText('title');
-        } catch (e) {
-            logError('updateUItext error', e);
-        }
-    }
-
-    function makeDraggable(headerEl, rootEl) {
-        if (!headerEl || !rootEl) return;
-        let isDown = false;
-        let startX = 0, startY = 0, origX = 0, origY = 0;
-        headerEl.addEventListener('mousedown', (ev) => {
-            isDown = true;
-            startX = ev.clientX; startY = ev.clientY;
-            const rect = rootEl.getBoundingClientRect();
-            origX = rect.left; origY = rect.top;
-            document.body.style.userSelect = 'none';
-        });
-        window.addEventListener('mousemove', (ev) => {
-            if (!isDown) return;
-            const dx = ev.clientX - startX, dy = ev.clientY - startY;
-            rootEl.style.left = (origX + dx) + 'px';
-            rootEl.style.top = (origY + dy) + 'px';
-            rootEl.style.right = 'auto'; rootEl.style.bottom = 'auto';
-            rootEl.style.position = 'fixed';
-        });
-        window.addEventListener('mouseup', () => {
-            if (!isDown) return;
-            isDown = false;
-            document.body.style.userSelect = '';
-        });
-    }
-
+    // createOverlay (UI only)
     function createOverlay() {
         if (overlayEl) return;
         ensureStyle();
@@ -579,37 +230,28 @@
         overlayEl.id = OVERLAY_ID;
         overlayEl.innerHTML = `
             <div class="overlay-header">
-                <div class="header-left">
-                    <div class="overlay-title">${getText('title')}</div>
-                    <div class="db-info">
-                        <div id="db-version">v?</div>
-                        <div id="db-age">?</div>
-                        <div id="db-status" class="db-status">✗</div>
-                    </div>
-                </div>
-                <div class="overlay-controls">
-                    <button id="lang-flag-btn" class="overlay-btn flag-btn" title="Toggle language">🌐</button>
-                    <button id="minimize-btn" class="overlay-btn" title="${getText('minimize')}">—</button>
-                    <button id="close-btn" class="overlay-btn" title="${getText('close')}">×</button>
+                <div class="overlay-title">${getText('title')}</div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div id="db-version" style="font-size:12px">v?</div>
+                    <div id="db-age" style="font-size:12px">?</div>
+                    <div id="db-status" class="db-status">✗</div>
                 </div>
             </div>
-
             <div class="overlay-content">
-                <div class="game-indicator">
-                    <div id="status-dot" class="indicator-dot"></div>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                    <div id="status-dot" style="width:12px;height:12px;border-radius:50%;background:#505050"></div>
                     <div style="flex:1">
                         <div id="game-name">${getText('notDetected')}</div>
                         <div id="game-confidence" style="font-size:11px;color:#888"></div>
                     </div>
-                    <div id="indicator-count" class="indicator-count"></div>
                 </div>
 
                 <div class="question-box">
-                    <div class="question-header">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                         <div style="font-weight:700">${getText('questionLabel')}</div>
                         <div id="question-length" style="font-size:12px;color:#888">0 ${getText('symbols')}</div>
                     </div>
-                    <div id="question-text" class="question-text scrollbar-custom">${getText('notDetected')}</div>
+                    <div id="question-text" class="question-text">${getText('notDetected')}</div>
                 </div>
 
                 <div class="action-buttons">
@@ -619,7 +261,7 @@
                 </div>
 
                 <div id="answer-box" class="answer-box">
-                    <div class="answer-header">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                         <div style="font-weight:700">${getText('answerLabel')}</div>
                         <div id="answer-confidence" style="font-size:12px;color:#888"></div>
                     </div>
@@ -630,13 +272,11 @@
             </div>
         `;
         document.body.appendChild(overlayEl);
-
         cacheDom();
-        updateUItext();
 
+        // init buttons
         if (dom.searchBtn) dom.searchBtn.disabled = true;
         if (dom.copyBtn) dom.copyBtn.disabled = true;
-        if (dom.dbStatus) dom.dbStatus.className = 'db-status error';
 
         if (dom.detectBtn) {
             dom.detectBtn.addEventListener('click', async () => {
@@ -653,72 +293,195 @@
         if (dom.searchBtn) {
             dom.searchBtn.addEventListener('click', () => {
                 dom.searchBtn.disabled = true;
-                try { searchAnswer(); } finally { setTimeout(() => { dom.searchBtn.disabled = false; }, 250); }
+                try { searchAnswer(); }
+                finally { setTimeout(()=> { dom.searchBtn.disabled = false; }, 250); }
             });
         }
 
         if (dom.copyBtn) {
             dom.copyBtn.addEventListener('click', () => {
                 try {
-                    const text = (dom.answerText && dom.answerText.textContent) ? dom.answerText.textContent : '';
+                    const text = dom.answerText ? dom.answerText.textContent : '';
                     if (!text) return;
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(text).then(() => updateStatus(getText('copySuccess'), 'success')).catch(() => updateStatus(getText('copySuccess'), 'success'));
+                    if (navigator.clipboard?.writeText) {
+                        navigator.clipboard.writeText(text).then(()=> updateStatus(getText('copySuccess'), 'success')).catch(()=> {});
                     } else {
                         const ta = document.createElement('textarea');
                         ta.value = text; document.body.appendChild(ta); ta.select();
-                        document.execCommand('copy'); ta.remove();
-                        updateStatus(getText('copySuccess'), 'success');
+                        document.execCommand('copy'); ta.remove(); updateStatus(getText('copySuccess'), 'success');
                     }
-                } catch (e) { logError('Copy failed', e); }
+                } catch (e) { logError('copy failed', e); }
             });
         }
 
-        const langBtn = overlayEl.querySelector('#lang-flag-btn');
-        if (langBtn) {
-            langBtn.addEventListener('click', () => {
-                currentLang = currentLang === 'ru' ? 'en' : 'ru';
-                updateUItext();
-                updateStatus(currentLang === 'ru' ? 'RU' : 'EN', 'info');
+        // simple draggable
+        (function makeDraggable(){
+            const header = overlayEl.querySelector('.overlay-header');
+            if (!header) return;
+            let dragging=false, sx=0, sy=0, ox=0, oy=0;
+            header.addEventListener('mousedown', (e)=> {
+                dragging=true; sx=e.clientX; sy=e.clientY;
+                const r = overlayEl.getBoundingClientRect(); ox=r.left; oy=r.top;
+                document.body.style.userSelect='none';
             });
-        }
+            window.addEventListener('mousemove', (e)=> {
+                if (!dragging) return;
+                const dx=e.clientX-sx, dy=e.clientY-sy;
+                overlayEl.style.left=(ox+dx)+'px'; overlayEl.style.top=(oy+dy)+'px';
+                overlayEl.style.position='fixed'; overlayEl.style.right='auto';
+            });
+            window.addEventListener('mouseup', ()=> { dragging=false; document.body.style.userSelect=''; });
+        })();
 
-        const minBtn = overlayEl.querySelector('#minimize-btn');
-        const closeBtn = overlayEl.querySelector('#close-btn');
-        if (minBtn) minBtn.addEventListener('click', () => overlayEl.classList.toggle('overlay-minimized'));
-        if (closeBtn) closeBtn.addEventListener('click', () => { overlayEl.remove(); overlayEl = null; });
-
-        const headerEl = overlayEl.querySelector('.overlay-header');
-        makeDraggable(headerEl, overlayEl);
-
-        log('Overlay created and initialized');
     }
 
-    // === ИНИЦИАЛИЗАЦИЯ ОВЕРЛЕЯ И ЗАГРУЗКА БД ===
+    // detectGame: calls DB.detectGame and extractQuestion (DB responsibility)
+    function detectGame() {
+        if (!isDatabaseLoaded || !gameDatabase || typeof gameDatabase.detectGame !== 'function') {
+            updateStatus(getText('dbError'), 'error');
+            return null;
+        }
+
+        updateStatus(getText('scanning'), 'searching');
+
+        try {
+            const res = gameDatabase.detectGame();
+            logDebug('detectGame ->', res);
+            if (res && res.gameId && gameDatabase.gameConfig?.[res.gameId]) {
+                // update UI indicator
+                updateIndicator(res);
+
+                // extract question via DB API (DB should implement extractQuestion)
+                setTimeout(()=> {
+                    try {
+                        let rawQ = null;
+                        if (typeof gameDatabase.extractQuestion === 'function') rawQ = gameDatabase.extractQuestion(res.gameId);
+                        if (rawQ && typeof rawQ === 'string' && rawQ.length >= CONFIG.minQuestionLength) {
+                            currentQuestion = rawQ.trim();
+                            displayQuestion(currentQuestion);
+                            dom.searchBtn.disabled = false;
+                        } else {
+                            currentQuestion = '';
+                            displayQuestion(null);
+                            dom.searchBtn.disabled = true;
+                        }
+                    } catch (e) {
+                        logError('extractQuestion error', e);
+                        currentQuestion = '';
+                        displayQuestion(null);
+                        dom.searchBtn.disabled = true;
+                    }
+                }, 200);
+            } else {
+                updateStatus(getText('notDetected'), 'warning');
+                currentGame = null;
+                currentQuestion = '';
+                displayQuestion(null);
+                dom.searchBtn.disabled = true;
+            }
+            // set currentGame
+            currentGame = res?.gameId || null;
+            return res;
+        } catch (e) {
+            logError('detectGame error', e);
+            updateStatus(getText('dbError') + ': ' + (e.message || e), 'error');
+            return null;
+        }
+    }
+
+    function updateIndicator(result) {
+        if (!result || !result.gameId || !gameDatabase?.gameConfig?.[result.gameId]) {
+            if (dom.statusDot) dom.statusDot.style.background = '#505050';
+            if (dom.gameName) dom.gameName.textContent = getText('notDetected');
+            return;
+        }
+        const cfg = gameDatabase.gameConfig[result.gameId];
+        if (dom.statusDot) dom.statusDot.style.background = '#4ecdc4';
+        if (dom.gameName) dom.gameName.textContent = cfg.name || result.gameId;
+    }
+
+    function displayQuestion(q) {
+        if (!dom.questionText || !dom.questionLength) return;
+        if (!q) {
+            dom.questionText.textContent = getText('notDetected');
+            dom.questionLength.textContent = '0 ' + getText('symbols');
+            return;
+        }
+        const trimmed = q.trim();
+        dom.questionText.textContent = trimmed.length > 300 ? trimmed.slice(0,300) + '...' : trimmed;
+        dom.questionLength.textContent = trimmed.length + getText('symbols');
+    }
+
+    // searchAnswer: purely calls DB.findAnswer
+    function searchAnswer() {
+        if (!isDatabaseLoaded || !gameDatabase) {
+            updateStatus(getText('dbError'), 'error');
+            return;
+        }
+        if (!currentGame || !currentQuestion) {
+            updateStatus(getText('detectFirst'), 'warning');
+            return;
+        }
+        if (typeof gameDatabase.findAnswer !== 'function') {
+            updateStatus(getText('dbError'), 'error');
+            logError('GameDatabase.findAnswer is missing');
+            return;
+        }
+
+        updateStatus(getText('scanning'), 'searching');
+
+        try {
+            const res = gameDatabase.findAnswer(currentQuestion, currentGame);
+            logDebug('DB.findAnswer ->', res);
+            if (res && res.answer) {
+                dom.answerText.textContent = res.answer;
+                dom.answerBox.classList.remove('not-found');
+                dom.answerBox.classList.add('found');
+                if (dom.answerConfidence) dom.answerConfidence.textContent = (res.confidence ?? 0) + '%';
+                if (dom.copyBtn) dom.copyBtn.disabled = false;
+                updateStatus(getText('answerFound') + (res.confidence ?? 0) + '%)', 'success');
+            } else {
+                dom.answerText.textContent = getText('answerNotFound');
+                dom.answerBox.classList.remove('found');
+                dom.answerBox.classList.add('not-found');
+                if (dom.answerConfidence) dom.answerConfidence.textContent = '';
+                if (dom.copyBtn) dom.copyBtn.disabled = true;
+                updateStatus(getText('answerNotFound'), 'error');
+            }
+        } catch (e) {
+            logError('searchAnswer error', e);
+            updateStatus(getText('dbError') + ': ' + (e.message || e), 'error');
+        }
+    }
+
+    // init
     async function init() {
-        log('=== INIT STARTED ===');
+        log('Initializing overlay...');
         createOverlay();
         updateStatus(getText('loadingDB'), 'info');
 
         const loaded = await loadDatabase();
-        log('Database load result:', loaded);
-
         if (loaded) {
-            // НЕ переопределяем методы базы — используем их, если они есть.
+            isDatabaseLoaded = true;
             updateStatus(getText('notDetected'), 'info');
-            log('Initialization complete (DB loaded)');
+            updateDBStatus(true);
+            updateVersionInfo();
+            log('DB loaded and ready');
         } else {
-            logError('Initialization failed - database not loaded');
+            isDatabaseLoaded = false;
+            updateDBStatus(false);
+            updateStatus(getText('dbError'), 'error');
+            logError('Database failed to load');
         }
-
-        log('=== INIT COMPLETE ===');
     }
 
+    // start
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
 
-    log('Overlay script loaded successfully');
+    // expose nothing global
+    log('Overlay loaded');
 })();
