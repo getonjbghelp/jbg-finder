@@ -16,8 +16,7 @@ const GameDatabase = {
                 'pollposition-text.question-text.pollposition-range-buffer'
             ],
             backgroundColor: '#2d5a27',
-            minConfidence: 3,
-            keywords: ['процент', 'percentage', 'poll', 'vote', 'guess']
+            minConfidence: 3
         },
         fibbage12collab: {
             name: 'Fibbage 1-2 (Бредовуха 1-2)',
@@ -38,8 +37,7 @@ const GameDatabase = {
                 '#question-text'
             ],
             backgroundColor: '#5a4a2d',
-            minConfidence: 5,
-            keywords: ['question', 'lie', 'Andrey', 'answer']
+            minConfidence: 5
         },
 		fibbage3: {
             name: 'Fibbage 3 (Бредовуха 3)',
@@ -50,11 +48,10 @@ const GameDatabase = {
 				'EnterText.scrollable', 'broadcaster', 'debug-region'
             ],
             questionSelectors: [
-                '#text'
+                'text'
             ],
             backgroundColor: '#5a4a2d',
-            minConfidence: 4,
-            keywords: ['Отправить', 'Send']
+            minConfidence: 4
         } 
     },
 
@@ -3543,13 +3540,6 @@ const GameDatabase = {
                 }
             }
             
-            // Поиск по ключевым словам в контенте страницы
-            for (const keyword of config.keywords) {
-                if (pageContent.toLowerCase().includes(keyword.toLowerCase())) {
-                    confidence += 1;
-                    foundIndicators.push({ keyword, type: 'text' });
-                }
-            }
             
             // Поиск по заголовку страницы
             const title = document.title.toLowerCase();
