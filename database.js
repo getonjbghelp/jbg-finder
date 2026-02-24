@@ -54,8 +54,7 @@ const GameDatabase = {
             backgroundColor: '#5a4a2d',
             minConfidence: 4,
             keywords: ['Отправить', 'Send']
-        }
-        
+        } 
     },
 
     questions: {
