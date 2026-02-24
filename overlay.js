@@ -21,7 +21,7 @@ log('Initializing JBG-Finder overlay...');
 const CONFIG = {
     databaseURL: "https://getonjbghelp.github.io/jbg-finder/database.js",
     minQuestionLength: 15,
-    defaultLang: 'ru',
+    defaultLang: 'en',
     loadTimeout: 10000,
     retryAttempts: 3
 };
@@ -103,7 +103,7 @@ function getText(key) {
     return (LANG[currentLang] && LANG[currentLang][key]) || (LANG.ru && LANG.ru[key]) || key;
 }
 
-// === 🎨 НОВЫЕ СТИЛИ - MODERN GLASSMORPHISM ===
+// === 🎨 УЛУЧШЕННЫЙ GLASSMORPHISM С БОЛЬШИМ ВОЗДУХОМ ===
 function ensureStyle() {
     if (document.getElementById(STYLE_ID)) return;
     log('Creating overlay styles...');
@@ -117,161 +117,215 @@ function ensureStyle() {
             padding: 0; 
         }
         
-        /* === MAIN CONTAINER === */
+        /* === MAIN CONTAINER - ENHANCED GLASS === */
         #${OVERLAY_ID} {
             position: fixed;
-            top: 24px;
-            right: 24px;
-            width: 420px;
+            top: 32px;
+            right: 32px;
+            width: 480px;
             max-width: 95vw;
-            background: linear-gradient(135deg, 
-                rgba(30, 30, 35, 0.95) 0%, 
-                rgba(20, 20, 25, 0.98) 50%,
-                rgba(15, 15, 20, 0.95) 100%);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
+            
+            /* Многослойный glassmorphism фон */
+            background: 
+                linear-gradient(
+                    135deg, 
+                    rgba(35, 35, 42, 0.92) 0%, 
+                    rgba(25, 25, 32, 0.95) 50%,
+                    rgba(18, 18, 25, 0.92) 100%
+                );
+            
+            /* Размытие фона за оверлеем */
+            backdrop-filter: blur(24px) saturate(200%) brightness(1.1);
+            -webkit-backdrop-filter: blur(24px) saturate(200%) brightness(1.1);
+            
+            /* Тонкие границы для глубины */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+            
+            /* Многослойные тени для объёма */
             box-shadow: 
-                0 25px 80px rgba(0, 0, 0, 0.6),
+                /* Внешнее свечение */
+                0 40px 120px rgba(0, 0, 0, 0.7),
                 0 0 0 1px rgba(255, 255, 255, 0.05) inset,
-                0 0 120px rgba(78, 205, 196, 0.1);
+                /* Цветное свечение */
+                0 0 200px rgba(78, 205, 196, 0.12),
+                /* Верхний блик */
+                0 -1px 0 rgba(255, 255, 255, 0.1) inset;
+            
             z-index: 999999;
-            font-family: 'SF Pro Display', 'Inter', 'Segoe UI', system-ui, sans-serif;
+            font-family: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             color: #e8e8e8;
             overflow: hidden;
             user-select: none;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: overlaySlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: overlaySlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 20px;
         }
         
         @keyframes overlaySlideIn {
             from { 
                 opacity: 0; 
-                transform: translateY(-20px) scale(0.95); 
+                transform: translateY(-30px) scale(0.92); 
+                filter: blur(10px);
             }
             to { 
                 opacity: 1; 
                 transform: translateY(0) scale(1); 
+                filter: blur(0);
             }
         }
         
         #${OVERLAY_ID}:hover {
             box-shadow: 
-                0 30px 100px rgba(0, 0, 0, 0.7),
-                0 0 0 1px rgba(255, 255, 255, 0.1) inset,
-                0 0 150px rgba(78, 205, 196, 0.15);
+                0 50px 150px rgba(0, 0, 0, 0.75),
+                0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+                0 0 250px rgba(78, 205, 196, 0.18),
+                0 -1px 0 rgba(255, 255, 255, 0.12) inset;
+            border-color: rgba(255, 255, 255, 0.14);
         }
         
-        /* === HEADER === */
+        /* === HEADER - УВЕЛИЧЕННЫЕ ОТСТУПЫ === */
         .overlay-header { 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            height: 56px; 
-            padding: 0 16px; 
+            height: 68px; 
+            padding: 0 24px; 
             background: linear-gradient(180deg, 
-                rgba(255, 255, 255, 0.03) 0%, 
+                rgba(255, 255, 255, 0.05) 0%, 
+                rgba(255, 255, 255, 0.02) 50%,
                 transparent 100%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             cursor: move; 
             position: relative;
         }
         
+        /* Декоративная линия сверху */
         .overlay-header::before {
             content: '';
             position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
+            left: 24px;
+            right: 24px;
             height: 1px;
             background: linear-gradient(90deg, 
                 transparent 0%, 
-                rgba(78, 205, 196, 0.5) 50%, 
+                rgba(78, 205, 196, 0.6) 20%,
+                rgba(78, 205, 196, 0.8) 50%,
+                rgba(78, 205, 196, 0.6) 80%,
                 transparent 100%);
+            opacity: 0.8;
         }
         
         .header-left {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
         }
         
+        /* === ЗАГОЛОВОК С ГРАДИЕНТОМ === */
         .overlay-title { 
-            font-size: 16px; 
+            font-size: 18px; 
             font-weight: 700; 
             color: #ffffff;
-            letter-spacing: -0.3px;
-            background: linear-gradient(135deg, #fff 0%, #a8a8a8 100%);
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, 
+                #ffffff 0%, 
+                #d0d0d0 50%,
+                #a0a0a0 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
         }
         
+        /* === БЛОК ИНФОРМАЦИИ О БАЗЕ === */
         .db-info { 
             display: flex; 
-            gap: 8px; 
+            gap: 10px; 
             align-items: center;
-            padding: 4px 10px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 6px 14px;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.04) 0%, 
+                rgba(255, 255, 255, 0.02) 100%);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 
+                0 2px 10px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
         
         #db-version, #db-age {
-            font-size: 10px; 
-            color: #6a6a6a;
+            font-size: 11px; 
+            color: #7a7a7a;
             font-weight: 500;
+            letter-spacing: 0.3px;
         }
         
         .db-status { 
-            font-size: 9px; 
-            padding: 3px 7px; 
-            border-radius: 10px; 
+            font-size: 10px; 
+            padding: 4px 10px; 
+            border-radius: 12px; 
             font-weight: 700;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
+            letter-spacing: 0.8px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
         }
         
         .db-status.loaded { 
             background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); 
             color: #fff;
-            box-shadow: 0 0 20px rgba(78, 205, 196, 0.4);
+            box-shadow: 
+                0 0 25px rgba(78, 205, 196, 0.5),
+                0 4px 15px rgba(78, 205, 196, 0.3);
         }
         
         .db-status.error { 
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%); 
             color: #fff;
-            box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
+            box-shadow: 
+                0 0 25px rgba(255, 107, 107, 0.5),
+                0 4px 15px rgba(255, 107, 107, 0.3);
         }
         
-        /* === CONTROLS === */
+        /* === КНОПКИ УПРАВЛЕНИЯ === */
         .overlay-controls { 
             display: flex; 
-            gap: 4px;
+            gap: 8px;
         }
         
         .overlay-btn { 
-            width: 36px; 
-            height: 36px; 
+            width: 42px; 
+            height: 42px; 
             border: none; 
-            background: rgba(255, 255, 255, 0.03);
-            color: #8a8a8a; 
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.05) 0%, 
+                rgba(255, 255, 255, 0.03) 100%);
+            color: #9a9a9a; 
             cursor: pointer; 
-            font-size: 16px; 
+            font-size: 18px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 10px;
-            border: 1px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 
+                0 2px 8px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
         
         .overlay-btn:hover { 
-            background: rgba(255, 255, 255, 0.08); 
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.12) 0%, 
+                rgba(255, 255, 255, 0.08) 100%);
             color: #fff;
-            border-color: rgba(255, 255, 255, 0.1);
-            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 20px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
         
         .overlay-btn:active {
@@ -279,36 +333,46 @@ function ensureStyle() {
         }
         
         #lang-flag-btn:hover {
-            background: linear-gradient(135deg, rgba(78, 205, 196, 0.2) 0%, rgba(68, 160, 141, 0.2) 100%);
+            background: linear-gradient(135deg, 
+                rgba(78, 205, 196, 0.25) 0%, 
+                rgba(68, 160, 141, 0.2) 100%);
             color: #4ecdc4;
+            border-color: rgba(78, 205, 196, 0.4);
         }
         
         #close-btn:hover {
-            background: linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(238, 90, 90, 0.2) 100%);
+            background: linear-gradient(135deg, 
+                rgba(255, 107, 107, 0.25) 0%, 
+                rgba(238, 90, 90, 0.2) 100%);
             color: #ff6b6b;
+            border-color: rgba(255, 107, 107, 0.4);
         }
         
-        /* === CONTENT === */
+        /* === CONTENT - УВЕЛИЧЕННЫЕ ОТСТУПЫ === */
         .overlay-content { 
-            padding: 20px; 
+            padding: 28px 24px 24px 24px; 
             position: relative; 
         }
         
-        /* === GAME INDICATOR === */
+        /* === GAME INDICATOR - БОЛЬШЕ ВОЗДУХА === */
         .game-indicator { 
             display: flex; 
             align-items: center; 
-            gap: 14px; 
-            margin-bottom: 18px; 
-            padding: 16px 18px; 
+            gap: 18px; 
+            margin-bottom: 24px; 
+            padding: 20px 22px; 
             background: linear-gradient(135deg, 
-                rgba(78, 205, 196, 0.08) 0%, 
-                rgba(68, 160, 141, 0.05) 100%);
-            border: 1px solid rgba(78, 205, 196, 0.15);
-            border-radius: 14px;
+                rgba(78, 205, 196, 0.1) 0%, 
+                rgba(68, 160, 141, 0.06) 50%,
+                rgba(50, 120, 100, 0.04) 100%);
+            border: 1px solid rgba(78, 205, 196, 0.2);
+            border-radius: 16px;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
+            box-shadow: 
+                0 4px 20px rgba(78, 205, 196, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
         
         .game-indicator::before {
@@ -318,122 +382,168 @@ function ensureStyle() {
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(78, 205, 196, 0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(78, 205, 196, 0.12) 0%, transparent 70%);
             opacity: 0;
-            transition: opacity 0.4s ease;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
         }
         
         .game-indicator:hover::before {
             opacity: 1;
         }
         
+        .game-indicator:hover {
+            border-color: rgba(78, 205, 196, 0.35);
+            box-shadow: 
+                0 8px 30px rgba(78, 205, 196, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            transform: translateY(-1px);
+        }
+        
         .indicator-dot { 
-            width: 12px; 
-            height: 12px; 
+            width: 14px; 
+            height: 14px; 
             border-radius: 50%; 
-            background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+            background: linear-gradient(135deg, #404040 0%, #2a2a2a 100%);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             z-index: 1;
+            box-shadow: 
+                0 2px 8px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
         
         .indicator-dot.active { 
             background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
             box-shadow: 
-                0 0 20px rgba(78, 205, 196, 0.6),
-                0 0 40px rgba(78, 205, 196, 0.3);
-            animation: pulse 2s ease-in-out infinite; 
+                0 0 25px rgba(78, 205, 196, 0.7),
+                0 0 50px rgba(78, 205, 196, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            animation: pulse 2.5s ease-in-out infinite; 
         }
         
         @keyframes pulse { 
             0%, 100% { 
                 transform: scale(1);
-                box-shadow: 0 0 20px rgba(78, 205, 196, 0.6), 0 0 40px rgba(78, 205, 196, 0.3);
+                box-shadow: 
+                    0 0 25px rgba(78, 205, 196, 0.7),
+                    0 0 50px rgba(78, 205, 196, 0.4),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.3);
             } 
             50% { 
-                transform: scale(1.1);
-                box-shadow: 0 0 30px rgba(78, 205, 196, 0.8), 0 0 60px rgba(78, 205, 196, 0.4);
+                transform: scale(1.15);
+                box-shadow: 
+                    0 0 35px rgba(78, 205, 196, 0.9),
+                    0 0 70px rgba(78, 205, 196, 0.5),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.4);
             } 
         }
         
         #game-name {
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             color: #fff;
-            letter-spacing: -0.2px;
+            letter-spacing: -0.3px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
         
         #game-confidence {
-            font-size: 11px;
-            color: #6a6a6a;
-            margin-top: 2px;
+            font-size: 12px;
+            color: #7a7a7a;
+            margin-top: 3px;
+            font-weight: 500;
         }
         
         .indicator-count { 
-            font-size: 10px; 
-            color: #5a5a5a; 
+            font-size: 11px; 
+            color: #6a6a6a; 
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
         }
         
         .confidence-badge { 
-            background: linear-gradient(135deg, rgba(78, 205, 196, 0.15) 0%, rgba(68, 160, 141, 0.1) 100%);
+            background: linear-gradient(135deg, 
+                rgba(78, 205, 196, 0.2) 0%, 
+                rgba(68, 160, 141, 0.15) 100%);
             color: #4ecdc4; 
-            padding: 3px 10px; 
-            border-radius: 20px; 
-            font-size: 10px;
+            padding: 4px 12px; 
+            border-radius: 24px; 
+            font-size: 11px;
             font-weight: 600;
-            letter-spacing: 0.3px;
-            border: 1px solid rgba(78, 205, 196, 0.2);
+            letter-spacing: 0.4px;
+            border: 1px solid rgba(78, 205, 196, 0.25);
+            box-shadow: 
+                0 2px 10px rgba(78, 205, 196, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
         
-        /* === QUESTION & ANSWER BOXES === */
+        /* === QUESTION & ANSWER BOXES - БОЛЬШЕ ПРОСТРАНСТВА === */
         .question-box, .answer-box { 
-            margin-bottom: 16px; 
-            padding: 18px; 
-            background: rgba(255, 255, 255, 0.02); 
-            border: 1px solid rgba(255, 255, 255, 0.06); 
-            border-radius: 14px; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 20px; 
+            padding: 22px 20px; 
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.03) 0%, 
+                rgba(255, 255, 255, 0.015) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 16px; 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            box-shadow: 
+                0 4px 20px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
         
         .question-box { 
-            border-left: 3px solid transparent;
+            border-left: 4px solid transparent;
             border-image: linear-gradient(180deg, #4ecdc4 0%, #44a08d 100%) 1;
+            background: linear-gradient(135deg, 
+                rgba(78, 205, 196, 0.05) 0%, 
+                rgba(255, 255, 255, 0.02) 100%);
         }
         
         .question-box:hover {
-            background: rgba(255, 255, 255, 0.04);
-            border-color: rgba(78, 205, 196, 0.2);
+            background: linear-gradient(135deg, 
+                rgba(78, 205, 196, 0.08) 0%, 
+                rgba(255, 255, 255, 0.04) 100%);
+            border-color: rgba(78, 205, 196, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 
+                0 8px 30px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
         
         .answer-box { 
-            border-left: 3px solid rgba(80, 80, 80, 0.5);
+            border-left: 4px solid rgba(90, 90, 90, 0.5);
         }
         
         .answer-box.found { 
             border-left-color: #4ecdc4;
             background: linear-gradient(135deg, 
-                rgba(78, 205, 196, 0.08) 0%, 
-                rgba(68, 160, 141, 0.04) 100%);
-            border-color: rgba(78, 205, 196, 0.3);
+                rgba(78, 205, 196, 0.1) 0%, 
+                rgba(68, 160, 141, 0.06) 100%);
+            border-color: rgba(78, 205, 196, 0.4);
             animation: answerFound 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                0 8px 30px rgba(78, 205, 196, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
         
         .answer-box.not-found { 
             border-left-color: #ff6b6b;
             background: linear-gradient(135deg, 
-                rgba(255, 107, 107, 0.08) 0%, 
-                rgba(238, 90, 90, 0.04) 100%);
-            border-color: rgba(255, 107, 107, 0.3);
+                rgba(255, 107, 107, 0.1) 0%, 
+                rgba(238, 90, 90, 0.06) 100%);
+            border-color: rgba(255, 107, 107, 0.4);
+            box-shadow: 
+                0 8px 30px rgba(255, 107, 107, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
         
         @keyframes answerFound {
             from { 
-                transform: scale(0.98);
-                opacity: 0.8;
+                transform: scale(0.97);
+                opacity: 0.7;
             }
             to { 
                 transform: scale(1);
@@ -441,70 +551,80 @@ function ensureStyle() {
             }
         }
         
+        /* === HEADERS С БОЛЬШИМИ ОТСТУПАМИ === */
         .question-header, .answer-header { 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            margin-bottom: 12px; 
+            margin-bottom: 16px; 
         }
         
         .question-header div[style*="font-weight:700"],
         .answer-header div[style*="font-weight:700"] {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 700 !important;
-            color: #6a6a6a;
+            color: #7a7a7a;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.2px;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
         }
         
         #question-length, #answer-confidence {
-            font-size: 10px;
-            color: #4a4a4a;
+            font-size: 11px;
+            color: #5a5a5a;
             font-weight: 600;
+            letter-spacing: 0.3px;
         }
         
+        /* === ТЕКСТОВЫЕ ПОЛЯ === */
         .question-text, .answer-text { 
-            font-size: 13px; 
-            color: #c8c8c8; 
-            line-height: 1.7; 
-            max-height: 120px; 
+            font-size: 14px; 
+            color: #d0d0d0; 
+            line-height: 1.8; 
+            max-height: 140px; 
             overflow-y: auto; 
             word-break: break-word;
             font-weight: 400;
+            padding-right: 4px;
         }
         
         .answer-text { 
             font-weight: 600; 
             color: #ffffff; 
-            font-size: 14px;
+            font-size: 15px;
             letter-spacing: -0.2px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
         
-        /* === ACTION BUTTONS === */
+        /* === ACTION BUTTONS - СЕТКА С ОТСТУПАМИ === */
         .action-buttons { 
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px; 
-            margin-bottom: 16px; 
+            gap: 14px; 
+            margin-bottom: 20px; 
         }
         
         .action-btn { 
-            padding: 14px 18px; 
+            padding: 16px 20px; 
             border: none; 
-            border-radius: 12px; 
+            border-radius: 14px; 
             cursor: pointer; 
-            font-size: 13px; 
+            font-size: 14px; 
             font-weight: 600; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            gap: 8px; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 10px; 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-            letter-spacing: -0.2px;
+            letter-spacing: -0.3px;
+            box-shadow: 
+                0 4px 15px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
         
+        /* Shine эффект */
         .action-btn::before {
             content: '';
             position: absolute;
@@ -512,8 +632,11 @@ function ensureStyle() {
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-            transition: left 0.5s ease;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.15) 50%, 
+                transparent 100%);
+            transition: left 0.6s ease;
         }
         
         .action-btn:hover::before {
@@ -523,33 +646,42 @@ function ensureStyle() {
         .detect-btn { 
             background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); 
             color: #fff;
-            box-shadow: 0 4px 20px rgba(78, 205, 196, 0.3);
+            box-shadow: 
+                0 6px 25px rgba(78, 205, 196, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
         
         .detect-btn:hover { 
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(78, 205, 196, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 
+                0 12px 40px rgba(78, 205, 196, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25);
         }
         
         .detect-btn:active {
-            transform: translateY(0);
+            transform: translateY(-1px);
         }
         
         .detect-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
         
         .search-btn { 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
             color: #fff;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 
+                0 6px 25px rgba(102, 126, 234, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
         
         .search-btn:hover { 
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 
+                0 12px 40px rgba(102, 126, 234, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25);
         }
         
         .search-btn:disabled {
@@ -561,44 +693,58 @@ function ensureStyle() {
         
         .copy-btn { 
             grid-column: span 2;
-            background: rgba(255, 255, 255, 0.05); 
-            color: #8a8a8a; 
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.08) 0%, 
+                rgba(255, 255, 255, 0.05) 100%);
+            color: #9a9a9a; 
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 
+                0 4px 15px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
         
         .copy-btn:hover { 
-            background: rgba(255, 255, 255, 0.08);
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.12) 0%, 
+                rgba(255, 255, 255, 0.08) 100%);
             color: #fff;
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12);
         }
         
         .copy-btn:disabled {
             opacity: 0.4;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
         
-        /* === STATUS BAR === */
+        /* === STATUS BAR - ОТДЕЛЁННЫЙ БЛОК === */
         .overlay-status { 
-            font-size: 10px; 
-            color: #4a4a4a; 
+            font-size: 11px; 
+            color: #5a5a5a; 
             text-align: center; 
-            padding: 14px 16px; 
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 18px 20px; 
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
             font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
             font-weight: 500;
-            letter-spacing: 0.5px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 0 0 16px 16px;
-            margin: -20px -20px -20px -20px;
-            padding-top: 16px;
-            margin-top: 16px;
+            letter-spacing: 0.6px;
+            background: linear-gradient(180deg, 
+                rgba(0, 0, 0, 0.3) 0%, 
+                rgba(0, 0, 0, 0.4) 100%);
+            border-radius: 0 0 20px 20px;
+            margin: -24px -24px -24px -24px;
+            padding-top: 20px;
+            margin-top: 20px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
         
         /* === MINIMIZED STATE === */
         .overlay-minimized { 
-            height: 56px; 
+            height: 68px; 
             overflow: hidden; 
         }
         
@@ -607,47 +753,60 @@ function ensureStyle() {
         }
         
         .overlay-minimized {
-            border-radius: 28px;
+            border-radius: 34px;
         }
         
-        /* === SCROLLBAR === */
+        /* === SCROLLBAR - ДЕТАЛИЗИРОВАННЫЙ === */
         .scrollbar-custom::-webkit-scrollbar { 
-            width: 4px; 
+            width: 6px; 
         }
         
         .scrollbar-custom::-webkit-scrollbar-track { 
-            background: rgba(0, 0, 0, 0.1); 
-            border-radius: 2px; 
+            background: rgba(0, 0, 0, 0.15); 
+            border-radius: 3px; 
+            margin: 4px;
         }
         
         .scrollbar-custom::-webkit-scrollbar-thumb { 
             background: linear-gradient(180deg, #4ecdc4 0%, #44a08d 100%); 
-            border-radius: 2px; 
+            border-radius: 3px; 
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .scrollbar-custom::-webkit-scrollbar-thumb:hover { 
             background: linear-gradient(180deg, #5fded5 0%, #55b09d 100%);
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
         }
         
         /* === WATERMARK === */
         #game-watermark {
             position: absolute;
-            bottom: 60px;
-            right: 20px;
-            font-size: 80px;
+            bottom: 80px;
+            right: 24px;
+            font-size: 90px;
             font-weight: 900;
-            color: rgba(255, 255, 255, 0.02);
+            color: rgba(255, 255, 255, 0.025);
             pointer-events: none;
-            letter-spacing: 5px;
+            letter-spacing: 8px;
             z-index: 1;
+            text-transform: uppercase;
+            text-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
         }
         
         /* === RESPONSIVE === */
-        @media (max-width: 480px) {
+        @media (max-width: 540px) {
             #${OVERLAY_ID} {
-                width: calc(100vw - 32px);
-                right: 16px;
-                top: 16px;
+                width: calc(100vw - 40px);
+                right: 20px;
+                top: 20px;
+            }
+            
+            .overlay-header {
+                padding: 0 18px;
+            }
+            
+            .overlay-content {
+                padding: 22px 18px 18px 18px;
             }
             
             .action-buttons {
@@ -663,9 +822,21 @@ function ensureStyle() {
         @media (prefers-color-scheme: dark) {
             #${OVERLAY_ID} {
                 background: linear-gradient(135deg, 
-                    rgba(25, 25, 30, 0.98) 0%, 
-                    rgba(15, 15, 20, 0.99) 100%);
+                    rgba(30, 30, 38, 0.95) 0%, 
+                    rgba(20, 20, 28, 0.97) 50%,
+                    rgba(15, 15, 22, 0.95) 100%);
             }
+        }
+        
+        /* === FOCUS STATES === */
+        .action-btn:focus-visible {
+            outline: 2px solid rgba(78, 205, 196, 0.5);
+            outline-offset: 2px;
+        }
+        
+        .overlay-btn:focus-visible {
+            outline: 2px solid rgba(78, 205, 196, 0.5);
+            outline-offset: 2px;
         }
     `;
     document.head.appendChild(style);
@@ -699,7 +870,6 @@ function cacheDom() {
     log('DOM elements cached:', Object.keys(dom));
 }
 
-// === ОБНОВЛЕНИЕ СТАТУСА ===
 function updateStatus(messageKey, type) {
     if (!dom.status) {
         logWarn('Status element not found!');
@@ -708,7 +878,7 @@ function updateStatus(messageKey, type) {
     const message = LANG[currentLang][messageKey] ? getText(messageKey) : messageKey;
     
     const colors = { 
-        info: '#4a4a4a', 
+        info: '#5a5a5a', 
         success: '#4ecdc4', 
         warning: '#ffd93d', 
         error: '#ff6b6b', 
@@ -835,7 +1005,7 @@ function updateIndicator(result) {
     if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
     if (dom.indicatorCount && result.foundIndicators) dom.indicatorCount.textContent = `${result.foundIndicators.length} ${getText('indicators')}`;
 
-    if (config.backgroundColor && overlayEl) overlayEl.style.boxShadow = `0 25px 80px ${config.backgroundColor}40, 0 0 0 1px rgba(255, 255, 255, 0.05) inset, 0 0 120px ${config.backgroundColor}20`;
+    if (config.backgroundColor && overlayEl) overlayEl.style.boxShadow = `0 40px 120px ${config.backgroundColor}50, 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 0 200px ${config.backgroundColor}25, 0 -1px 0 rgba(255, 255, 255, 0.1) inset`;
 }
 
 function displayQuestion(q) {
@@ -955,7 +1125,6 @@ function searchAnswer() {
     }
 }
 
-// === ПОЛНОЕ ОБНОВЛЕНИЕ ТЕКСТА ИНТЕРФЕЙСА ===
 function updateAllText() {
     if (!overlayEl) return;
     try {
@@ -1020,7 +1189,6 @@ function updateAllText() {
     }
 }
 
-// === ПЕРЕТАСКИВАНИЕ (БЕЗ ИЗМЕНЕНИЙ) ===
 function makeDraggable(headerEl, rootEl) {
     if (!headerEl || !rootEl) return;
     let isDown = false;
@@ -1047,7 +1215,6 @@ function makeDraggable(headerEl, rootEl) {
     });
 }
 
-// === СОЗДАНИЕ ОВЕРЛЕЯ ===
 function createOverlay() {
     if (overlayEl) return;
     ensureStyle();
@@ -1076,7 +1243,7 @@ function createOverlay() {
                 <div id="status-dot" class="indicator-dot"></div>
                 <div style="flex:1">
                     <div id="game-name">${getText('notDetected')}</div>
-                    <div id="game-confidence" style="font-size:11px;color:#6a6a6a;margin-top:2px"></div>
+                    <div id="game-confidence" style="font-size:12px;color:#7a7a7a;margin-top:3px"></div>
                 </div>
                 <div id="indicator-count" class="indicator-count"></div>
             </div>
@@ -1084,7 +1251,7 @@ function createOverlay() {
             <div class="question-box">
                 <div class="question-header">
                     <div style="font-weight:700">${getText('questionLabel')}</div>
-                    <div id="question-length" style="font-size:10px;color:#4a4a4a;font-weight:600">0 ${getText('symbols')}</div>
+                    <div id="question-length" style="font-size:11px;color:#5a5a5a;font-weight:600">0 ${getText('symbols')}</div>
                 </div>
                 <div id="question-text" class="question-text scrollbar-custom">${getText('placeholderQuestion')}</div>
             </div>
@@ -1098,7 +1265,7 @@ function createOverlay() {
             <div id="answer-box" class="answer-box">
                 <div class="answer-header">
                     <div style="font-weight:700">${getText('answerLabel')}</div>
-                    <div id="answer-confidence" style="font-size:10px;color:#4a4a4a;font-weight:600"></div>
+                    <div id="answer-confidence" style="font-size:11px;color:#5a5a5a;font-weight:600"></div>
                 </div>
                 <div id="answer-text" class="answer-text">${getText('placeholderAnswer')}</div>
             </div>
