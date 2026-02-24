@@ -3548,23 +3548,28 @@ const GameDatabase = {
     },
 
     detectGame: function() {
+        console.log('[GameDatabase] detectGame called');
+        console.log('[GameDatabase] gameConfig keys:', Object.keys(this.gameConfig));
+        
         const results = [];
         
         for (const [gameId, config] of Object.entries(this.gameConfig)) {
+            console.log('[GameDatabase] Checking game:', gameId);
             let confidence = 0;
             const foundIndicators = [];
             let uniqueCount = 0;
             
-            // Поиск по DOM индикаторам с весами
             for (const indicator of config.requiredIndicators) {
                 try {
                     const elements = document.querySelectorAll(indicator.selector);
+                    console.log('[GameDatabase] Selector:', indicator.selector, 'Found:', elements.length);
+                    
                     for (const element of elements) {
                         if (this.isElementVisible(element)) {
                             confidence += indicator.weight;
                             if (indicator.unique) {
                                 uniqueCount++;
-                                confidence += 3; // Бонус за уникальные индикаторы
+                                confidence += 3;
                             }
                             foundIndicators.push({ 
                                 selector: indicator.selector, 
@@ -3575,37 +3580,35 @@ const GameDatabase = {
                             break;
                         }
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.error('[GameDatabase] Error checking selector:', indicator.selector, e);
+                }
             }
             
-            // Поиск по заголовку страницы
             const title = document.title.toLowerCase();
-            if (title.includes(gameId.toLowerCase()) || 
-                title.includes(config.name.toLowerCase())) {
+            if (title.includes(gameId.toLowerCase()) || title.includes(config.name.toLowerCase())) {
                 confidence += 5;
                 foundIndicators.push({ source: 'title', type: 'metadata', weight: 5 });
             }
             
-            // Поиск по URL
             const url = window.location.href.toLowerCase();
             if (url.includes(gameId.toLowerCase())) {
                 confidence += 4;
                 foundIndicators.push({ source: 'url', type: 'metadata', weight: 4 });
             }
             
-            // Проверка вопроса
             const question = this.extractQuestion(gameId);
             if (question && question.length > 15) {
                 confidence += 3;
                 foundIndicators.push({ source: 'question', type: 'content', weight: 3 });
             }
             
-            // Бонус за количество уникальных индикаторов
             if (uniqueCount >= 2) {
                 confidence += 5;
             }
             
-            // Добавляем результат если превышен порог
+            console.log('[GameDatabase]', gameId, '- Confidence:', confidence, 'Unique:', uniqueCount);
+            
             if (confidence >= config.minConfidence) {
                 results.push({
                     gameId,
@@ -3618,19 +3621,18 @@ const GameDatabase = {
             }
         }
         
-        // Возвращаем игру с НАИБОЛЬШЕЙ уверенностью
         if (results.length > 0) {
             results.sort((a, b) => {
-                // Сначала по уникальным индикаторам
                 if (b.uniqueCount !== a.uniqueCount) {
                     return b.uniqueCount - a.uniqueCount;
                 }
-                // Потом по общей уверенности
                 return b.confidence - a.confidence;
             });
+            console.log('[GameDatabase] Best match:', results[0].gameId, 'Confidence:', results[0].confidence);
             return results[0];
         }
         
+        console.log('[GameDatabase] No game detected');
         return null;
     },
 
@@ -3733,3 +3735,4 @@ const GameDatabase = {
     }
 };
 window.GameDatabase = GameDatabase;
+console.log('[GameDatabase] Database initialized and attached to window');
