@@ -5,7 +5,7 @@ const GameDatabase = {
     
     gameConfig: {
         guesspy: {
-            name: 'Guesspionage - Unstable ((Нашшпионаж - Нестабильно)',
+            name: 'Guesspionage - Unstable (Нашшпионаж - Нестабильно)',
             requiredIndicators: [
                 '#pollposition-page', '.page-pollposition', '.pollposition-preload',
                 '.pollposition-player', '.pollposition-submitpercentage', '.percent-display',
@@ -17,6 +17,20 @@ const GameDatabase = {
             ],
             backgroundColor: '#2d5a27',
             minConfidence: 3
+        },
+		fibbage3: {
+            name: 'Fibbage 3 (Бредовуха 3)',
+            requiredIndicators: [
+                'Logo.Standard', 'playericon', 'choicesRegion', 
+				'button.choice-button.btn.btn-lg', 'text', 'enter-text-textarea',
+				'btn.btn-block.submitButton', 'btn.btn-block.lieForMe', 'delimiter',
+				'EnterText.scrollable', 'broadcaster', 'debug-region'
+            ],
+            questionSelectors: [
+                'text'
+            ],
+            backgroundColor: '#5a4a2d',
+            minConfidence: 6
         },
         fibbage12collab: {
             name: 'Fibbage 1-2 (Бредовуха 1-2)',
@@ -37,22 +51,8 @@ const GameDatabase = {
                 '#question-text'
             ],
             backgroundColor: '#5a4a2d',
-            minConfidence: 5
-        },
-		fibbage3: {
-            name: 'Fibbage 3 (Бредовуха 3)',
-            requiredIndicators: [
-                'Logo.Standard', 'playericon', 'choicesRegion', 
-				'button.choice-button.btn.btn-lg', 'text', 'enter-text-textarea',
-				'btn.btn-block.submitButton', 'btn.btn-block.lieForMe', 'delimiter',
-				'EnterText.scrollable', 'broadcaster', 'debug-region'
-            ],
-            questionSelectors: [
-                'text'
-            ],
-            backgroundColor: '#5a4a2d',
-            minConfidence: 4
-        } 
+            minConfidence: 7
+        }
     },
 
     questions: {
@@ -3518,64 +3518,74 @@ const GameDatabase = {
     },
 
     detectGame: function() {
-        const pageContent = this.getPageContent();
+    const pageContent = this.getPageContent();
+    const results = [];  // <-- СОБИРАЕМ ВСЕ РЕЗУЛЬТАТЫ
+    
+    for (const [gameId, config] of Object.entries(this.gameConfig)) {
+        let confidence = 0;
+        const foundIndicators = [];
         
-        for (const [gameId, config] of Object.entries(this.gameConfig)) {
-            let confidence = 0;
-            const foundIndicators = [];
-            
-            // Поиск по DOM индикаторам
-            for (const selector of config.requiredIndicators) {
-                try {
-                    const elements = document.querySelectorAll(selector);
-                    for (const element of elements) {
-                        if (this.isElementVisible(element)) {
+        // Поиск по DOM индикаторам
+        for (const selector of config.requiredIndicators) {
+            try {
+                const elements = document.querySelectorAll(selector);
+                for (const element of elements) {
+                    if (this.isElementVisible(element)) {
+                        // Увеличиваем вес для уникальных индикаторов
+                        if (selector.includes('fibbage3') || selector.includes('Fibbage3') || 
+                            selector.includes('Logo.Standard') || selector.includes('EnterText.scrollable')) {
+                            confidence += 3;  // <-- +3 для уникальных индикаторов Fibbage 3
+                        } else {
                             confidence += 2;
-                            foundIndicators.push({ selector, type: 'dom' });
-                            break;
                         }
+                        foundIndicators.push({ selector, type: 'dom' });
+                        break;
                     }
-                } catch (e) {
-                    // Игнорируем неверные селекторы
                 }
-            }
-            
-            
-            // Поиск по заголовку страницы
-            const title = document.title.toLowerCase();
-            if (title.includes(gameId.toLowerCase()) || 
-                title.includes(config.name.toLowerCase())) {
-                confidence += 3;
-                foundIndicators.push({ source: 'title', type: 'metadata' });
-            }
-            
-            // Поиск по URL
-            const url = window.location.href.toLowerCase();
-            if (url.includes(gameId.toLowerCase())) {
-                confidence += 2;
-                foundIndicators.push({ source: 'url', type: 'metadata' });
-            }
-            
-            // Проверка вопроса
-            const question = this.extractQuestion(gameId);
-            if (question && question.length > 15) {
-                confidence += 2;
-                foundIndicators.push({ source: 'question', type: 'content' });
-            }
-            
-            if (confidence >= config.minConfidence) {
-                return {
-                    gameId,
-                    confidence,
-                    foundIndicators,
-                    name: config.name,
-                    backgroundColor: config.backgroundColor
-                };
-            }
+            } catch (e) {}
         }
         
-        return null;
-    },
+        // Поиск по заголовку страницы
+        const title = document.title.toLowerCase();
+        if (title.includes(gameId.toLowerCase()) || title.includes(config.name.toLowerCase())) {
+            confidence += 3;
+            foundIndicators.push({ source: 'title', type: 'metadata' });
+        }
+        
+        // Поиск по URL
+        const url = window.location.href.toLowerCase();
+        if (url.includes(gameId.toLowerCase())) {
+            confidence += 2;
+            foundIndicators.push({ source: 'url', type: 'metadata' });
+        }
+        
+        // Проверка вопроса
+        const question = this.extractQuestion(gameId);
+        if (question && question.length > 15) {
+            confidence += 2;
+            foundIndicators.push({ source: 'question', type: 'content' });
+        }
+        
+        // СОБИРАЕМ ВСЕ РЕЗУЛЬТАТЫ ВМЕСТО ВОЗВРАТА ПЕРВОГО
+        if (confidence >= config.minConfidence) {
+            results.push({
+                gameId,
+                confidence,
+                foundIndicators,
+                name: config.name,
+                backgroundColor: config.backgroundColor
+            });
+        }
+    }
+    
+    // ВОЗВРАЩАЕМ РЕЗУЛЬТАТ С НАИБОЛЬШЕЙ УВЕРЕННОСТЬЮ
+    if (results.length > 0) {
+        results.sort((a, b) => b.confidence - a.confidence);
+        return results[0];
+    }
+    
+    return null;
+},
 
     getPageContent: function() {
         const elements = [
