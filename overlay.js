@@ -40,7 +40,7 @@ if (existing) {
 log('Initializing JBG-Finder overlay...');
 
 const CONFIG = {
-    databaseURL: 'https://raw.githubusercontent.com/getonjbghelp/jbg-finder/refs/heads/main/database.js',
+    databaseURL: 'https://raw.githubusercontent.com/getonjbghelp/jbg-finder/refs/heads/main/database.js ',
     minQuestionLength: 15,
     defaultLang: 'en',
     loadTimeout: 10000, // 10 секунд таймаут для загрузки БД
