@@ -1092,9 +1092,16 @@ function createOverlay() {
                     const qThreshold = Math.ceil(questionWords.length * 0.8);
                     const dbThreshold = Math.ceil(dbWords.length * 0.8);
 
-                    if (matchCount >= 5 && (matchCount >= qThreshold || matchCount >= dbThreshold)) {
-                        return { answer: item.answer, confidence: 60 };
-                    }
+                    const lastQ = qWords[qWords.length - 1];
+					const lastDB = dbWords[dbWords.length - 1];
+
+					if (
+						matchCount >= 5 &&
+						(matchCount >= qThreshold || matchCount >= dbThreshold) &&
+						lastQ === lastDB // <-- КЛЮЧЕВОЕ УСЛОВИЕ
+					) {
+						return { answer: item.answer, confidence: 60 };
+					}
                 }
                 return null;
             };
