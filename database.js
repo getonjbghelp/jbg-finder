@@ -2808,7 +2808,7 @@ const GameDatabase = {
 			{ question: "According to the American Canine Hybrid Club, the name for a chihuahua-dachshund mix.", answer: "chiweenie" },
 			{ question: "People for the Ethical Treatment of Animals was once offered George Clooney’s used towel by a supporter who owned it. PETA then wrote to Clooney to ask if they could use it to make _______.", answer: "Clooney-flavored tofu" },
  			{ question: "In 2009, scientists exploring Loch Ness in a submarine unexpectedly discovered hundreds of thousands of _______ at the bottom.", answer: "golf balls" }
-        ]
+        ],
 		fibbage3: [
 			{ question: "Президент США Уоррен Гардинг был заядлым фанатом покера. В одной из игр он умудрился проиграть _______ из Белого Дома.", answer: "фарфоровый сервиз" },
 			{ question: "Житель штата Арканзас Джонни Ли Николс был арестован за то, что он ходил по домам и предлагал _______ в обмен на секс.", answer: "динамиты" },
