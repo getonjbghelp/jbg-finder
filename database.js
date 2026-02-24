@@ -3686,42 +3686,75 @@ const GameDatabase = {
         return null;
     },
 
-    findAnswer: function(question, gameId) {
-        const questions = this.questions[gameId];
-        if (!questions || !question) return null;
+    findAnswer: function (question, gameId) {
+		if (!question || !gameId) return null;
 
-        const normalizedQuestion = this.normalizeText(question);
+		const rawQuestions = this.questions?.[gameId];
+		if (!rawQuestions) return null;
 
-        for (const item of questions) {
-            const normalizedDB = this.normalizeText(item.question);
-            
-            if (normalizedQuestion === normalizedDB) {
-                return { answer: item.answer, confidence: 100 };
-            }
-            
-            if (normalizedQuestion.includes(normalizedDB.substring(0, 50)) ||
-                normalizedDB.includes(normalizedQuestion.substring(0, 50))) {
-                return { answer: item.answer, confidence: 75 };
-            }
-            
-            const questionWords = normalizedQuestion.split(' ').filter(w => w.length > 3);
-            const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
-            const matchCount = questionWords.filter(w => dbWords.includes(w)).length;
-            
-            if (matchCount >= Math.min(5, questionWords.length * 0.6)) {
+		// Определяем язык по наличию кириллических символов
+		const questionLang = /[\u0400-\u04FF]/.test(question) ? 'ru' : 'en';
+
+		// Поддержка двух форматов хранения: массив или { ru: [...], en: [...] }
+		let items = [];
+		if (Array.isArray(rawQuestions)) {
+			// Фильтруем по языку, если тексты смешаны в одном массиве
+			items = rawQuestions.filter(it => {
+            if (!it || !it.question) return false;
+            return questionLang === 'ru'
+                ? /[\u0400-\u04FF]/.test(it.question)
+                : !/[\u0400-\u04FF]/.test(it.question);
+        });
+        if (!items.length) items = rawQuestions; // fallback — весь массив
+    } else {
+        items = rawQuestions[questionLang] || [...(rawQuestions.ru || []), ...(rawQuestions.en || [])];
+    }
+
+    const normalizedQuestion = this.normalizeText(question);
+
+    for (const item of items) {
+        if (!item || !item.question) continue;
+        const normalizedDB = this.normalizeText(item.question);
+
+        // 1) Точное совпадение
+        if (normalizedQuestion === normalizedDB) {
+            return { answer: item.answer, confidence: 100 };
+        }
+
+        // 2) Подстроковое включение (одна строка полностью содержит другую)
+        if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
+            return { answer: item.answer, confidence: 75 };
+        }
+
+        // 3) Совпадение по словам с жёсткими порогами, чтобы уменьшить ложные срабатывания
+        const qWords = normalizedQuestion.split(' ').filter(w => w.length > 3);
+        const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
+
+        if (qWords.length && dbWords.length) {
+            const matchCount = qWords.filter(w => dbWords.includes(w)).length;
+            const qThreshold = Math.ceil(qWords.length * 0.8);
+            const dbThreshold = Math.ceil(dbWords.length * 0.8);
+
+            if (matchCount >= 5 && (matchCount >= qThreshold || matchCount >= dbThreshold)) {
                 return { answer: item.answer, confidence: 60 };
             }
         }
-        
-        return null;
-    },
+    }
 
-    normalizeText: function(text) {
-        return text.toLowerCase()
-            .replace(/[^\w\sа-яёa-z]/gi, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-    },
+    return null;
+},
+
+    normalizeText: function (text) {
+		if (!text || typeof text !== 'string') return '';
+
+		return text
+			.normalize('NFD')                                  // Unicode NFD (разложение диакритики)
+			.replace(/[\u0300-\u036f]/g, '')                   // удалить диакритические знаки
+			.toLowerCase()
+			.replace(/[^a-z0-9\u0400-\u04FF\s]/g, ' ')         // оставить только латиницу, кириллицу, цифры и пробелы
+			.replace(/\s+/g, ' ')                              // свести множественные пробелы в один
+			.trim();
+	},
 
     getVersionInfo: function() {
         const now = new Date();
