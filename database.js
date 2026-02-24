@@ -46,7 +46,8 @@ const GameDatabase = {
             requiredIndicators: [
                 'Logo.Standard', 'playericon', 'choicesRegion', 
 				'button.choice-button.btn.btn-lg', 'text', 'enter-text-textarea',
-				'btn.btn-block.submitButton', 'btn.btn-block.lieForMe', 'delimiter'
+				'btn.btn-block.submitButton', 'btn.btn-block.lieForMe', 'delimiter',
+				'EnterText.scrollable', 'broadcaster', 'debug-region'
             ],
             questionSelectors: [
                 '#text'
