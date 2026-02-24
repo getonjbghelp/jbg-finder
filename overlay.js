@@ -28,7 +28,7 @@ const CONFIG = {
 
 const LANG = {
     ru: {
-        title: 'JBG-Finder',
+        title: 'JBG-Finder PREALPHA',
         detectBtn: '🔍 Найти вопрос и игру',
         searchBtn: '⚡ Найти ответ',
         copyBtn: '📋 Копировать',
@@ -58,7 +58,7 @@ const LANG = {
         daysAgo: 'дн. назад'
     },
     en: {
-        title: 'JBG-Finder',
+        title: 'JBG-Finder PREALPHA',
         detectBtn: '🔍 Detect Question and Game',
         searchBtn: '⚡ Find Answer',
         copyBtn: '📋 Copy',
@@ -1045,7 +1045,7 @@ function detectGame() {
 
         if (result && result.gameId) {
             const gameName = gameDatabase.gameConfig?.[result.gameId]?.name || getText('notDetected');
-            dom.status.textContent = getText('gameDetected') + gameName + getText('gameDetectedSuffix');
+            dom.status.textContent = getText('gameDetected') + gameName;
             dom.status.style.color = '#4ecdc4';
 
             setTimeout(() => {
