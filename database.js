@@ -3687,62 +3687,77 @@ const GameDatabase = {
     },
 
     findAnswer: function (question, gameId) {
-		if (!question || !gameId) return null;
+		try {
+			if (!question || !gameId) return null;
 
-		const rawQuestions = this.questions?.[gameId];
-		if (!rawQuestions) return null;
+			const rawQuestions = this.questions?.[gameId];
+			if (!rawQuestions) return null;
 
-		// Определяем язык по наличию кириллических символов
-		const questionLang = /[\u0400-\u04FF]/.test(question) ? 'ru' : 'en';
+			// Определяем язык по наличию кириллических символов
+			const questionLang = /[\u0400-\u04FF]/.test(question) ? 'ru' : 'en';
 
-		// Поддержка двух форматов хранения: массив или { ru: [...], en: [...] }
-		let items = [];
-		if (Array.isArray(rawQuestions)) {
-			// Фильтруем по языку, если тексты смешаны в одном массиве
-			items = rawQuestions.filter(it => {
-            if (!it || !it.question) return false;
-            return questionLang === 'ru'
-                ? /[\u0400-\u04FF]/.test(it.question)
-                : !/[\u0400-\u04FF]/.test(it.question);
-        });
-        if (!items.length) items = rawQuestions; // fallback — весь массив
-    } else {
-        items = rawQuestions[questionLang] || [...(rawQuestions.ru || []), ...(rawQuestions.en || [])];
-    }
+			// Поддержка двух форматов хранения: массив или { ru: [...], en: [...] }
+			let items = [];
+			if (Array.isArray(rawQuestions)) {
+				// Фильтруем по языку, если тексты смешаны в одном массиве
+				items = rawQuestions.filter(it => {
+					if (!it || !it.question) return false;
+					return questionLang === 'ru'
+						? /[\u0400-\u04FF]/.test(it.question)
+						: !/[\u0400-\u04FF]/.test(it.question);
+				});
+				if (!items.length) items = rawQuestions; // fallback — весь массив
+			} else {
+            items = rawQuestions[questionLang] || [...(rawQuestions.ru || []), ...(rawQuestions.en || [])];
+			}
 
-    const normalizedQuestion = this.normalizeText(question);
+			const normalizedQuestion = this.normalizeText(question);
 
-    for (const item of items) {
-        if (!item || !item.question) continue;
-        const normalizedDB = this.normalizeText(item.question);
+			for (const item of items) {
+				if (!item || !item.question) continue;
+				const normalizedDB = this.normalizeText(item.question);
 
-        // 1) Точное совпадение
-        if (normalizedQuestion === normalizedDB) {
-            return { answer: item.answer, confidence: 100 };
-        }
+				// 1) Точное совпадение
+				if (normalizedQuestion === normalizedDB) {
+					return { answer: item.answer, confidence: 100 };
+				}
 
-        // 2) Подстроковое включение (одна строка полностью содержит другую)
-        if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
-            return { answer: item.answer, confidence: 75 };
-        }
+				// 2) Подстроковое включение (одна строка полностью содержит другую)
+				if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
+					return { answer: item.answer, confidence: 75 };
+				}
 
-        // 3) Совпадение по словам с жёсткими порогами, чтобы уменьшить ложные срабатывания
-        const qWords = normalizedQuestion.split(' ').filter(w => w.length > 3);
-        const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
+				// 3) Совпадение по словам с жёсткими порогами, с дополнительной проверкой последнего слова
+				const qWords = normalizedQuestion.split(' ').filter(w => w.length > 3);
+				const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
 
-        if (qWords.length && dbWords.length) {
-            const matchCount = qWords.filter(w => dbWords.includes(w)).length;
-            const qThreshold = Math.ceil(qWords.length * 0.8);
-            const dbThreshold = Math.ceil(dbWords.length * 0.8);
+				if (qWords.length && dbWords.length) {
+					const matchCount = qWords.filter(w => dbWords.includes(w)).length;
+					const qThreshold = Math.ceil(qWords.length * 0.8);
+					const dbThreshold = Math.ceil(dbWords.length * 0.8);
 
-            if (matchCount >= 5 && (matchCount >= qThreshold || matchCount >= dbThreshold)) {
-                return { answer: item.answer, confidence: 60 };
-            }
-        }
-    }
+					// Определяем последние значимые слова (если есть)
+					const lastQ = qWords.length ? qWords[qWords.length - 1] : null;
+					const lastDB = dbWords.length ? dbWords[dbWords.length - 1] : null;
 
-    return null;
-},
+					// Условие: должно быть минимум 5 совпадающих слов И один из порогов выполнен
+					// + последний значимый слово должен совпадать (исключает шаблонные вопросы с разными хвостами)
+					if (
+						matchCount >= 5 &&
+						(matchCount >= qThreshold || matchCount >= dbThreshold) &&
+						lastQ && lastDB && lastQ === lastDB
+					) {
+						return { answer: item.answer, confidence: 60 };
+					}
+				}
+			}
+
+			return null;
+		} catch (e) {
+			console.error('[GameDatabase] findAnswer error:', e);
+			return null;
+		}
+	},
 
     normalizeText: function (text) {
 		if (!text || typeof text !== 'string') return '';
