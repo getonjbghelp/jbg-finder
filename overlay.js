@@ -608,54 +608,6 @@ function updateIndicator(result) {
     log('=== UPDATE INDICATOR COMPLETE ===');
 }
 
-function findCleanQuestion(rawText) {
-    log('=== FIND CLEAN QUESTION ===');
-    log('Raw text length:', rawText?.length);
-    
-    if (!gameDatabase || !currentGame || !rawText || rawText.length < CONFIG.minQuestionLength) {
-        logWarn('Cannot find clean question - invalid input');
-        return null;
-    }
-
-    const questions = gameDatabase.questions[currentGame];
-    if (!questions) {
-        logError('No questions found for game:', currentGame);
-        return null;
-    }
-    
-    log('Questions available:', questions.length);
-
-    const normalizedRaw = gameDatabase.normalizeText(rawText);
-    log('Normalized raw text (first 100 chars):', normalizedRaw.substring(0, 100));
-
-    for (const item of questions) {
-        const normalizedDB = gameDatabase.normalizeText(item.question);
-        
-        if (normalizedRaw === normalizedDB) {
-            log('✓ Exact match found');
-            return item.question;
-        }
-        
-        if (normalizedRaw.includes(normalizedDB.substring(0, 50)) ||
-            normalizedDB.includes(normalizedRaw.substring(0, 50))) {
-            log('✓ Partial match found');
-            return item.question;
-        }
-        
-        const rawWords = normalizedRaw.split(' ').filter(w => w.length > 3);
-        const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
-        const matchCount = rawWords.filter(w => dbWords.includes(w)).length;
-        
-        if (matchCount >= Math.min(5, rawWords.length * 0.6)) {
-            log('✓ Word match found:', matchCount, 'words');
-            return item.question;
-        }
-    }
-    
-    logWarn('No matching question found');
-    return null;
-}
-
 function displayQuestion(q) {
     log('=== DISPLAY QUESTION ===');
     
@@ -716,16 +668,9 @@ function detectGame() {
                 log('Raw question:', rawQuestion ? rawQuestion.substring(0, 100) : 'null');
                 
                 if (rawQuestion && rawQuestion.length >= CONFIG.minQuestionLength) {
-                    const cleanQuestion = findCleanQuestion(rawQuestion);
-                    log('Clean question:', cleanQuestion ? cleanQuestion.substring(0, 100) : 'null');
-                    
-                    if (cleanQuestion) {
-                        currentQuestion = cleanQuestion;
-                        displayQuestion(cleanQuestion);
-                    } else {
-                        currentQuestion = rawQuestion;
-                        displayQuestion(rawQuestion);
-                    }
+                    // Используем сырой текст вопроса для поиска и отображения
+                    currentQuestion = rawQuestion;
+                    displayQuestion(rawQuestion);
                 } else {
                     currentQuestion = '';
                     displayQuestion(null);
