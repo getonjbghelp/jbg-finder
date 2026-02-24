@@ -5,54 +5,84 @@ const GameDatabase = {
     
     gameConfig: {
         guesspy: {
-            name: 'Guesspionage - Unstable (Нашшпионаж - Нестабильно)',
+            name: 'Guesspionage (Нашшпионаж) - Unstable',
             requiredIndicators: [
-                '#pollposition-page', '.page-pollposition', '.pollposition-preload',
-                '.pollposition-player', '.pollposition-submitpercentage', '.percent-display',
-                '.pollposition-chooseupordown', 'table.table-striped', 'table.table-bordered',
-                '[data-game="guesspionage"]', '[class*="pollposition"]'
+                { selector: '#pollposition-page', weight: 5, unique: true },
+                { selector: '.page-pollposition', weight: 4, unique: true },
+                { selector: '.pollposition-preload', weight: 3, unique: false },
+                { selector: '.pollposition-player', weight: 3, unique: false },
+                { selector: '.pollposition-submitpercentage', weight: 4, unique: true },
+                { selector: '.percent-display', weight: 3, unique: false },
+                { selector: '[data-game="guesspionage"]', weight: 5, unique: true },
+                { selector: '[class*="pollposition"]', weight: 2, unique: false }
             ],
-            questionSelectors: [
-                'pollposition-text.question-text.pollposition-range-buffer'
-            ],
+            questionSelectors: ['pollposition-text.question-text.pollposition-range-buffer'],
             backgroundColor: '#2d5a27',
-            minConfidence: 3
+            minConfidence: 8
         },
-		fibbage3: {
+        
+        fibbage3: {
             name: 'Fibbage 3 (Бредовуха 3)',
             requiredIndicators: [
-                'Logo.Standard', 'playericon', 'choicesRegion', 
-				'button.choice-button.btn.btn-lg', 'text', 'enter-text-textarea',
-				'btn.btn-block.submitButton', 'btn.btn-block.lieForMe', 'delimiter',
-				'EnterText.scrollable', 'broadcaster', 'debug-region'
+                { selector: '.Logo.Standard', weight: 5, unique: true },
+                { selector: '.EnterText.scrollable', weight: 5, unique: true },
+                { selector: '.choicesRegion', weight: 4, unique: true },
+                { selector: '.playericon', weight: 3, unique: false },
+                { selector: 'button.choice-button.btn.btn-lg', weight: 4, unique: true },
+                { selector: '.enter-text-textarea', weight: 4, unique: true },
+                { selector: '.btn.btn-block.submitButton', weight: 3, unique: false },
+                { selector: '.btn.btn-block.lieForMe', weight: 3, unique: false },
+                { selector: '.broadcaster', weight: 2, unique: false },
+                { selector: '.debug-region', weight: 2, unique: false },
+                { selector: '[data-round*="fibbage3"]', weight: 5, unique: true },
+                { selector: '[class*="fibbage3"]', weight: 5, unique: true }
             ],
-            questionSelectors: [
-                'text'
-            ],
+            questionSelectors: ['.text'],
             backgroundColor: '#5a4a2d',
-            minConfidence: 6
+            minConfidence: 10
         },
+        
         fibbage12collab: {
             name: 'Fibbage 1-2 (Бредовуха 1-2)',
             requiredIndicators: [
-                '#fibbage-page', '#question-text', '#chooselie-text',
-                '#fibbage-submitlie', '#round-text', '[data-game="fibbage"]',
-                '.lie-input', '.fibbage-answer', 
-				'#bloop-fieldset', '#bloop31', '#bloop30', '#round-text',
-                '#button-fieldset', '#fibbage-lie-input', '#fibbage-lie',
-                '#fibbage-submitlie', '#fibbage-lieforme',
-                '#player', '#fibbage-submit-alert', '#defib', '#fibbage-defib',
-                '#like-text', '#like-checkbox', '#chooselikes-choice',
-                '#round-main', '#fibbage-sameplayers', '#fibbage-newplayers',
-                '#page-fibbage', '#fibbage-preload', 'content-region',
-                'fibbage-enterlie-field', 'state-enterlie.fibbage-page'
+                { selector: '#fibbage-page', weight: 5, unique: true },
+                { selector: '#question-text', weight: 4, unique: false },
+                { selector: '#chooselie-text', weight: 4, unique: true },
+                { selector: '#fibbage-submitlie', weight: 4, unique: true },
+                { selector: '#round-text', weight: 3, unique: false },
+                { selector: '[data-game="fibbage"]', weight: 3, unique: false },
+                { selector: '.lie-input', weight: 3, unique: false },
+                { selector: '.fibbage-answer', weight: 3, unique: false },
+                { selector: '#bloop-fieldset', weight: 4, unique: true },
+                { selector: '#bloop31', weight: 4, unique: true },
+                { selector: '#bloop30', weight: 4, unique: true },
+                { selector: '#button-fieldset', weight: 3, unique: false },
+                { selector: '#fibbage-lie-input', weight: 4, unique: true },
+                { selector: '#fibbage-lie', weight: 3, unique: false },
+                { selector: '#fibbage-lieforme', weight: 3, unique: false },
+                { selector: '#player', weight: 2, unique: false },
+                { selector: '#fibbage-submit-alert', weight: 3, unique: false },
+                { selector: '#defib', weight: 3, unique: false },
+                { selector: '#fibbage-defib', weight: 3, unique: false },
+                { selector: '#like-text', weight: 2, unique: false },
+                { selector: '#like-checkbox', weight: 2, unique: false },
+                { selector: '#chooselikes-choice', weight: 3, unique: false },
+                { selector: '#round-main', weight: 3, unique: false },
+                { selector: '#fibbage-sameplayers', weight: 3, unique: false },
+                { selector: '#fibbage-newplayers', weight: 3, unique: false },
+                { selector: '#page-fibbage', weight: 4, unique: true },
+                { selector: '#fibbage-preload', weight: 3, unique: false },
+                { selector: '.content-region', weight: 2, unique: false },
+                { selector: '.fibbage-enterlie-field', weight: 3, unique: false },
+                { selector: '.state-enterlie.fibbage-page', weight: 4, unique: true }
             ],
-            questionSelectors: [
-                '#question-text'
-            ],
+            questionSelectors: ['#question-text'],
             backgroundColor: '#5a4a2d',
-            minConfidence: 7
+            minConfidence: 12
         }
+        
+        // 🎮 Для добавления новой игры просто скопируйте структуру выше
+        // и добавьте свой конфиг в gameConfig
     },
 
     questions: {
@@ -3518,74 +3548,91 @@ const GameDatabase = {
     },
 
     detectGame: function() {
-    const pageContent = this.getPageContent();
-    const results = [];  // <-- СОБИРАЕМ ВСЕ РЕЗУЛЬТАТЫ
-    
-    for (const [gameId, config] of Object.entries(this.gameConfig)) {
-        let confidence = 0;
-        const foundIndicators = [];
+        const results = [];
         
-        // Поиск по DOM индикаторам
-        for (const selector of config.requiredIndicators) {
-            try {
-                const elements = document.querySelectorAll(selector);
-                for (const element of elements) {
-                    if (this.isElementVisible(element)) {
-                        // Увеличиваем вес для уникальных индикаторов
-                        if (selector.includes('fibbage3') || selector.includes('Fibbage3') || 
-                            selector.includes('Logo.Standard') || selector.includes('EnterText.scrollable')) {
-                            confidence += 3;  // <-- +3 для уникальных индикаторов Fibbage 3
-                        } else {
-                            confidence += 2;
+        for (const [gameId, config] of Object.entries(this.gameConfig)) {
+            let confidence = 0;
+            const foundIndicators = [];
+            let uniqueCount = 0;
+            
+            // Поиск по DOM индикаторам с весами
+            for (const indicator of config.requiredIndicators) {
+                try {
+                    const elements = document.querySelectorAll(indicator.selector);
+                    for (const element of elements) {
+                        if (this.isElementVisible(element)) {
+                            confidence += indicator.weight;
+                            if (indicator.unique) {
+                                uniqueCount++;
+                                confidence += 3; // Бонус за уникальные индикаторы
+                            }
+                            foundIndicators.push({ 
+                                selector: indicator.selector, 
+                                type: 'dom',
+                                weight: indicator.weight,
+                                unique: indicator.unique
+                            });
+                            break;
                         }
-                        foundIndicators.push({ selector, type: 'dom' });
-                        break;
                     }
+                } catch (e) {}
+            }
+            
+            // Поиск по заголовку страницы
+            const title = document.title.toLowerCase();
+            if (title.includes(gameId.toLowerCase()) || 
+                title.includes(config.name.toLowerCase())) {
+                confidence += 5;
+                foundIndicators.push({ source: 'title', type: 'metadata', weight: 5 });
+            }
+            
+            // Поиск по URL
+            const url = window.location.href.toLowerCase();
+            if (url.includes(gameId.toLowerCase())) {
+                confidence += 4;
+                foundIndicators.push({ source: 'url', type: 'metadata', weight: 4 });
+            }
+            
+            // Проверка вопроса
+            const question = this.extractQuestion(gameId);
+            if (question && question.length > 15) {
+                confidence += 3;
+                foundIndicators.push({ source: 'question', type: 'content', weight: 3 });
+            }
+            
+            // Бонус за количество уникальных индикаторов
+            if (uniqueCount >= 2) {
+                confidence += 5;
+            }
+            
+            // Добавляем результат если превышен порог
+            if (confidence >= config.minConfidence) {
+                results.push({
+                    gameId,
+                    confidence,
+                    uniqueCount,
+                    foundIndicators,
+                    name: config.name,
+                    backgroundColor: config.backgroundColor
+                });
+            }
+        }
+        
+        // Возвращаем игру с НАИБОЛЬШЕЙ уверенностью
+        if (results.length > 0) {
+            results.sort((a, b) => {
+                // Сначала по уникальным индикаторам
+                if (b.uniqueCount !== a.uniqueCount) {
+                    return b.uniqueCount - a.uniqueCount;
                 }
-            } catch (e) {}
-        }
-        
-        // Поиск по заголовку страницы
-        const title = document.title.toLowerCase();
-        if (title.includes(gameId.toLowerCase()) || title.includes(config.name.toLowerCase())) {
-            confidence += 3;
-            foundIndicators.push({ source: 'title', type: 'metadata' });
-        }
-        
-        // Поиск по URL
-        const url = window.location.href.toLowerCase();
-        if (url.includes(gameId.toLowerCase())) {
-            confidence += 2;
-            foundIndicators.push({ source: 'url', type: 'metadata' });
-        }
-        
-        // Проверка вопроса
-        const question = this.extractQuestion(gameId);
-        if (question && question.length > 15) {
-            confidence += 2;
-            foundIndicators.push({ source: 'question', type: 'content' });
-        }
-        
-        // СОБИРАЕМ ВСЕ РЕЗУЛЬТАТЫ ВМЕСТО ВОЗВРАТА ПЕРВОГО
-        if (confidence >= config.minConfidence) {
-            results.push({
-                gameId,
-                confidence,
-                foundIndicators,
-                name: config.name,
-                backgroundColor: config.backgroundColor
+                // Потом по общей уверенности
+                return b.confidence - a.confidence;
             });
+            return results[0];
         }
-    }
-    
-    // ВОЗВРАЩАЕМ РЕЗУЛЬТАТ С НАИБОЛЬШЕЙ УВЕРЕННОСТЬЮ
-    if (results.length > 0) {
-        results.sort((a, b) => b.confidence - a.confidence);
-        return results[0];
-    }
-    
-    return null;
-},
+        
+        return null;
+    },
 
     getPageContent: function() {
         const elements = [
@@ -3594,7 +3641,6 @@ const GameDatabase = {
             ...document.querySelectorAll('[class*="question"], [class*="text"], [class*="content"]'),
             ...document.querySelectorAll('[data-game], [data-question]')
         ];
-        
         return elements.map(el => el?.innerText || '').join(' ').toLowerCase();
     },
 
@@ -3621,12 +3667,9 @@ const GameDatabase = {
                         return text;
                     }
                 }
-            } catch (e) {
-                // Игнорируем неверные селекторы
-            }
+            } catch (e) {}
         }
         
-        // Резервный поиск по любым текстовым элементам
         const potentialQuestions = document.querySelectorAll('p, div, span');
         for (const el of potentialQuestions) {
             if (this.isElementVisible(el)) {
@@ -3650,18 +3693,15 @@ const GameDatabase = {
         for (const item of questions) {
             const normalizedDB = this.normalizeText(item.question);
             
-            // Точное совпадение
             if (normalizedQuestion === normalizedDB) {
                 return { answer: item.answer, confidence: 100 };
             }
             
-            // Частичное совпадение (первые 50 символов)
             if (normalizedQuestion.includes(normalizedDB.substring(0, 50)) ||
                 normalizedDB.includes(normalizedQuestion.substring(0, 50))) {
                 return { answer: item.answer, confidence: 75 };
             }
             
-            // Совпадение по ключевым словам
             const questionWords = normalizedQuestion.split(' ').filter(w => w.length > 3);
             const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
             const matchCount = questionWords.filter(w => dbWords.includes(w)).length;
@@ -3692,5 +3732,4 @@ const GameDatabase = {
         };
     }
 };
-
 window.GameDatabase = GameDatabase;
