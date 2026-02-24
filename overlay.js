@@ -819,7 +819,215 @@
             updateStatus(getText('dbError') + ': ' + e.message, 'error');
         }
     }
+	// -----------------------------
+// Добавить: createOverlay и вспомогательные UI-функции
+// ВСТАВЬТЕ ЭТО ПЕРЕД init()
+// -----------------------------
+function updateUItext() {
+    // Обновляет подписи кнопок/лейблов при смене языка
+    if (!overlayEl) return;
+    try {
+        if (dom.detectBtn) dom.detectBtn.textContent = getText('detectBtn');
+        if (dom.searchBtn) dom.searchBtn.textContent = getText('searchBtn');
+        if (dom.copyBtn) dom.copyBtn.textContent = getText('copyBtn');
+        // мелкие текстовые элементы (при наличии)
+        const titleEl = overlayEl.querySelector('.overlay-title');
+        if (titleEl) titleEl.textContent = getText('title');
+    } catch (e) {
+        logError('updateUItext error', e);
+    }
+}
 
+function makeDraggable(headerEl, rootEl) {
+    if (!headerEl || !rootEl) return;
+    let isDown = false;
+    let startX = 0;
+    let startY = 0;
+    let origX = 0;
+    let origY = 0;
+
+    headerEl.addEventListener('mousedown', (ev) => {
+        isDown = true;
+        startX = ev.clientX;
+        startY = ev.clientY;
+        const rect = rootEl.getBoundingClientRect();
+        origX = rect.left;
+        origY = rect.top;
+        document.body.style.userSelect = 'none';
+    });
+
+    window.addEventListener('mousemove', (ev) => {
+        if (!isDown) return;
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        rootEl.style.left = (origX + dx) + 'px';
+        rootEl.style.top = (origY + dy) + 'px';
+        rootEl.style.right = 'auto';
+        rootEl.style.bottom = 'auto';
+        rootEl.style.position = 'fixed';
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (!isDown) return;
+        isDown = false;
+        document.body.style.userSelect = '';
+    });
+}
+
+function createOverlay() {
+    if (overlayEl) return; // уже создан
+
+    ensureStyle();
+
+    overlayEl = document.createElement('div');
+    overlayEl.id = OVERLAY_ID;
+    overlayEl.innerHTML = `
+        <div class="overlay-header">
+            <div class="header-left">
+                <div class="overlay-title">${getText('title')}</div>
+                <div class="db-info">
+                    <div id="db-version">v?</div>
+                    <div id="db-age">?</div>
+                    <div id="db-status" class="db-status">✗</div>
+                </div>
+            </div>
+            <div class="overlay-controls">
+                <button id="lang-flag-btn" class="overlay-btn flag-btn" title="Toggle language">🌐</button>
+                <button id="minimize-btn" class="overlay-btn" title="${getText('minimize')}">—</button>
+                <button id="close-btn" class="overlay-btn" title="${getText('close')}">×</button>
+            </div>
+        </div>
+
+        <div class="overlay-content">
+            <div class="game-indicator">
+                <div id="status-dot" class="indicator-dot"></div>
+                <div style="flex:1">
+                    <div id="game-name">${getText('notDetected')}</div>
+                    <div id="game-confidence" style="font-size:11px;color:#888"></div>
+                </div>
+                <div id="indicator-count" class="indicator-count"></div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-header">
+                    <div style="font-weight:700">${getText('questionLabel')}</div>
+                    <div id="question-length" style="font-size:12px;color:#888">0 ${getText('symbols')}</div>
+                </div>
+                <div id="question-text" class="question-text scrollbar-custom">${getText('notDetected')}</div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="detect-btn" class="action-btn detect-btn">${getText('detectBtn')}</button>
+                <button id="search-btn" class="action-btn search-btn" disabled>${getText('searchBtn')}</button>
+                <button id="copy-btn" class="action-btn copy-btn" disabled>${getText('copyBtn')}</button>
+            </div>
+
+            <div id="answer-box" class="answer-box">
+                <div class="answer-header">
+                    <div style="font-weight:700">${getText('answerLabel')}</div>
+                    <div id="answer-confidence" style="font-size:12px;color:#888"></div>
+                </div>
+                <div id="answer-text" class="answer-text">${getText('answerNotFound')}</div>
+            </div>
+
+            <div id="overlay-status" class="overlay-status">${getText('loadingDB')}</div>
+        </div>
+    `;
+
+    document.body.appendChild(overlayEl);
+
+    // Кэшируем DOM элементы и навешиваем слушатели
+    cacheDom();
+    updateUItext();
+
+    // Инициализация элементов
+    if (dom.searchBtn) dom.searchBtn.disabled = true;
+    if (dom.copyBtn) dom.copyBtn.disabled = true;
+    if (dom.dbStatus) dom.dbStatus.className = 'db-status error';
+
+    // Кнопки
+    if (dom.detectBtn) {
+        dom.detectBtn.addEventListener('click', async () => {
+            try {
+                dom.detectBtn.disabled = true;
+                updateStatus(getText('scanning'), 'searching');
+                await detectGame();
+            } finally {
+                dom.detectBtn.disabled = false;
+            }
+        });
+    }
+
+    if (dom.searchBtn) {
+        dom.searchBtn.addEventListener('click', () => {
+            dom.searchBtn.disabled = true;
+            try {
+                searchAnswer();
+            } finally {
+                // небольшая задержка чтобы UI не мигал слишком быстро
+                setTimeout(() => { dom.searchBtn.disabled = false; }, 250);
+            }
+        });
+    }
+
+    if (dom.copyBtn) {
+        dom.copyBtn.addEventListener('click', () => {
+            try {
+                const text = (dom.answerText && dom.answerText.textContent) ? dom.answerText.textContent : '';
+                if (!text) return;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        updateStatus(getText('copySuccess'), 'success');
+                    }).catch(() => {
+                        updateStatus(getText('copySuccess'), 'success');
+                    });
+                } else {
+                    // fallback
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    updateStatus(getText('copySuccess'), 'success');
+                }
+            } catch (e) {
+                logError('Copy failed', e);
+            }
+        });
+    }
+
+    // Язык (переключатель)
+    const langBtn = overlayEl.querySelector('#lang-flag-btn');
+    if (langBtn) {
+        langBtn.addEventListener('click', () => {
+            currentLang = currentLang === 'ru' ? 'en' : 'ru';
+            updateUItext();
+            updateStatus(currentLang === 'ru' ? 'RU' : 'EN', 'info');
+        });
+    }
+
+    // Минимизировать / закрыть
+    const minBtn = overlayEl.querySelector('#minimize-btn');
+    const closeBtn = overlayEl.querySelector('#close-btn');
+    if (minBtn) {
+        minBtn.addEventListener('click', () => {
+            overlayEl.classList.toggle('overlay-minimized');
+        });
+    }
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            overlayEl.remove();
+            overlayEl = null;
+        });
+    }
+
+    // Драг по заголовку
+    const headerEl = overlayEl.querySelector('.overlay-header');
+    makeDraggable(headerEl, overlayEl);
+
+    log('Overlay created and initialized');
+}
     // === ИНИЦИАЛИЗАЦИЯ ОВЕРЛЕЯ И ЗАГРУЗКА БД ===
     async function init() {
         log('=== INIT STARTED ===');
