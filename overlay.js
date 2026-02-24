@@ -29,7 +29,7 @@ const CONFIG = {
 const LANG = {
     ru: {
         title: 'JBG-Finder',
-        detectBtn: '🔍 Найти вопрос',
+        detectBtn: '🔍 Найти вопрос и игру',
         searchBtn: '⚡ Найти ответ',
         copyBtn: '📋 Копировать',
         questionLabel: '📝 ВОПРОС',
@@ -59,7 +59,7 @@ const LANG = {
     },
     en: {
         title: 'JBG-Finder',
-        detectBtn: '🔍 Detect Question',
+        detectBtn: '🔍 Detect Question and Game',
         searchBtn: '⚡ Find Answer',
         copyBtn: '📋 Copy',
         questionLabel: '📝 QUESTION',
@@ -1189,32 +1189,6 @@ function updateAllText() {
     }
 }
 
-function makeDraggable(headerEl, rootEl) {
-    if (!headerEl || !rootEl) return;
-    let isDown = false;
-    let startX = 0, startY = 0, origX = 0, origY = 0;
-    headerEl.addEventListener('mousedown', (ev) => {
-        isDown = true;
-        startX = ev.clientX; startY = ev.clientY;
-        const rect = rootEl.getBoundingClientRect();
-        origX = rect.left; origY = rect.top;
-        document.body.style.userSelect = 'none';
-    });
-    window.addEventListener('mousemove', (ev) => {
-        if (!isDown) return;
-        const dx = ev.clientX - startX, dy = ev.clientY - startY;
-        rootEl.style.left = (origX + dx) + 'px';
-        rootEl.style.top = (origY + dy) + 'px';
-        rootEl.style.right = 'auto'; rootEl.style.bottom = 'auto';
-        rootEl.style.position = 'fixed';
-    });
-    window.addEventListener('mouseup', () => {
-        if (!isDown) return;
-        isDown = false;
-        document.body.style.userSelect = '';
-    });
-}
-
 function createOverlay() {
     if (overlayEl) return;
     ensureStyle();
@@ -1336,7 +1310,36 @@ function createOverlay() {
     if (closeBtn) closeBtn.addEventListener('click', () => { overlayEl.remove(); overlayEl = null; });
 
     const headerEl = overlayEl.querySelector('.overlay-header');
-    makeDraggable(headerEl, overlayEl);
+    let isDragging = false;
+    let startX, startY, initialX, initialY;
+
+    headerEl.onmousedown = (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        const rect = overlayEl.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+        document.body.style.userSelect = 'none';
+    };
+
+    document.onmousemove = (e) => {
+        if (!isDragging) return;
+        // Проверка на случай, если оверлей уже удалён
+        if (!overlayEl) {
+            isDragging = false;
+            return;
+        }
+        overlayEl.style.left = (initialX + e.clientX - startX) + 'px';
+        overlayEl.style.top = (initialY + e.clientY - startY) + 'px';
+        overlayEl.style.right = 'auto';
+        overlayEl.style.bottom = 'auto';
+    };
+
+    document.onmouseup = () => {
+        isDragging = false;
+		document.body.style.userSelect = '';
+	};
 
     log('Overlay created and initialized');
 }
