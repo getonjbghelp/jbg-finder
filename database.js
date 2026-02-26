@@ -84,22 +84,22 @@ const GameDatabase = {
 		triviamurderparty: {
             name: 'Trivia Murder Party (Это Смертельная Вечеринка)',
             requiredIndicators: [
-                { selector: 'make-single-choice-text', weight: 5, unique: true },
-                { selector: 'lobby-text', weight: 3, unique: false },
-                { selector: 'state-lobby', weight: 4, unique: true },
-                { selector: 'dark-background.light-text', weight: 4, unique: true },
-                { selector: 'many-text', weight: 3, unique: true },
-                { selector: 'many-sub-text', weight: 3, unique: true },
-                { selector: 'make-many-choices-submit-button', weight: 3, unique: true },
+                { selector: '.make-single-choice-text', weight: 5, unique: true },
+                { selector: '.lobby-text', weight: 3, unique: false },
+                { selector: '.state-lobby', weight: 4, unique: true },
+                { selector: '.dark-background.light-text', weight: 4, unique: true },
+                { selector: '.many-text', weight: 3, unique: true },
+                { selector: '.many-sub-text', weight: 3, unique: true },
+                { selector: '.make-many-choices-submit-button', weight: 3, unique: true },
                 { selector: '.light-text.button-choice.button-game.button-large.btn', weight: 3, unique: false },
-                { selector: 'state-logo', weight: 4, unique: true },
-                { selector: 'game-page.black-background.logo-image', weight: 4, unique: true },
-                { selector: 'state-make-single-choice', weight: 4, unique: true },
-                { selector: 'data-choice', weight: 2, unique: false }
+                { selector: '.state-logo', weight: 4, unique: true },
+                { selector: '.game-page.black-background.logo-image', weight: 4, unique: true },
+                { selector: '.state-make-single-choice', weight: 4, unique: true },
+                { selector: '.data-choice', weight: 2, unique: false }
             ],
-            questionSelectors: ['p', 'p#many-text'],
+            questionSelectors: ['.make-single-choice-text', 'p#many-text'],
             backgroundColor: '#5a4a2d',
-            minConfidence: 10
+            minConfidence: 8
         }
         
         // 🎮 Для добавления новой игры просто скопируйте структуру выше
