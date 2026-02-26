@@ -97,9 +97,9 @@ const GameDatabase = {
                 { selector: 'state-make-single-choice', weight: 4, unique: true },
                 { selector: 'data-choice', weight: 2, unique: false }
             ],
-            questionSelectors: ['make-single-choice-text', 'many-text'],
+            questionSelectors: ['p', 'p#many-text'],
             backgroundColor: '#5a4a2d',
-            minConfidence: 12
+            minConfidence: 10
         }
         
         // 🎮 Для добавления новой игры просто скопируйте структуру выше
