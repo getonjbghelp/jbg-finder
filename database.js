@@ -6,6 +6,19 @@ const GameDatabase = {
     gameConfig: {
         guesspy: {
             name: 'Guesspionage (Нашшпионаж)',
+            // Статус поддержки игры и пояснение (на двух языках)
+            status: {
+                level: 'nonfullwork', // stable | unstable | nonfullwork
+                notes: {
+                    ru: 'Неполная цельность. Нет вопросов финального раунда из-за сложности их сортировки.',
+                    en: 'Not complete integrity. There are no final round questions due to the difficulty of sorting them.'
+                }
+            },
+            // Логотипы игры под RU / EN (по желанию)
+            logoUrls: {
+                ru: '',
+                en: ''
+            },
             requiredIndicators: [
                 { selector: '#pollposition-page', weight: 5, unique: true },
                 { selector: '.page-pollposition', weight: 4, unique: true },
@@ -23,6 +36,17 @@ const GameDatabase = {
         
         fibbage3: {
             name: 'Fibbage 3 (Бредовуха 3)',
+            status: {
+                level: 'stable',
+                notes: {
+                    ru: 'Полностью стабильная работа, присутствуют все вопросы из Русской и Английской версии игры',
+                    en: 'Completely stable work, all questions from the Russian and English versions of the game are here'
+                }
+            },
+            logoUrls: {
+                ru: '',
+                en: ''
+            },
             requiredIndicators: [
                 { selector: '.Logo.Standard', weight: 5, unique: true },
                 { selector: '.EnterText.scrollable', weight: 5, unique: true },
@@ -44,6 +68,17 @@ const GameDatabase = {
         
         fibbage12collab: {
             name: 'Fibbage 1-2 (Бредовуха 1-2)',
+            status: {
+                level: 'stable',
+                notes: {
+                    ru: 'Полностью стабильная работа, присутствуют все вопросы из Русской и Английской версии игры. Две части были совмещены в одну из-за крайней схожести индикаторов.',
+                    en: 'Completely stable operation, all questions from the Russian and English versions of the game are here. The two parts were combined into one due to the extreme similarity of the indicators.'
+                }
+            },
+            logoUrls: {
+                ru: '',
+                en: ''
+            },
             requiredIndicators: [
                 { selector: '#fibbage-page', weight: 5, unique: true },
                 { selector: '#question-text', weight: 4, unique: false },
@@ -83,6 +118,17 @@ const GameDatabase = {
 		
 		triviamurderparty: {
             name: 'Trivia Murder Party (Это Смертельная Вечеринка)',
+            status: {
+                level: 'unstable',
+                notes: {
+                    ru: 'Есть все вопросы, но во время Финального Раунда могут быть проблемы с отображением категории и ответа примерно в 30-50% случаев',
+                    en: 'There are all questions, but during the Final Round there may be problems with displaying the category and answer approximately 30-50% of the time'
+                }
+            },
+            logoUrls: {
+                ru: '',
+                en: ''
+            },
             requiredIndicators: [
                 { selector: '.make-single-choice-text', weight: 5, unique: true },
                 { selector: '.lobby-text', weight: 3, unique: false },
