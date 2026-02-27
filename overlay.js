@@ -1025,7 +1025,7 @@ function displayQuestion(q) {
     const text = q.length > 200 ? q.slice(0, 200) + '...' : q;
     dom.questionText.textContent = text;
     dom.questionLength.textContent = q.length + getText('symbols');
-    dom.searchBtn.disabled = q.length < CONFIG.minQuestionLength;
+    dom.searchBtn.disabled = q.length < 5;
 }
 
 function detectGame() {
