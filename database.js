@@ -5702,12 +5702,15 @@ const GameDatabase = {
         const config = this.gameConfig[gameId];
         if (!config) return null;
 
+        const overlayRoot = document.getElementById('game-finder-overlay');
+        const isInOverlay = (el) => overlayRoot ? overlayRoot.contains(el) : false;
+
         const selectorCandidates = [];
 
         for (const selector of config.questionSelectors) {
             try {
                 const element = document.querySelector(selector);
-                if (element && this.isElementVisible(element)) {
+                if (element && !isInOverlay(element) && this.isElementVisible(element)) {
                     const text = element.innerText.trim();
                     if (text.length > 0 && text.length < 500) {
                         selectorCandidates.push(text);
@@ -5727,7 +5730,7 @@ const GameDatabase = {
         
         const potentialQuestions = document.querySelectorAll('p, div, span');
         for (const el of potentialQuestions) {
-            if (this.isElementVisible(el)) {
+            if (this.isElementVisible(el) && !isInOverlay(el)) {
                 const text = el.innerText.trim();
                 if (text.length > 30 && text.length < 500 && 
                     (text.includes('?') || text.includes('_______') || text.includes('...'))) {
