@@ -29,9 +29,9 @@ const CONFIG = {
 // Общие иконки статуса игры (маленький круг рядом с названием)
 // Задай здесь реальные URL-ы PNG под свой хостинг.
 const GAME_STATUS_ICONS = {
-    stable:    'https://downloader.disk.yandex.ru/preview/3bd289d37478d5b43f17638adbaff61bf7cbdd738c354beec555e9d28eff1212/69a1ec58/y53erwckJBftlTwaQJQ417ZsBFm22eOuL-X-G6yZnun7o3g6IJtZq1P0dUskBcbVnclg40x5xuVga1uBjFdngw%3D%3D?uid=0&filename=stable.PNG&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=0&tknv=v3&size=2048x2048',
-    unstable:  'https://downloader.disk.yandex.ru/preview/6e79862f19f476e166024adca86cb0dbcb27425a515a10161d8f46d75eb43702/69a1ebad/stJeIhPZqErfUvcuzgqecdcG4UB8X47dvH2sTcWJPfu8MZlDnE7gs5jv-Fep1j0tMH-hmE3nm8S2_hUVGtzk-Q%3D%3D?uid=0&filename=unstable.PNG&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=0&tknv=v3&size=2048x2048',
-    nonfullwork: 'https://downloader.disk.yandex.ru/preview/9bb7148daba3d6c142d897390571b0ef7aeb79c860c2d7603a7538781cdc06a1/69a1ec1c/3ZPFEXrhuGZYM9HPlwY6G7ZsBFm22eOuL-X-G6yZnumfkePC7Bj6hsQLgWUzneXjVdAdGRTFsSJaNzWzmaWmdw%3D%3D?uid=0&filename=nonfullwork.PNG&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=0&tknv=v3&size=1920x911'
+    stable:    'https://eblo.id/uploads/hXknfQt/stable.png',
+    unstable:  'https://eblo.id/uploads/FNTZaw5/unstable_001.png',
+    nonfullwork: 'https://eblo.id/uploads/CS5k21l/nonfullwork.png'
 };
 
 const LANG = {
