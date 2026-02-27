@@ -1,7 +1,7 @@
 const GameDatabase = {
-    version: "DB26FEBEXP",
-    lastUpdated: "2026-02-26",
-    buildDate: new Date("2026-02-26"),
+    version: "DB27FEBEXP",
+    lastUpdated: "2026-02-27",
+    buildDate: new Date("2026-02-27"),
     
     gameConfig: {
         guesspy: {
@@ -88,16 +88,19 @@ const GameDatabase = {
                 { selector: '.lobby-text', weight: 3, unique: false },
                 { selector: '.state-lobby', weight: 4, unique: true },
                 { selector: '.dark-background.light-text', weight: 4, unique: true },
-                // Экран с несколькими вариантами выбора
-                { selector: '#many-text', weight: 3, unique: true },
-                { selector: '.many-text', weight: 2, unique: false },
+                // Экран с несколькими вариантами выбора (many choices)
+                { selector: '#many-text', weight: 5, unique: true },
+                { selector: '#make-many-choices-text', weight: 4, unique: true },
+                { selector: '#make-many-choices-choices', weight: 3, unique: true },
+                { selector: '.make-many-choices-button', weight: 3, unique: false },
+                { selector: '.make-many-choices-checkbox', weight: 2, unique: false },
                 { selector: '.many-sub-text', weight: 3, unique: true },
                 { selector: '.make-many-choices-submit-button', weight: 3, unique: true },
-                { selector: '.light-text.button-choice.button-game.button-large.btn', weight: 3, unique: false },
+                { selector: '.light-text.button-choice.button-game.button-large.btn', weight: 2, unique: false },
                 { selector: '.state-logo', weight: 4, unique: true },
                 { selector: '.game-page.black-background.logo-image', weight: 4, unique: true },
                 { selector: '.state-make-single-choice', weight: 4, unique: true },
-                { selector: '.data-choice', weight: 2, unique: false }
+                { selector: '[data-choice]', weight: 2, unique: false }
             ],
             // Вопрос может быть либо в одиночном выборе, либо в many-choices:
             // <div id="make-many-choices-text"> <p id="many-text">ТЕКСТ ВОПРОСА</p> </div>
