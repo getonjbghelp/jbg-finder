@@ -5791,6 +5791,4 @@ const GameDatabase = {
         console.error('[GameDatabase] findAnswer error:', e);
         return null;
     }
-},
-window.GameDatabase = GameDatabase;
-console.log('[GameDatabase] Database initialized and attached to window');
+}
