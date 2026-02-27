@@ -29,9 +29,9 @@ const CONFIG = {
 // Общие иконки статуса игры (маленький круг рядом с названием)
 // Задай здесь реальные URL-ы PNG под свой хостинг.
 const GAME_STATUS_ICONS = {
-    stable:    'https://eblo.id/uploads/hXknfQt/stable.png',
-    unstable:  'https://eblo.id/uploads/FNTZaw5/unstable_001.png',
-    nonfullwork: 'https://eblo.id/uploads/CS5k21l/nonfullwork.png'
+    stable:    'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/stable.png',
+    unstable:  'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/unstable.png',
+    nonfullwork: 'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/nonfullwork.png'
 };
 
 const LANG = {
@@ -170,10 +170,10 @@ function ensureStyle() {
         /* Основное окно */
         #${OVERLAY_ID} {
             position: fixed;
-            top: 32px;
-            right: 32px;
-            width: 420px;
-            max-width: 95vw;
+            top: 40px;
+            right: 40px;
+            width: 520px;
+            max-width: 98vw;
             background: #2b2b2b;
             border: 1px solid #3b3b3b;
             border-radius: 6px;
@@ -277,7 +277,7 @@ function ensureStyle() {
         }
 
         .overlay-content {
-            padding: 10px 12px 8px 12px;
+            padding: 14px 16px 10px 16px;
             background: #252525;
         }
 
