@@ -179,7 +179,7 @@ function ensureStyle() {
             padding: 0;
         }
 
-        /* Основное окно */
+        /* Основное окно (фиксированный размер под макет 522x338) */
         #${OVERLAY_ID} {
             position: fixed;
             top: 40px;
@@ -187,6 +187,7 @@ function ensureStyle() {
             width: 522px;
             height: 338px;
             max-width: 98vw;
+            max-height: 95vh;
             background: #2b2b2b;
             border: 1px solid #3b3b3b;
             border-radius: 6px;
@@ -292,6 +293,9 @@ function ensureStyle() {
         .overlay-content {
             padding: 14px 16px 10px 16px;
             background: #252525;
+            height: calc(100% - 30px); /* минус заголовок */
+            display: flex;
+            flex-direction: column;
         }
 
         /* Верхняя строка с игрой */
@@ -385,6 +389,7 @@ function ensureStyle() {
             grid-template-columns: 2fr 1.2fr 2fr;
             gap: 8px;
             align-items: stretch;
+            flex: 1; /* занять всё доступное пространство над строкой статуса */
         }
 
         .qa-column {
@@ -424,7 +429,6 @@ function ensureStyle() {
             font-size: 13px;
             line-height: 1.5;
             flex: 1;
-            max-height: 180px;
             overflow-y: auto;
             word-break: break-word;
             background: #7f7f7f;
