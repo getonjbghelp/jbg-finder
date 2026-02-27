@@ -5713,29 +5713,25 @@ const GameDatabase = {
         const overlayRoot = document.getElementById('game-finder-overlay');
         const isInOverlay = (el) => overlayRoot ? overlayRoot.contains(el) : false;
 
-        const selectorCandidates = [];
+        const selectors = Array.isArray(config.questionSelectors) ? config.questionSelectors : [];
 
-        for (const selector of config.questionSelectors) {
+        // 1) Жёстко придерживаемся приоритета селекторов:
+        //    берём ПЕРВЫЙ видимый элемент по каждому селектору, в указанном порядке.
+        for (const selector of selectors) {
             try {
-                const element = document.querySelector(selector);
-                if (element && !isInOverlay(element) && this.isElementVisible(element)) {
-                    const text = element.innerText.trim();
-                    if (text.length > 0 && text.length < 500) {
-                        selectorCandidates.push(text);
+                const elements = document.querySelectorAll(selector);
+                for (const el of elements) {
+                    if (!el || isInOverlay(el) || !this.isElementVisible(el)) continue;
+                    const text = el.innerText.trim();
+                    if (!text) continue;
+                    if (text.length >= 3 && text.length < 500) {
+                        return text;
                     }
                 }
             } catch (e) {}
         }
-
-        // 1) Сначала пытаемся найти "нормальный" длинный вопрос (как и раньше)
-        const longCandidate = selectorCandidates.find(t => t.length > 15);
-        if (longCandidate) return longCandidate;
-
-        // 2) Если длинного вопроса нет (например, Trivia Murder Party с 1–3 словами),
-        //    допускаем короткие фразы из целевых селекторов
-        const shortCandidate = selectorCandidates.find(t => t.length >= 3);
-        if (shortCandidate) return shortCandidate;
         
+        // 2) Резервный поиск по странице, если ничего из целевых селекторов не подошло
         const potentialQuestions = document.querySelectorAll('p, div, span');
         for (const el of potentialQuestions) {
             if (this.isElementVisible(el) && !isInOverlay(el)) {
