@@ -40,6 +40,7 @@ const LANG = {
         detectBtn: '🔍 Найти вопрос и игру',
         searchBtn: '⚡ Найти ответ',
         copyBtn: '📋 Копировать',
+        clearBtn: '🗑 Удалить результаты',
         questionLabel: '📝 ВОПРОС',
         answerLabel: '💡 ОТВЕТ',
         notDetected: 'Игра не определена',
@@ -70,6 +71,7 @@ const LANG = {
         detectBtn: '🔍 Detect Question and Game',
         searchBtn: '⚡ Find Answer',
         copyBtn: '📋 Copy',
+        clearBtn: '🗑 Delete Results',
         questionLabel: '📝 QUESTION',
         answerLabel: '💡 ANSWER',
         notDetected: 'Game Not Detected',
@@ -151,6 +153,16 @@ function updateGameAssets() {
             dom.gameLogo.style.display = 'none';
         }
     }
+}
+
+function setQuestionLoading(isLoading) {
+    if (!dom.questionSpinner) return;
+    dom.questionSpinner.classList.toggle('active', !!isLoading);
+}
+
+function setAnswerLoading(isLoading) {
+    if (!dom.answerSpinner) return;
+    dom.answerSpinner.classList.toggle('active', !!isLoading);
 }
 
 // === Минималистичный интерфейс в стиле Windows 10 ===
@@ -281,12 +293,12 @@ function ensureStyle() {
             background: #252525;
         }
 
-        /* Блок игры */
+        /* Верхняя строка с игрой */
         .game-indicator {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 10px;
+            padding: 6px 10px;
             margin-bottom: 10px;
             border-radius: 4px;
             background: #2f2f2f;
@@ -301,8 +313,8 @@ function ensureStyle() {
         }
 
         .indicator-dot {
-            width: 10px;
-            height: 10px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
             background: #555555;
         }
@@ -312,8 +324,8 @@ function ensureStyle() {
         }
 
         .game-icon {
-            width: 24px;
-            height: 24px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: #3b3b3b;
             object-fit: cover;
@@ -345,6 +357,7 @@ function ensureStyle() {
             font-size: 10px;
             color: #808080;
             white-space: nowrap;
+            text-align: right;
         }
 
         .confidence-badge {
@@ -352,14 +365,34 @@ function ensureStyle() {
             color: #a0e7c4;
         }
 
-        /* Вопрос / ответ */
-        .question-box,
-        .answer-box {
-            margin-bottom: 8px;
-            padding: 8px 8px;
-            border-radius: 4px;
+        #game-logo-container {
+            display: flex;
+            justify-content: flex-start;
+            margin-bottom: 6px;
+        }
+
+        #game-logo {
+            max-width: 180px;
+            max-height: 40px;
+            object-fit: contain;
+            display: none;
+        }
+
+        /* Основная сетка: ВОПРОС | КНОПКИ | ОТВЕТ */
+        .overlay-grid {
+            display: grid;
+            grid-template-columns: 2fr 1.2fr 2fr;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .qa-column {
+            display: flex;
+            flex-direction: column;
             background: #2b2b2b;
             border: 1px solid #3b3b3b;
+            border-radius: 4px;
+            padding: 6px;
         }
 
         .question-header,
@@ -372,10 +405,11 @@ function ensureStyle() {
 
         .question-header div[style*="font-weight:700"],
         .answer-header div[style*="font-weight:700"] {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 600 !important;
+            letter-spacing: 0.25em;
             text-transform: uppercase;
-            color: #a0a0a0;
+            color: #d0d0d0;
         }
 
         #question-length,
@@ -386,11 +420,16 @@ function ensureStyle() {
 
         .question-text,
         .answer-text {
-            font-size: 12px;
+            font-size: 13px;
             line-height: 1.5;
-            max-height: 120px;
+            flex: 1;
+            max-height: 180px;
             overflow-y: auto;
             word-break: break-word;
+            background: #7f7f7f;
+            color: #f5f5f5;
+            padding: 6px;
+            border-radius: 2px;
         }
 
         .answer-box.found {
@@ -401,33 +440,81 @@ function ensureStyle() {
             border-color: #c0392b;
         }
 
-        /* Кнопки действий */
-        .action-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin-bottom: 8px;
+        .qa-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
         }
 
-        .action-btn {
-            padding: 6px 8px;
-            border-radius: 3px;
+        .qa-footer-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .qa-spinner {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #777777;
+            border-top-color: #f0f0f0;
+            display: none;
+        }
+
+        .qa-spinner.active {
+            display: inline-block;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .qa-copy-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 2px;
             border: 1px solid #3b3b3b;
             background: #323232;
             color: #f0f0f0;
-            font-size: 12px;
+            font-size: 11px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
         }
 
-        .action-btn:hover {
+        .qa-copy-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        /* Центральная колонка кнопок */
+        .center-column {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .center-btn {
+            padding: 10px 8px;
+            border-radius: 3px;
+            border: 1px solid #3b3b3b;
+            background: #323232;
+            color: #f0f0f0;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .center-btn:hover:not(:disabled) {
             background: #3a3a3a;
         }
 
-        .action-btn:disabled {
+        .center-btn:disabled {
             opacity: 0.5;
             cursor: default;
         }
@@ -443,25 +530,13 @@ function ensureStyle() {
         }
 
         .search-btn {
-            background: #3a3a3a;
+            background: #2f9b5f;
+            border-color: #2f9b5f;
         }
 
-        .copy-btn {
-            grid-column: span 2;
-        }
-
-        /* Лого игры */
-        #game-logo-container {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 4px;
-        }
-
-        #game-logo {
-            max-width: 120px;
-            max-height: 40px;
-            object-fit: contain;
-            display: none;
+        .delete-btn {
+            background: #444444;
+            border-color: #444444;
         }
 
         /* Строка статуса */
@@ -516,7 +591,6 @@ function cacheDom() {
     dom.status = overlayEl.querySelector('#overlay-status');
     dom.detectBtn = overlayEl.querySelector('#detect-btn');
     dom.searchBtn = overlayEl.querySelector('#search-btn');
-    dom.copyBtn = overlayEl.querySelector('#copy-btn');
     dom.flagBtn = overlayEl.querySelector('#lang-flag-btn');
     dom.questionText = overlayEl.querySelector('#question-text');
     dom.questionLength = overlayEl.querySelector('#question-length');
@@ -536,6 +610,11 @@ function cacheDom() {
     dom.titleEl = overlayEl.querySelector('.overlay-title');
     dom.qLabelEl = overlayEl.querySelector('.question-header div[style*="font-weight:700"]');
     dom.aLabelEl = overlayEl.querySelector('.answer-header div[style*="font-weight:700"]');
+    dom.questionSpinner = overlayEl.querySelector('#question-spinner');
+    dom.answerSpinner = overlayEl.querySelector('#answer-spinner');
+    dom.questionCopyBtn = overlayEl.querySelector('#question-copy-btn');
+    dom.answerCopyBtn = overlayEl.querySelector('#answer-copy-btn');
+    dom.deleteBtn = overlayEl.querySelector('#delete-btn');
     log('DOM elements cached:', Object.keys(dom));
 }
 
@@ -697,6 +776,8 @@ function displayQuestion(q) {
         dom.questionText.textContent = getText('placeholderQuestion');
         dom.questionLength.textContent = '0' + getText('symbols');
         dom.searchBtn.disabled = true;
+        if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
+        setQuestionLoading(false);
         return;
     }
 
@@ -708,6 +789,8 @@ function displayQuestion(q) {
     // Определяем язык вопроса и обновляем визуальные элементы игры
     currentContentLang = detectLangFromText(q);
     updateGameAssets();
+    if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = false;
+    setQuestionLoading(false);
 }
 
 function detectGame() {
@@ -719,6 +802,7 @@ function detectGame() {
     }
 
     updateStatus('scanning', 'searching');
+    setQuestionLoading(true);
 
     try { 
         const result = gameDatabase.detectGame();
@@ -748,18 +832,22 @@ function detectGame() {
                     logError('Error extracting question:', e);
                     currentQuestion = '';
                     displayQuestion(null);
+                } finally {
+                    setQuestionLoading(false);
                 }
             }, 250);
         } else {
             updateStatus('notDetected', 'warning');
             currentQuestion = '';
             displayQuestion(null);
+            setQuestionLoading(false);
         }
 
         return result;
     } catch (e) {
         logError('Error in detectGame:', e);
         updateStatus('dbError', 'error');
+        setQuestionLoading(false);
         return null;
     }
 }
@@ -778,6 +866,7 @@ function searchAnswer() {
     }
 
     updateStatus('scanning', 'searching');
+    setAnswerLoading(true);
 
     try {
         const result = gameDatabase.findAnswer(currentQuestion, currentGame);
@@ -790,7 +879,8 @@ function searchAnswer() {
             dom.answerBox.classList.remove('not-found'); 
             dom.answerBox.classList.add('found');
             dom.answerConfidence.textContent = (result.confidence ?? 0) + '%';
-            dom.copyBtn.disabled = false;
+            if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = false;
+            if (dom.deleteBtn) dom.deleteBtn.disabled = false;
             dom.status.textContent = getText('answerFound') + (result.confidence ?? 0) + '%)';
             dom.status.style.color = '#4ecdc4';
         } else {
@@ -798,12 +888,14 @@ function searchAnswer() {
             dom.answerBox.classList.remove('found');
             dom.answerBox.classList.add('not-found');
             dom.answerConfidence.textContent = '';
-            dom.copyBtn.disabled = true;
+            if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
             updateStatus('answerNotFound', 'error');
         }
     } catch (e) {
         logError('Error in searchAnswer:', e);
         updateStatus('dbError', 'error');
+    } finally {
+        setAnswerLoading(false);
     }
 }
 
@@ -814,10 +906,12 @@ function updateAllText() {
         if (dom.titleEl) dom.titleEl.textContent = t.title;
         if (dom.detectBtn) dom.detectBtn.textContent = t.detectBtn;
         if (dom.searchBtn) dom.searchBtn.textContent = t.searchBtn;
-        if (dom.copyBtn) dom.copyBtn.textContent = t.copyBtn;
+        if (dom.deleteBtn) dom.deleteBtn.textContent = t.clearBtn;
         
         if (dom.qLabelEl) dom.qLabelEl.textContent = t.questionLabel;
         if (dom.aLabelEl) dom.aLabelEl.textContent = t.answerLabel;
+        if (dom.questionCopyBtn) dom.questionCopyBtn.title = t.copyBtn;
+        if (dom.answerCopyBtn) dom.answerCopyBtn.title = t.copyBtn;
 
         const minBtn = document.getElementById('minimize-btn');
         const closeBtn = document.getElementById('close-btn');
@@ -911,29 +1005,41 @@ function createOverlay() {
                 <img id="game-logo" alt="">
             </div>
 
-            <div class="question-box">
-                <div class="question-header">
-                    <div style="font-weight:700">${getText('questionLabel')}</div>
-                    <div id="question-length" style="font-size:11px;color:#5a5a5a;font-weight:600">0 ${getText('symbols')}</div>
+            <div class="overlay-grid">
+                <div class="qa-column question-column">
+                    <div class="question-header">
+                        <div style="font-weight:700">${getText('questionLabel')}</div>
+                        <div id="question-length">0 ${getText('symbols')}</div>
+                    </div>
+                    <div id="question-text" class="question-text scrollbar-custom">${getText('placeholderQuestion')}</div>
+                    <div class="qa-footer">
+                        <div class="qa-footer-left">
+                            <div id="question-spinner" class="qa-spinner"></div>
+                            <button id="question-copy-btn" class="qa-copy-btn" title="${getText('copyBtn')}" disabled>📋</button>
+                        </div>
+                    </div>
                 </div>
-                <div id="question-text" class="question-text scrollbar-custom">${getText('placeholderQuestion')}</div>
-            </div>
 
-            <div class="action-buttons">
-                <button id="detect-btn" class="action-btn detect-btn">${getText('detectBtn')}</button>
-                <button id="search-btn" class="action-btn search-btn" disabled>${getText('searchBtn')}</button>
-                <button id="copy-btn" class="action-btn copy-btn" disabled>${getText('copyBtn')}</button>
-            </div>
-
-            <div id="answer-box" class="answer-box">
-                <div class="answer-header">
-                    <div style="font-weight:700">${getText('answerLabel')}</div>
-                    <div id="answer-confidence" style="font-size:11px;color:#5a5a5a;font-weight:600"></div>
+                <div class="center-column">
+                    <button id="detect-btn" class="center-btn detect-btn">${getText('detectBtn')}</button>
+                    <button id="search-btn" class="center-btn search-btn" disabled>${getText('searchBtn')}</button>
+                    <button id="delete-btn" class="center-btn delete-btn" disabled>${getText('clearBtn')}</button>
                 </div>
-                <div id="answer-text" class="answer-text">${getText('placeholderAnswer')}</div>
-            </div>
 
-            <div id="game-watermark"></div>
+                <div id="answer-box" class="qa-column answer-box answer-column">
+                    <div class="answer-header">
+                        <div style="font-weight:700">${getText('answerLabel')}</div>
+                        <div id="answer-confidence"></div>
+                    </div>
+                    <div id="answer-text" class="answer-text scrollbar-custom">${getText('placeholderAnswer')}</div>
+                    <div class="qa-footer">
+                        <div class="qa-footer-left">
+                            <div id="answer-spinner" class="qa-spinner"></div>
+                            <button id="answer-copy-btn" class="qa-copy-btn" title="${getText('copyBtn')}" disabled>📋</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div id="overlay-status" class="overlay-status">${getText('loadingDB')}</div>
         </div>
@@ -944,7 +1050,9 @@ function createOverlay() {
     updateAllText();
 
     if (dom.searchBtn) dom.searchBtn.disabled = true;
-    if (dom.copyBtn) dom.copyBtn.disabled = true;
+    if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
+    if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
+    if (dom.deleteBtn) dom.deleteBtn.disabled = true;
     if (dom.dbStatus) dom.dbStatus.className = 'db-status error';
 
     if (dom.detectBtn) {
@@ -966,20 +1074,57 @@ function createOverlay() {
         });
     }
 
-    if (dom.copyBtn) {
-        dom.copyBtn.addEventListener('click', () => {
-            try {
-                const text = (dom.answerText && dom.answerText.textContent) ? dom.answerText.textContent : '';
-                if (!text || text === getText('answerNotFound')) return;
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text).then(() => updateStatus('copySuccess', 'success')).catch(() => updateStatus('copySuccess', 'success'));
-                } else {
-                    const ta = document.createElement('textarea');
-                    ta.value = text; document.body.appendChild(ta); ta.select();
-                    document.execCommand('copy'); ta.remove();
-                    updateStatus('copySuccess', 'success');
-                }
-            } catch (e) { logError('Copy failed', e); }
+    function copyTextToClipboard(text) {
+        try {
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(() => updateStatus('copySuccess', 'success'))
+                    .catch(() => updateStatus('copySuccess', 'success'));
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                updateStatus('copySuccess', 'success');
+            }
+        } catch (e) {
+            logError('Copy failed', e);
+        }
+    }
+
+    if (dom.questionCopyBtn) {
+        dom.questionCopyBtn.addEventListener('click', () => {
+            const text = currentQuestion || (dom.questionText && dom.questionText.textContent) || '';
+            if (!text || text === getText('placeholderQuestion')) return;
+            copyTextToClipboard(text);
+        });
+    }
+
+    if (dom.answerCopyBtn) {
+        dom.answerCopyBtn.addEventListener('click', () => {
+            const text = (dom.answerText && dom.answerText.textContent) ? dom.answerText.textContent : '';
+            if (!text || text === getText('answerNotFound')) return;
+            copyTextToClipboard(text);
+        });
+    }
+
+    if (dom.deleteBtn) {
+        dom.deleteBtn.addEventListener('click', () => {
+            currentQuestion = '';
+            displayQuestion(null);
+            if (dom.answerText) dom.answerText.textContent = getText('placeholderAnswer');
+            if (dom.answerBox) {
+                dom.answerBox.classList.remove('found');
+                dom.answerBox.classList.remove('not-found');
+            }
+            if (dom.answerConfidence) dom.answerConfidence.textContent = '';
+            if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
+            if (dom.deleteBtn) dom.deleteBtn.disabled = true;
+            setQuestionLoading(false);
+            setAnswerLoading(false);
         });
     }
 
