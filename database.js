@@ -1,7 +1,7 @@
 const GameDatabase = {
-    version: "DB26FEBEXP",
-    lastUpdated: "2026-02-26",
-    buildDate: new Date("2026-02-26"),
+    version: "DB27FEBEXP",
+    lastUpdated: "2026-02-27",
+    buildDate: new Date("2026-02-27"),
     
     gameConfig: {
         guesspy: {
