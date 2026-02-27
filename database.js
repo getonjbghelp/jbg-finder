@@ -88,7 +88,9 @@ const GameDatabase = {
                 { selector: '.lobby-text', weight: 3, unique: false },
                 { selector: '.state-lobby', weight: 4, unique: true },
                 { selector: '.dark-background.light-text', weight: 4, unique: true },
-                { selector: '.many-text', weight: 3, unique: true },
+                // Экран с несколькими вариантами выбора
+                { selector: '#many-text', weight: 3, unique: true },
+                { selector: '.many-text', weight: 2, unique: false },
                 { selector: '.many-sub-text', weight: 3, unique: true },
                 { selector: '.make-many-choices-submit-button', weight: 3, unique: true },
                 { selector: '.light-text.button-choice.button-game.button-large.btn', weight: 3, unique: false },
@@ -97,7 +99,13 @@ const GameDatabase = {
                 { selector: '.state-make-single-choice', weight: 4, unique: true },
                 { selector: '.data-choice', weight: 2, unique: false }
             ],
-            questionSelectors: ['.make-single-choice-text', 'make-many-choices-text', 'p'],
+            // Вопрос может быть либо в одиночном выборе, либо в many-choices:
+            // <div id="make-many-choices-text"> <p id="many-text">ТЕКСТ ВОПРОСА</p> </div>
+            questionSelectors: [
+                '.make-single-choice-text',
+                '#many-text',
+                '#make-many-choices-text'
+            ],
             backgroundColor: '#5a4a2d',
             minConfidence: 8
         }
