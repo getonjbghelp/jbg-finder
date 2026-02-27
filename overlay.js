@@ -184,7 +184,8 @@ function ensureStyle() {
             position: fixed;
             top: 40px;
             right: 40px;
-            width: 520px;
+            width: 522px;
+            height: 338px;
             max-width: 98vw;
             background: #2b2b2b;
             border: 1px solid #3b3b3b;
