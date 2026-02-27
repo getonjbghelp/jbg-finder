@@ -16,8 +16,8 @@ const GameDatabase = {
             },
             // Логотипы игры под RU / EN (по желанию)
             logoUrls: {
-                ru: '',
-                en: ''
+                ru: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/guesspyRU.png',
+                en: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/guesspyENG.png'
             },
             requiredIndicators: [
                 { selector: '#pollposition-page', weight: 5, unique: true },
@@ -76,8 +76,8 @@ const GameDatabase = {
                 }
             },
             logoUrls: {
-                ru: '',
-                en: ''
+                ru: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/fibbage12rus.png',
+                en: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/fibbage12.PNG'
             },
             requiredIndicators: [
                 { selector: '#fibbage-page', weight: 5, unique: true },
@@ -126,8 +126,8 @@ const GameDatabase = {
                 }
             },
             logoUrls: {
-                ru: '',
-                en: ''
+                ru: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/tmpRUS.png',
+                en: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/tmpENGLISH.PNG'
             },
             requiredIndicators: [
                 { selector: '.make-single-choice-text', weight: 5, unique: true },
