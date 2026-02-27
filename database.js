@@ -1,7 +1,7 @@
 const GameDatabase = {
-    version: "DB27FEBEXP",
-    lastUpdated: "2026-02-27",
-    buildDate: new Date("2026-02-27"),
+    version: "DB26FEBEXP",
+    lastUpdated: "2026-02-26",
+    buildDate: new Date("2026-02-26"),
     
     gameConfig: {
         guesspy: {
@@ -5702,17 +5702,28 @@ const GameDatabase = {
         const config = this.gameConfig[gameId];
         if (!config) return null;
 
+        const selectorCandidates = [];
+
         for (const selector of config.questionSelectors) {
             try {
                 const element = document.querySelector(selector);
                 if (element && this.isElementVisible(element)) {
                     const text = element.innerText.trim();
-                    if (text.length > 15 && text.length < 500) {
-                        return text;
+                    if (text.length > 0 && text.length < 500) {
+                        selectorCandidates.push(text);
                     }
                 }
             } catch (e) {}
         }
+
+        // 1) Сначала пытаемся найти "нормальный" длинный вопрос (как и раньше)
+        const longCandidate = selectorCandidates.find(t => t.length > 15);
+        if (longCandidate) return longCandidate;
+
+        // 2) Если длинного вопроса нет (например, Trivia Murder Party с 1–3 словами),
+        //    допускаем короткие фразы из целевых селекторов
+        const shortCandidate = selectorCandidates.find(t => t.length >= 3);
+        if (shortCandidate) return shortCandidate;
         
         const potentialQuestions = document.querySelectorAll('p, div, span');
         for (const el of potentialQuestions) {
@@ -5729,66 +5740,100 @@ const GameDatabase = {
     },
 
     findAnswer: function (question, gameId) {
-    try {
-        if (!question || !gameId) return null;
-        const rawQuestions = this.questions?.[gameId];
-        if (!rawQuestions) return null;
-        
-        // Определяем язык по наличию кириллических символов
-        const hasCyrillic = /[\u0400-\u04FF]/.test(question);
-        const questionLang = hasCyrillic ? 'ru' : 'en';
-        
-        // Фильтруем вопросы по языку
-        let items = rawQuestions.filter(it => {
-            if (!it || !it.question) return false;
-            const isRu = /[\u0400-\u04FF]/.test(it.question);
-            return hasCyrillic ? isRu : !isRu;
-        });
-        if (!items.length) items = rawQuestions; // fallback
-        
-        const normalizedQuestion = this.normalizeText(question);
-        const qWords = normalizedQuestion.split(' ').filter(w => w.length > 2);
-        const isShortQuestion = qWords.length <= 3; // === КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ===
-        
-        for (const item of items) {
-            if (!item || !item.question) continue;
-            const normalizedDB = this.normalizeText(item.question);
-            
-            // 1) Точное совпадение (всегда работает)
-            if (normalizedQuestion === normalizedDB) {
-                return { answer: item.answer, confidence: 100 };
-            }
-            
-            // 2) Для коротких вопросов — ТОЛЬКО точное или подстроковое совпадение
-            // === ИСПРАВЛЕНИЕ: отключаем fuzzy-матчинг для коротких вопросов ===
-            if (isShortQuestion) {
-                if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
-                    return { answer: item.answer, confidence: 85 };
-                }
-                continue; // пропускаем fuzzy-логику для коротких вопросов
-            }
-            
-            // 3) Для длинных вопросов — обычный fuzzy-матчинг
-            const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
-            if (qWords.length && dbWords.length) {
-                const matchCount = qWords.filter(w => dbWords.includes(w)).length;
-                const qThreshold = Math.ceil(qWords.length * 0.8);
-                const dbThreshold = Math.ceil(dbWords.length * 0.8);
-                const lastQ = qWords.length ? qWords[qWords.length - 1] : null;
-                const lastDB = dbWords.length ? dbWords[dbWords.length - 1] : null;
-                
-                if (
-                    matchCount >= 5 &&
-                    (matchCount >= qThreshold || matchCount >= dbThreshold) &&
-                    lastQ && lastDB && lastQ === lastDB
-                ) {
-                    return { answer: item.answer, confidence: 60 };
-                }
-            }
-        }
-        return null;
-    } catch (e) {
-        console.error('[GameDatabase] findAnswer error:', e);
-        return null;
+		try {
+			if (!question || !gameId) return null;
+
+			const rawQuestions = this.questions?.[gameId];
+			if (!rawQuestions) return null;
+
+			// Определяем язык по наличию кириллических символов
+			const questionLang = /[\u0400-\u04FF]/.test(question) ? 'ru' : 'en';
+
+			// Поддержка двух форматов хранения: массив или { ru: [...], en: [...] }
+			let items = [];
+			if (Array.isArray(rawQuestions)) {
+				// Фильтруем по языку, если тексты смешаны в одном массиве
+				items = rawQuestions.filter(it => {
+					if (!it || !it.question) return false;
+					return questionLang === 'ru'
+						? /[\u0400-\u04FF]/.test(it.question)
+						: !/[\u0400-\u04FF]/.test(it.question);
+				});
+				if (!items.length) items = rawQuestions; // fallback — весь массив
+			} else {
+            items = rawQuestions[questionLang] || [...(rawQuestions.ru || []), ...(rawQuestions.en || [])];
+			}
+
+			const normalizedQuestion = this.normalizeText(question);
+
+			for (const item of items) {
+				if (!item || !item.question) continue;
+				const normalizedDB = this.normalizeText(item.question);
+
+				// 1) Точное совпадение
+				if (normalizedQuestion === normalizedDB) {
+					return { answer: item.answer, confidence: 100 };
+				}
+
+				// 2) Подстроковое включение (одна строка полностью содержит другую)
+				if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
+					return { answer: item.answer, confidence: 75 };
+				}
+
+				// 3) Совпадение по словам с жёсткими порогами, с дополнительной проверкой последнего слова
+				const qWords = normalizedQuestion.split(' ').filter(w => w.length > 3);
+				const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
+
+				if (qWords.length && dbWords.length) {
+					const matchCount = qWords.filter(w => dbWords.includes(w)).length;
+					const qThreshold = Math.ceil(qWords.length * 0.8);
+					const dbThreshold = Math.ceil(dbWords.length * 0.8);
+
+					// Определяем последние значимые слова (если есть)
+					const lastQ = qWords.length ? qWords[qWords.length - 1] : null;
+					const lastDB = dbWords.length ? dbWords[dbWords.length - 1] : null;
+
+					// Условие: должно быть минимум 5 совпадающих слов И один из порогов выполнен
+					// + последний значимый слово должен совпадать (исключает шаблонные вопросы с разными хвостами)
+					if (
+						matchCount >= 5 &&
+						(matchCount >= qThreshold || matchCount >= dbThreshold) &&
+						lastQ && lastDB && lastQ === lastDB
+					) {
+						return { answer: item.answer, confidence: 60 };
+					}
+				}
+			}
+
+			return null;
+		} catch (e) {
+			console.error('[GameDatabase] findAnswer error:', e);
+			return null;
+		}
+	},
+
+    normalizeText: function (text) {
+		if (!text || typeof text !== 'string') return '';
+
+		return text
+			.normalize('NFD')                                  // Unicode NFD (разложение диакритики)
+			.replace(/[\u0300-\u036f]/g, '')                   // удалить диакритические знаки
+			.toLowerCase()
+			.replace(/[^a-z0-9\u0400-\u04FF\s]/g, ' ')         // оставить только латиницу, кириллицу, цифры и пробелы
+			.replace(/\s+/g, ' ')                              // свести множественные пробелы в один
+			.trim();
+	},
+
+    getVersionInfo: function() {
+        const now = new Date();
+        const daysSinceUpdate = Math.floor((now - this.buildDate) / (1000 * 60 * 60 * 24));
+        return {
+            version: this.version,
+            lastUpdated: this.lastUpdated,
+            daysSinceUpdate: daysSinceUpdate,
+            isOutdated: daysSinceUpdate > 30
+        };
     }
-}
+};
+window.GameDatabase = GameDatabase;
+console.log('[GameDatabase] Database initialized and attached to window');
