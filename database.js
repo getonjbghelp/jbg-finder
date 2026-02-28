@@ -44,8 +44,8 @@ const GameDatabase = {
                 }
             },
             logoUrls: {
-                ru: '',
-                en: ''
+                ru: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/fibbage3ru.png',
+                en: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/fibbage3eng.png'
             },
             requiredIndicators: [
                 { selector: '.Logo.Standard', weight: 5, unique: true },
