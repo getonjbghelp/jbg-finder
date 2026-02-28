@@ -64,7 +64,8 @@ const LANG = {
         placeholderQuestion: 'Нажмите "Найти вопрос", когда вопрос будет на экране...',
         placeholderAnswer: 'Здесь появится ответ...',
         version: 'Версия',
-        daysAgo: 'дн. назад'
+        daysAgo: 'дн. назад',
+        statusWhy: 'Почему?'
     },
     en: {
         title: 'JBG-Finder PREALPHA',
@@ -95,7 +96,8 @@ const LANG = {
         placeholderQuestion: 'Click "Detect" when question is on screen...',
         placeholderAnswer: 'Answer will appear here...',
         version: 'Ver',
-        daysAgo: 'days ago'
+        daysAgo: 'days ago',
+        statusWhy: 'Why?'
     }
 };
 
@@ -128,6 +130,8 @@ function updateGameAssets() {
     const notes = status.notes || {};
     const statusIconUrl = status.level ? GAME_STATUS_ICONS[status.level] : null;
 
+    const noteText = notes[currentContentLang] || notes.en || notes.ru || '';
+
     if (dom.gameIcon) {
         if (statusIconUrl) {
             dom.gameIcon.src = statusIconUrl;
@@ -136,15 +140,20 @@ function updateGameAssets() {
             dom.gameIcon.src = '';
             dom.gameIcon.style.display = 'none';
         }
-        const noteText = notes[currentContentLang] || notes.en || notes.ru || '';
-        dom.gameIcon.title = noteText;
+    }
+
+    if (dom.statusNotesPopup && dom.statusNotesPopupTitle && dom.statusNotesPopupText) {
+        dom.statusNotesPopupTitle.textContent = getText('statusWhy');
+        dom.statusNotesPopupText.textContent = noteText || '';
+        dom.statusNotesPopup.style.display = noteText ? 'block' : 'none';
     }
 
     const logoUrls = config.logoUrls || (config.assets && config.assets.logoUrls);
+    const logoUrl = logoUrls
+        ? (logoUrls[currentContentLang] || logoUrls.en || logoUrls.ru)
+        : null;
+
     if (dom.gameLogo) {
-        const logoUrl = logoUrls
-            ? (logoUrls[currentContentLang] || logoUrls.en || logoUrls.ru)
-            : null;
         if (logoUrl) {
             dom.gameLogo.src = logoUrl;
             dom.gameLogo.style.display = 'block';
@@ -152,6 +161,10 @@ function updateGameAssets() {
             dom.gameLogo.src = '';
             dom.gameLogo.style.display = 'none';
         }
+    }
+    /* Название игры показываем только если логотип не указан */
+    if (dom.gameTitleBlock) {
+        dom.gameTitleBlock.style.display = logoUrl ? 'none' : '';
     }
 }
 
@@ -328,20 +341,25 @@ function ensureStyle() {
             background: #29b765;
         }
 
+        .game-icon-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            flex-shrink: 0;
+            height: var(--game-brand-height);
+        }
+
         .game-icon {
-            width: 18px;
-            height: 18px;
+            width: var(--game-brand-height);
+            height: var(--game-brand-height);
             border-radius: 50%;
             background: #3b3b3b;
             object-fit: cover;
-            flex-shrink: 0;
             display: none;
         }
 
-        .game-title-block {
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
+        .game-icon-wrap .game-icon[src]:not([src=""]) {
+            display: block;
         }
 
         #game-name {
@@ -370,23 +388,77 @@ function ensureStyle() {
             color: #a0e7c4;
         }
 
-        #game-logo-container {
+        /* Логотип игры наверху; иконка статуса по высоте логотипа (переменная под разные логотипы) */
+        .game-branding {
+            --game-brand-height: 36px;
             display: flex;
-            justify-content: flex-start;
-            margin-bottom: 6px;
+            align-items: center;
+            min-width: 0;
+            flex: 1;
+            gap: 8px;
         }
 
         #game-logo {
-            max-width: 180px;
-            max-height: 40px;
+            max-width: 160px;
+            max-height: var(--game-brand-height, 36px);
+            height: auto;
             object-fit: contain;
             display: none;
+        }
+
+        /* Попап с пояснением статуса (notes) при наведении на иконку */
+        .status-notes-popup {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            padding: 10px 12px;
+            min-width: 180px;
+            max-width: 260px;
+            background: #1e1e1e;
+            border: 1px solid #3b3b3b;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06) inset;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+            z-index: 10000;
+            white-space: normal;
+            text-align: left;
+        }
+
+        .game-icon-wrap:hover .status-notes-popup {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .status-notes-popup-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #8a8a8a;
+            margin-bottom: 6px;
+        }
+
+        .status-notes-popup-text {
+            font-size: 12px;
+            line-height: 1.45;
+            color: #e0e0e0;
+        }
+
+        .game-title-block {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
         }
 
         /* Основная сетка: ВОПРОС | КНОПКИ | ОТВЕТ */
         .overlay-grid {
             display: grid;
-            grid-template-columns: 2fr 1.2fr 2fr;
+            grid-template-columns: 2fr 1fr 2fr;
             gap: 8px;
             align-items: stretch;
             flex: 1; /* занять всё доступное пространство над строкой статуса */
@@ -497,22 +569,25 @@ function ensureStyle() {
             cursor: default;
         }
 
-        /* Центральная колонка кнопок */
+        /* Центральная колонка кнопок — на всю ширину колонки (до краёв полей) */
         .center-column {
             display: flex;
             flex-direction: column;
             gap: 6px;
             justify-content: center;
+            min-width: 0;
         }
 
         .center-btn {
-            padding: 10px 8px;
+            width: 100%;
+            padding: 10px 6px;
             border-radius: 3px;
             border: 1px solid #3b3b3b;
             background: #323232;
             color: #f0f0f0;
-            font-size: 13px;
+            font-size: 12px;
             cursor: pointer;
+            box-sizing: border-box;
         }
 
         .center-btn:hover:not(:disabled) {
@@ -554,14 +629,15 @@ function ensureStyle() {
             font-family: "Consolas", "JetBrains Mono", monospace;
         }
 
-        /* Свернутый режим */
-        .overlay-minimized {
-            height: 30px;
+        /* Свернутый режим — окно реально уменьшается до заголовка */
+        #${OVERLAY_ID}.overlay-minimized {
+            height: 30px !important;
+            min-height: 30px;
             overflow: hidden;
         }
 
         .overlay-minimized .overlay-content {
-            display: none;
+            display: none !important;
         }
 
         /* Скроллбар */
@@ -608,6 +684,10 @@ function cacheDom() {
     dom.watermark = overlayEl.querySelector('#game-watermark');
     dom.gameIcon = overlayEl.querySelector('#game-icon');
     dom.gameLogo = overlayEl.querySelector('#game-logo');
+    dom.gameTitleBlock = overlayEl.querySelector('.game-title-block');
+    dom.statusNotesPopup = overlayEl.querySelector('#status-notes-popup');
+    dom.statusNotesPopupTitle = overlayEl.querySelector('#status-notes-popup-title');
+    dom.statusNotesPopupText = overlayEl.querySelector('#status-notes-popup-text');
     dom.dbVersion = overlayEl.querySelector('#db-version');
     dom.dbAge = overlayEl.querySelector('#db-age');
     dom.indicatorCount = overlayEl.querySelector('#indicator-count');
@@ -754,6 +834,9 @@ function updateIndicator(result) {
             dom.gameLogo.src = '';
             dom.gameLogo.style.display = 'none';
         }
+        if (dom.gameTitleBlock) dom.gameTitleBlock.style.display = '';
+        if (dom.statusNotesPopup) dom.statusNotesPopup.style.display = 'none';
+        if (dom.statusNotesPopupText) dom.statusNotesPopupText.textContent = '';
         return;
     }
 
@@ -963,6 +1046,7 @@ function updateAllText() {
             const conf = dom.gameConfidence.textContent.match(/\d+/);
             if(conf) dom.gameConfidence.innerHTML = `<span class="confidence-badge">${t.confidence} ${conf[0]}</span>`;
         }
+        if (dom.statusNotesPopupTitle) dom.statusNotesPopupTitle.textContent = t.statusWhy || getText('statusWhy');
 
         logDebug('UI Text updated for lang:', currentLang);
     } catch (e) {
@@ -998,16 +1082,22 @@ function createOverlay() {
                 <div class="game-indicator-main">
                     <div id="status-dot" class="indicator-dot"></div>
                     <img id="game-icon" class="game-icon" alt="">
-                    <div class="game-title-block">
-                        <div id="game-name">${getText('notDetected')}</div>
-                        <div id="game-confidence" class="game-confidence-text"></div>
+                    <div class="game-branding">
+                        <span class="game-icon-wrap">
+                            <img id="game-icon" class="game-icon" alt="">
+                            <div id="status-notes-popup" class="status-notes-popup">
+                                <div id="status-notes-popup-title" class="status-notes-popup-title"></div>
+                                <div id="status-notes-popup-text" class="status-notes-popup-text"></div>
+                            </div>
+                        </span>
+                        <img id="game-logo" alt="">
+                        <div class="game-title-block">
+                            <div id="game-name">${getText('notDetected')}</div>
+                            <div id="game-confidence" class="game-confidence-text"></div>
+                        </div>
                     </div>
                 </div>
                 <div id="indicator-count" class="indicator-count"></div>
-            </div>
-
-            <div id="game-logo-container">
-                <img id="game-logo" alt="">
             </div>
 
             <div class="overlay-grid">
