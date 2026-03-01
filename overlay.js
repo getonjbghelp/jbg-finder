@@ -15,6 +15,7 @@ if (existing) {
     log('Removing existing overlay...');
     existing.remove();
 }
+
 log('Initializing JBG-Finder overlay...');
 
 const CONFIG = {
@@ -25,9 +26,10 @@ const CONFIG = {
     retryAttempts: 3
 };
 
+// Общие иконки статуса игры
 const GAME_STATUS_ICONS = {
-    stable: 'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/stable.png',
-    unstable: 'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/unstable.png',
+    stable:    'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/stable.png',
+    unstable:  'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/unstable.png',
     nonfullwork: 'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/nonfullwork.png'
 };
 
@@ -104,6 +106,7 @@ let overlayEl = null;
 let dbLoadAttempts = 0;
 let isDatabaseLoaded = false;
 let currentContentLang = CONFIG.defaultLang;
+
 const dom = {};
 let popupEl = null;
 let popupDocClickHandler = null;
@@ -122,6 +125,7 @@ function updateGameAssets() {
     if (!currentGame || !gameDatabase || !gameDatabase.gameConfig) return;
     const config = gameDatabase.gameConfig[currentGame];
     if (!config) return;
+
     const status = config.status || {};
     const notes = status.notes || {};
     const statusIconUrl = status.level ? GAME_STATUS_ICONS[status.level] : null;
@@ -139,7 +143,9 @@ function updateGameAssets() {
     }
 
     const logoUrls = config.logoUrls || (config.assets && config.assets.logoUrls);
-    const logoUrl = logoUrls ? (logoUrls[currentContentLang] || logoUrls.en || logoUrls.ru) : null;
+    const logoUrl = logoUrls
+        ? (logoUrls[currentContentLang] || logoUrls.en || logoUrls.ru)
+        : null;
 
     if (dom.gameLogo) {
         if (logoUrl) {
@@ -150,15 +156,11 @@ function updateGameAssets() {
             dom.gameLogo.style.display = 'none';
         }
     }
-
     if (dom.gameTitleBlock) {
         dom.gameTitleBlock.style.display = logoUrl ? 'none' : '';
     }
 
-    const noteText = notes[currentContentLang] || notes.en || notes.ru || '';
-    setPopupContent(noteText, currentContentLang);
     updateIconSize();
-    // ИСПРАВЛЕНО: убран вызов adaptCenterButtonsHeight() - это вызывало баг с кнопками
 }
 
 function updateIconSize() {
@@ -220,31 +222,6 @@ function hidePopup() {
     popupEl.style.pointerEvents = 'none';
 }
 
-function adaptCenterButtonsHeight() {
-    if (!overlayEl) return;
-    try {
-        setTimeout(() => {
-            if (!dom.questionText || !dom.answerText || !dom.detectBtn || !dom.searchBtn || !dom.deleteBtn) return;
-            const leftH = dom.questionText.getBoundingClientRect().height || 80;
-            const rightH = dom.answerText.getBoundingClientRect().height || 80;
-            const base = Math.max(48, Math.floor(Math.min(leftH, rightH)));
-            const gapTotal = 12;
-            const btnH = Math.max(36, Math.floor((base - gapTotal) / 3));
-            [dom.detectBtn, dom.searchBtn, dom.deleteBtn].forEach(btn => {
-                if (!btn) return;
-                btn.style.height = btnH + 'px';
-                // ИСПРАВЛЕНО: не переопределяем padding и lineHeight - это ломало кнопки
-                btn.style.display = 'flex';
-                btn.style.alignItems = 'center';
-                btn.style.justifyContent = 'center';
-                btn.style.boxSizing = 'border-box';
-            });
-        }, 150);
-    } catch (e) {
-        logWarn('adaptCenterButtonsHeight error', e);
-    }
-}
-
 function setQuestionLoading(isLoading) {
     if (!dom.questionSpinner) return;
     dom.questionSpinner.classList.toggle('active', !!isLoading);
@@ -261,389 +238,446 @@ function ensureStyle() {
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-#${OVERLAY_ID} * {
-    box-sizing: border-box !important;
-    margin: 0;
-    padding: 0;
-}
-#${OVERLAY_ID} {
-    position: fixed;
-    top: 40px;
-    right: 40px;
-    width: 522px;
-    height: 338px;
-    max-width: 98vw;
-    max-height: 95vh;
-    background: #2b2b2b;
-    border: 1px solid #3b3b3b;
-    border-radius: 6px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
-    z-index: 999999;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #f0f0f0;
-    overflow: hidden;
-    user-select: none;
-}
-#${OVERLAY_ID} .overlay-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: 30px;
-    padding: 0 8px;
-    background: #323232;
-    border-bottom: 1px solid #3f3f3f;
-    cursor: move;
-}
-#${OVERLAY_ID} .header-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
-#${OVERLAY_ID} .overlay-title {
-    font-size: 13px;
-    font-weight: 500;
-    color: #f5f5f5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-#${OVERLAY_ID} .db-info {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: #2b2b2b;
-    border: 1px solid #3b3b3b;
-    font-size: 10px;
-    color: #a0a0a0;
-}
-#${OVERLAY_ID} #db-version,
-#${OVERLAY_ID} #db-age {
-    font-size: 10px;
-}
-#${OVERLAY_ID} .db-status {
-    font-size: 9px;
-    padding: 1px 6px;
-    border-radius: 999px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-#${OVERLAY_ID} .db-status.loaded {
-    background: #2f854f;
-    color: #f5f5f5;
-}
-#${OVERLAY_ID} .db-status.error {
-    background: #8b3434;
-    color: #f5f5f5;
-}
-#${OVERLAY_ID} .overlay-controls {
-    display: flex;
-    align-items: center;
-}
-#${OVERLAY_ID} .overlay-btn {
-    width: 30px;
-    height: 22px;
-    border: none;
-    background: transparent;
-    color: #c0c0c0;
-    cursor: pointer;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-#${OVERLAY_ID} .overlay-btn:hover {
-    background: #3b3b3b;
-    color: #ffffff;
-}
-#${OVERLAY_ID} #close-btn:hover {
-    background: #c0392b;
-    color: #ffffff;
-}
-#${OVERLAY_ID} .overlay-content {
-    padding: 14px 16px 10px 16px;
-    background: #252525;
-    height: calc(100% - 30px);
-    display: flex;
-    flex-direction: column;
-}
-#${OVERLAY_ID} .game-indicator {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    background: #2f2f2f;
-    border: 1px solid #3b3b3b;
-}
-#${OVERLAY_ID} .game-indicator-main {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
-#${OVERLAY_ID} .indicator-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #555555;
-}
-#${OVERLAY_ID} .indicator-dot.active {
-    background: #29b765;
-}
-#${OVERLAY_ID} .game-icon {
-    height: auto;
-    width: auto;
-    border-radius: 4px;
-    background: #3b3b3b;
-    object-fit: contain;
-    flex-shrink: 0;
-    display: none;
-}
-#${OVERLAY_ID} #game-name {
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-#${OVERLAY_ID} #game-confidence {
-    font-size: 11px;
-    color: #a0a0a0;
-    margin-top: 1px;
-}
-#${OVERLAY_ID} .indicator-count {
-    font-size: 10px;
-    color: #808080;
-    white-space: nowrap;
-    text-align: right;
-}
-#${OVERLAY_ID} .confidence-badge {
-    font-size: 10px;
-    color: #a0e7c4;
-}
-#${OVERLAY_ID} .game-branding {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    flex: 1;
-}
-#${OVERLAY_ID} #game-logo {
-    max-width: 160px;
-    max-height: 36px;
-    object-fit: contain;
-    display: none;
-}
-#${OVERLAY_ID} .game-title-block {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-#${OVERLAY_ID} .overlay-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr 2fr;
-    gap: 8px;
-    align-items: stretch;
-    flex: 1;
-}
-#${OVERLAY_ID} .qa-column {
-    display: flex;
-    flex-direction: column;
-    background: #2b2b2b;
-    border: 1px solid #3b3b3b;
-    border-radius: 4px;
-    padding: 6px;
-}
-#${OVERLAY_ID} .question-header,
-#${OVERLAY_ID} .answer-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-}
-#${OVERLAY_ID} .question-header div[style*="font-weight:700"],
-#${OVERLAY_ID} .answer-header div[style*="font-weight:700"] {
-    font-size: 11px;
-    font-weight: 600 !important;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: #d0d0d0;
-}
-#${OVERLAY_ID} #question-length,
-#${OVERLAY_ID} #answer-confidence {
-    font-size: 10px;
-    color: #909090;
-}
-#${OVERLAY_ID} .question-text,
-#${OVERLAY_ID} .answer-text {
-    font-size: 13px;
-    line-height: 1.5;
-    flex: 1;
-    overflow-y: auto;
-    word-break: break-word;
-    background: #7f7f7f;
-    color: #f5f5f5;
-    padding: 6px;
-    border-radius: 2px;
-}
-#${OVERLAY_ID} .answer-box.found {
-    border-color: #29b765;
-}
-#${OVERLAY_ID} .answer-box.not-found {
-    border-color: #c0392b;
-}
-#${OVERLAY_ID} .qa-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 4px;
-}
-#${OVERLAY_ID} .qa-footer-left {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-#${OVERLAY_ID} .qa-spinner {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid #777777;
-    border-top-color: #f0f0f0;
-    display: none;
-}
-#${OVERLAY_ID} .qa-spinner.active {
-    display: inline-block;
-    animation: spin 0.8s linear infinite;
-}
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-#${OVERLAY_ID} .qa-copy-btn {
-    width: 20px;
-    height: 20px;
-    border-radius: 2px;
-    border: 1px solid #3b3b3b;
-    background: #323232;
-    color: #f0f0f0;
-    font-size: 11px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-#${OVERLAY_ID} .qa-copy-btn:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
-#${OVERLAY_ID} .center-column {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    justify-content: center;
-    min-width: 0;
-}
-#${OVERLAY_ID} .center-btn {
-    width: 100%;
-    padding: 10px 6px;
-    border-radius: 3px;
-    border: 1px solid #3b3b3b;
-    background: #323232;
-    color: #f0f0f0;
-    font-size: 12px;
-    cursor: pointer;
-    box-sizing: border-box;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-#${OVERLAY_ID} .center-btn:hover:not(:disabled) {
-    background: #3a3a3a;
-}
-#${OVERLAY_ID} .center-btn:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
-#${OVERLAY_ID} .detect-btn {
-    background: #2f7ed8;
-    border-color: #2f7ed8;
-}
-#${OVERLAY_ID} .detect-btn:hover:not(:disabled) {
-    background: #2b6bad;
-    border-color: #2b6bad;
-}
-#${OVERLAY_ID} .search-btn {
-    background: #2f9b5f;
-    border-color: #2f9b5f;
-}
-#${OVERLAY_ID} .delete-btn {
-    background: #444444;
-    border-color: #444444;
-}
-#${OVERLAY_ID} .overlay-status {
-    font-size: 11px;
-    color: #c0c0c0;
-    padding: 6px 10px 8px 10px;
-    border-top: 1px solid #3b3b3b;
-    background: #292929;
-    font-family: "Consolas", "JetBrains Mono", monospace;
-}
-#${OVERLAY_ID}.overlay-minimized {
-    height: 30px !important;
-    min-height: 30px;
-    overflow: hidden;
-}
-#${OVERLAY_ID} .overlay-minimized .overlay-content {
-    display: none !important;
-}
-#${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar {
-    width: 6px;
-}
-#${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar-track {
-    background: #252525;
-}
-#${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar-thumb {
-    background: #3f3f3f;
-    border-radius: 3px;
-}
-#${OVERLAY_ID} .jf-popup {
-    position: absolute;
-    z-index: 1000000;
-    min-width: 160px;
-    max-width: 320px;
-    background: #2b2b2b;
-    border: 1px solid #3b3b3b;
-    border-radius: 6px;
-    padding: 8px 10px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.55);
-    transition: opacity 0.12s ease;
-    opacity: 0;
-    pointer-events: none;
-    color: #f0f0f0;
-    font-size: 12px;
-}
-#${OVERLAY_ID} .jf-popup .jf-popup-subtitle {
-    display: block;
-    font-weight: 700;
-    margin-bottom: 6px;
-    color: #d8d8d8;
-}
-#${OVERLAY_ID} .jf-popup .jf-popup-body {
-    display: block;
-    font-size: 12px;
-    color: #cfcfcf;
-    white-space: pre-wrap;
-}
-@media (max-width: 540px) {
-    #${OVERLAY_ID} {
-        width: calc(100vw - 20px);
-        right: 10px;
-        top: 10px;
-    }
-}
-`;
+        #${OVERLAY_ID} * {
+            box-sizing: border-box !important;
+            margin: 0;
+            padding: 0;
+        }
+
+        #${OVERLAY_ID} {
+            position: fixed;
+            top: 40px;
+            right: 40px;
+            width: 522px;
+            height: 338px;
+            max-width: 98vw;
+            max-height: 95vh;
+            background: #2b2b2b;
+            border: 1px solid #3b3b3b;
+            border-radius: 6px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+            z-index: 999999;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #f0f0f0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #${OVERLAY_ID} .overlay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 30px;
+            padding: 0 8px;
+            background: #323232;
+            border-bottom: 1px solid #3f3f3f;
+            cursor: move;
+        }
+
+        #${OVERLAY_ID} .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        #${OVERLAY_ID} .overlay-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #f5f5f5;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #${OVERLAY_ID} .db-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #2b2b2b;
+            border: 1px solid #3b3b3b;
+            font-size: 10px;
+            color: #a0a0a0;
+        }
+
+        #${OVERLAY_ID} #db-version,
+        #${OVERLAY_ID} #db-age {
+            font-size: 10px;
+        }
+
+        #${OVERLAY_ID} .db-status {
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        #${OVERLAY_ID} .db-status.loaded {
+            background: #2f854f;
+            color: #f5f5f5;
+        }
+
+        #${OVERLAY_ID} .db-status.error {
+            background: #8b3434;
+            color: #f5f5f5;
+        }
+
+        #${OVERLAY_ID} .overlay-controls {
+            display: flex;
+            align-items: center;
+        }
+
+        #${OVERLAY_ID} .overlay-btn {
+            width: 30px;
+            height: 22px;
+            border: none;
+            background: transparent;
+            color: #c0c0c0;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #${OVERLAY_ID} .overlay-btn:hover {
+            background: #3b3b3b;
+            color: #ffffff;
+        }
+
+        #${OVERLAY_ID} #close-btn:hover {
+            background: #c0392b;
+            color: #ffffff;
+        }
+
+        #${OVERLAY_ID} .overlay-content {
+            padding: 14px 16px 10px 16px;
+            background: #252525;
+            height: calc(100% - 30px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #${OVERLAY_ID} .game-indicator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background: #2f2f2f;
+            border: 1px solid #3b3b3b;
+        }
+
+        #${OVERLAY_ID} .game-indicator-main {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        #${OVERLAY_ID} .indicator-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #555555;
+        }
+
+        #${OVERLAY_ID} .indicator-dot.active {
+            background: #29b765;
+        }
+
+        #${OVERLAY_ID} .game-icon {
+            height: auto;
+            width: auto;
+            border-radius: 4px;
+            background: #3b3b3b;
+            object-fit: contain;
+            flex-shrink: 0;
+            display: none;
+        }
+
+        #${OVERLAY_ID} #game-name {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #${OVERLAY_ID} #game-confidence {
+            font-size: 11px;
+            color: #a0a0a0;
+            margin-top: 1px;
+        }
+
+        #${OVERLAY_ID} .indicator-count {
+            font-size: 10px;
+            color: #808080;
+            white-space: nowrap;
+            text-align: right;
+        }
+
+        #${OVERLAY_ID} .confidence-badge {
+            font-size: 10px;
+            color: #a0e7c4;
+        }
+
+        #${OVERLAY_ID} .game-branding {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            flex: 1;
+        }
+
+        #${OVERLAY_ID} #game-logo {
+            max-width: 160px;
+            max-height: 36px;
+            object-fit: contain;
+            display: none;
+        }
+
+        #${OVERLAY_ID} .game-title-block {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        #${OVERLAY_ID} .overlay-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 2fr;
+            gap: 8px;
+            align-items: stretch;
+            flex: 1;
+        }
+
+        #${OVERLAY_ID} .qa-column {
+            display: flex;
+            flex-direction: column;
+            background: #2b2b2b;
+            border: 1px solid #3b3b3b;
+            border-radius: 4px;
+            padding: 6px;
+        }
+
+        #${OVERLAY_ID} .question-header,
+        #${OVERLAY_ID} .answer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        #${OVERLAY_ID} .question-header div[style*="font-weight:700"],
+        #${OVERLAY_ID} .answer-header div[style*="font-weight:700"] {
+            font-size: 11px;
+            font-weight: 600 !important;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #d0d0d0;
+        }
+
+        #${OVERLAY_ID} #question-length,
+        #${OVERLAY_ID} #answer-confidence {
+            font-size: 10px;
+            color: #909090;
+        }
+
+        #${OVERLAY_ID} .question-text,
+        #${OVERLAY_ID} .answer-text {
+            font-size: 13px;
+            line-height: 1.5;
+            flex: 1;
+            overflow-y: auto;
+            word-break: break-word;
+            background: #7f7f7f;
+            color: #f5f5f5;
+            padding: 6px;
+            border-radius: 2px;
+        }
+
+        #${OVERLAY_ID} .answer-box.found {
+            border-color: #29b765;
+        }
+
+        #${OVERLAY_ID} .answer-box.not-found {
+            border-color: #c0392b;
+        }
+
+        #${OVERLAY_ID} .qa-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
+        }
+
+        #${OVERLAY_ID} .qa-footer-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        #${OVERLAY_ID} .qa-spinner {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #777777;
+            border-top-color: #f0f0f0;
+            display: none;
+        }
+
+        #${OVERLAY_ID} .qa-spinner.active {
+            display: inline-block;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #${OVERLAY_ID} .qa-copy-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 2px;
+            border: 1px solid #3b3b3b;
+            background: #323232;
+            color: #f0f0f0;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #${OVERLAY_ID} .center-column {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        #${OVERLAY_ID} .center-btn {
+            width: 100%;
+            min-height: 42px;
+            padding: 8px 6px;
+            border-radius: 3px;
+            border: 1px solid #3b3b3b;
+            background: #323232;
+            color: #f0f0f0;
+            font-size: 12px;
+            cursor: pointer;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.2;
+            text-align: center;
+            word-wrap: break-word;
+        }
+
+        #${OVERLAY_ID} .center-btn:hover:not(:disabled) {
+            background: #3a3a3a;
+        }
+
+        #${OVERLAY_ID} .center-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        #${OVERLAY_ID} .detect-btn {
+            background: #2f7ed8;
+            border-color: #2f7ed8;
+        }
+
+        #${OVERLAY_ID} .detect-btn:hover:not(:disabled) {
+            background: #2b6bad;
+            border-color: #2b6bad;
+        }
+
+        #${OVERLAY_ID} .search-btn {
+            background: #2f9b5f;
+            border-color: #2f9b5f;
+        }
+
+        #${OVERLAY_ID} .delete-btn {
+            background: #444444;
+            border-color: #444444;
+        }
+
+        #${OVERLAY_ID} .overlay-status {
+            font-size: 11px;
+            color: #c0c0c0;
+            padding: 6px 10px 8px 10px;
+            border-top: 1px solid #3b3b3b;
+            background: #292929;
+            font-family: "Consolas", "JetBrains Mono", monospace;
+        }
+
+        #${OVERLAY_ID}.overlay-minimized {
+            height: 30px !important;
+            min-height: 30px;
+            overflow: hidden;
+        }
+
+        #${OVERLAY_ID} .overlay-minimized .overlay-content {
+            display: none !important;
+        }
+
+        #${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar-track {
+            background: #252525;
+        }
+
+        #${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar-thumb {
+            background: #3f3f3f;
+            border-radius: 3px;
+        }
+
+        #${OVERLAY_ID} .jf-popup {
+            position: absolute;
+            z-index: 1000000;
+            min-width: 160px;
+            max-width: 320px;
+            background: #2b2b2b;
+            border: 1px solid #3b3b3b;
+            border-radius: 6px;
+            padding: 8px 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+            transition: opacity 0.12s ease;
+            opacity: 0;
+            pointer-events: none;
+            color: #f0f0f0;
+            font-size: 12px;
+        }
+
+        #${OVERLAY_ID} .jf-popup .jf-popup-subtitle {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #d8d8d8;
+        }
+        #${OVERLAY_ID} .jf-popup .jf-popup-body {
+            display: block;
+            font-size: 12px;
+            color: #cfcfcf;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 540px) {
+            #${OVERLAY_ID} {
+                width: calc(100vw - 20px);
+                right: 10px;
+                top: 10px;
+            }
+        }
+    `;
     document.head.appendChild(style);
     log('Styles created successfully');
 }
@@ -683,36 +717,21 @@ function cacheDom() {
 }
 
 function updateStatus(messageKey, type) {
-    if (!dom.status) {
-        logWarn('Status element not found!');
-        return;
-    }
+    if (!dom.status) return;
     const message = LANG[currentLang][messageKey] ? getText(messageKey) : messageKey;
-    const colors = { 
-        info: '#5a5a5a', 
-        success: '#4ecdc4', 
-        warning: '#ffd93d', 
-        error: '#ff6b6b', 
-        searching: '#667eea' 
-    };
+    const colors = { info: '#5a5a5a', success: '#4ecdc4', warning: '#ffd93d', error: '#ff6b6b', searching: '#667eea' };
     dom.status.textContent = message;
     dom.status.style.color = colors[type] || colors.info;
-    logDebug('Status updated:', message, type);
 }
 
 function updateDBStatus(loaded) {
     if (!dom.dbStatus) return;
     dom.dbStatus.textContent = loaded ? '✓' : '✗';
     dom.dbStatus.className = 'db-status ' + (loaded ? 'loaded' : 'error');
-    logDebug('DB status updated:', loaded);
 }
 
 async function loadDatabase() {
-    log('=== DATABASE LOAD STARTED ===');
-    log('Database URL:', CONFIG.databaseURL);
-    log('Attempt:', dbLoadAttempts + 1);
     if (window.GameDatabase) {
-        log('Database already loaded in window.GameDatabase');
         gameDatabase = window.GameDatabase;
         updateStatus('dbLoaded', 'success');
         updateDBStatus(true);
@@ -728,7 +747,6 @@ async function loadDatabase() {
         script.async = true;
 
         script.onload = () => {
-            log('Script loaded successfully');
             if (window.GameDatabase) {
                 gameDatabase = window.GameDatabase;
                 updateStatus('dbLoaded', 'success');
@@ -737,64 +755,37 @@ async function loadDatabase() {
                 isDatabaseLoaded = true;
                 resolve(true);
             } else {
-                logError('✗ GameDatabase NOT found after script load');
-                updateStatus('dbError', 'error');
-                updateDBStatus(false);
                 if (dbLoadAttempts < CONFIG.retryAttempts) {
                     setTimeout(() => loadDatabase().then(resolve), 1000);
                 } else resolve(false);
             }
         };
 
-        script.onerror = (e) => {
-            logError('✗ Script load error:', e);
-            updateStatus('dbError', 'error');
-            updateDBStatus(false);
+        script.onerror = () => {
             if (dbLoadAttempts < CONFIG.retryAttempts) {
                 setTimeout(() => loadDatabase().then(resolve), 1000);
             } else resolve(false);
         };
 
-        const timeout = setTimeout(() => {
-            logError('✗ Database load timeout after', CONFIG.loadTimeout, 'ms');
-            script.remove();
-            updateStatus('dbError', 'error');
-            updateDBStatus(false);
-            resolve(false);
-        }, CONFIG.loadTimeout);
-
-        script.addEventListener('load', () => clearTimeout(timeout));
-        script.addEventListener('error', () => clearTimeout(timeout));
-
         document.head.appendChild(script);
-        log('Script tag appended to document head');
     });
 }
 
 function updateVersionInfo() {
-    if (!gameDatabase || typeof gameDatabase.getVersionInfo !== 'function') {
-        logWarn('getVersionInfo not available');
-        return;
-    }
+    if (!gameDatabase || typeof gameDatabase.getVersionInfo !== 'function') return;
     try {
         const info = gameDatabase.getVersionInfo() || {};
         if (dom.dbVersion) dom.dbVersion.textContent = info.version || 'v?';
         if (dom.dbAge) {
             const days = Number(info.daysSinceUpdate || 0);
             const langData = LANG[currentLang];
-            dom.dbAge.textContent = days === 0
-                ? (currentLang === 'ru' ? 'сегодня' : 'today')
-                : days + ' ' + langData.daysAgo;
+            dom.dbAge.textContent = days === 0 ? (currentLang === 'ru' ? 'сегодня' : 'today') : days + ' ' + langData.daysAgo;
             dom.dbAge.style.color = info.isOutdated ? '#ff6b6b' : '#4ecdc4';
         }
-    } catch (e) {
-        logError('Error updating version info:', e);
-    }
+    } catch (e) { logError(e); }
 }
 
 function updateIndicator(result) {
-    log('=== UPDATE INDICATOR ===');
-    log('Result:', result);
     if (!result || !result.gameId || !gameDatabase?.gameConfig?.[result.gameId]) {
         currentGame = null;
         if (dom.statusDot) dom.statusDot.className = 'indicator-dot';
@@ -802,14 +793,8 @@ function updateIndicator(result) {
         if (dom.gameConfidence) dom.gameConfidence.textContent = '';
         if (dom.watermark) dom.watermark.textContent = ''; 
         if (dom.indicatorCount) dom.indicatorCount.textContent = '';
-        if (dom.gameIcon) {
-            dom.gameIcon.src = '';
-            dom.gameIcon.style.display = 'none';
-        }
-        if (dom.gameLogo) {
-            dom.gameLogo.src = '';
-            dom.gameLogo.style.display = 'none';
-        }
+        if (dom.gameIcon) { dom.gameIcon.src = ''; dom.gameIcon.style.display = 'none'; }
+        if (dom.gameLogo) { dom.gameLogo.src = ''; dom.gameLogo.style.display = 'none'; }
         if (dom.gameTitleBlock) dom.gameTitleBlock.style.display = '';
         return;
     }
@@ -819,26 +804,22 @@ function updateIndicator(result) {
 
     if (dom.statusDot) dom.statusDot.className = 'indicator-dot active';
     if (dom.gameName) dom.gameName.textContent = config.name || getText('notDetected');
-    if (dom.gameConfidence) dom.gameConfidence.innerHTML = '<span class="confidence-badge">' + getText('confidence') + result.confidence + '</span>';
+    if (dom.gameConfidence) dom.gameConfidence.innerHTML = `<span class="confidence-badge">${getText('confidence')} ${result.confidence}</span>`;
     if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
-    if (dom.indicatorCount && result.foundIndicators) dom.indicatorCount.textContent = result.foundIndicators.length + ' ' + getText('indicators');
+    if (dom.indicatorCount && result.foundIndicators) dom.indicatorCount.textContent = `${result.foundIndicators.length} ${getText('indicators')}`;
 
     updateGameAssets();
 }
 
 function displayQuestion(q) {
-    log('=== DISPLAY QUESTION ===');
-    if (!dom.questionText || !dom.questionLength || !dom.searchBtn) {
-        logError('Question DOM elements not found!');
-        return;
-    }
+    if (!dom.questionText || !dom.questionLength || !dom.searchBtn) return;
+
     if (!q) {
         dom.questionText.textContent = getText('placeholderQuestion');
         dom.questionLength.textContent = '0' + getText('symbols');
         dom.searchBtn.disabled = true;
         if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
         setQuestionLoading(false);
-        // ИСПРАВЛЕНО: убран вызов adaptCenterButtonsHeight() - это вызывало баг при первом нажатии
         return;
     }
 
@@ -854,18 +835,12 @@ function displayQuestion(q) {
 }
 
 function detectGame() {
-    log('=== DETECT GAME CLICKED ===');
-    if (!gameDatabase || typeof gameDatabase.detectGame !== 'function') {
-        logError('Database or detectGame function not available!');
-        updateStatus('dbError', 'error');
-        return null;
-    }
+    if (!gameDatabase || typeof gameDatabase.detectGame !== 'function') return null;
     updateStatus('scanning', 'searching');
     setQuestionLoading(true);
 
     try { 
         const result = gameDatabase.detectGame();
-        logDebug('detectGame result:', result);
         updateIndicator(result);
 
         if (result && result.gameId) {
@@ -876,9 +851,7 @@ function detectGame() {
             setTimeout(() => {
                 try {
                     const rawQuestion = (typeof gameDatabase.extractQuestion === 'function')
-                        ? gameDatabase.extractQuestion(result.gameId)
-                        : null;
-                    logDebug('Raw question (preview):', rawQuestion ? rawQuestion.substring(0, 120) : null);
+                        ? gameDatabase.extractQuestion(result.gameId) : null;
 
                     if (rawQuestion && rawQuestion.length >= CONFIG.minQuestionLength) {
                         currentQuestion = rawQuestion;
@@ -888,12 +861,9 @@ function detectGame() {
                         displayQuestion(null);
                     }
                 } catch (e) {
-                    logError('Error extracting question:', e);
                     currentQuestion = '';
                     displayQuestion(null);
-                } finally {
-                    setQuestionLoading(false);
-                }
+                } finally { setQuestionLoading(false); }
             }, 250);
         } else {
             updateStatus('notDetected', 'warning');
@@ -901,26 +871,16 @@ function detectGame() {
             displayQuestion(null);
             setQuestionLoading(false);
         }
-
         return result;
     } catch (e) {
-        logError('Error in detectGame:', e);
-        updateStatus('dbError', 'error');
         setQuestionLoading(false);
         return null;
     }
 }
 
 function searchAnswer() {
-    log('=== SEARCH ANSWER CLICKED ===');
     if (!gameDatabase || !currentGame || !currentQuestion) {
-        logError('Cannot search - missing dependencies');
         updateStatus('detectFirst', 'warning');
-        return;
-    }
-    if (typeof gameDatabase.findAnswer !== 'function') {
-        logError('GameDatabase.findAnswer is not a function');
-        updateStatus('dbError', 'error');
         return;
     }
     updateStatus('scanning', 'searching');
@@ -928,8 +888,6 @@ function searchAnswer() {
 
     try {
         const result = gameDatabase.findAnswer(currentQuestion, currentGame);
-        logDebug('findAnswer result:', result);
-
         displayQuestion(currentQuestion);
 
         if (result?.answer) {
@@ -949,13 +907,7 @@ function searchAnswer() {
             if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
             updateStatus('answerNotFound', 'error');
         }
-    } catch (e) {
-        logError('Error in searchAnswer:', e);
-        updateStatus('dbError', 'error');
-    } finally {
-        setAnswerLoading(false);
-        adaptCenterButtonsHeight();
-    }
+    } catch (e) { logError(e); } finally { setAnswerLoading(false); }
 }
 
 function updateAllText() {
@@ -968,85 +920,28 @@ function updateAllText() {
         if (dom.deleteBtn) dom.deleteBtn.textContent = t.clearBtn;
         if (dom.qLabelEl) dom.qLabelEl.textContent = t.questionLabel;
         if (dom.aLabelEl) dom.aLabelEl.textContent = t.answerLabel;
-        if (dom.questionCopyBtn) dom.questionCopyBtn.title = t.copyBtn;
-        if (dom.answerCopyBtn) dom.answerCopyBtn.title = t.copyBtn;
-
-        const minBtn = document.getElementById('minimize-btn');
-        const closeBtn = document.getElementById('close-btn');
-        if (minBtn) minBtn.title = t.minimize;
-        if (closeBtn) closeBtn.title = t.close;
-
-        if (dom.status.textContent === getText('loadingDB', 'en') || dom.status.textContent === getText('loadingDB', 'ru')) {
-            updateStatus('loadingDB', 'info');
-        } else if (dom.status.textContent.includes(getText('gameDetected', 'en')) || dom.status.textContent.includes(getText('gameDetected', 'ru'))) {
-            const gameName = dom.gameName ? dom.gameName.textContent : '';
-            if (gameName && gameName !== getText('notDetected')) {
-                dom.status.textContent = getText('gameDetected') + gameName + getText('gameDetectedSuffix');
-                dom.status.style.color = '#4ecdc4';
-            }
-        } else if (dom.answerBox.classList.contains('found')) {
-            const conf = dom.answerConfidence.textContent;
-            dom.status.textContent = getText('answerFound') + conf + ')';
-            dom.status.style.color = '#4ecdc4';
-        }
-        
-        if (dom.questionText.textContent === getText('placeholderQuestion', 'en') || dom.questionText.textContent === getText('placeholderQuestion', 'ru')) {
-            dom.questionText.textContent = t.placeholderQuestion;
-        }
-        if (dom.answerText.textContent === getText('placeholderAnswer', 'en') || dom.answerText.textContent === getText('placeholderAnswer', 'ru')) {
-            dom.answerText.textContent = t.placeholderAnswer;
-        }
-        if (dom.answerText.textContent === getText('answerNotFound', 'en') || dom.answerText.textContent === getText('answerNotFound', 'ru')) {
-            dom.answerText.textContent = t.answerNotFound;
-        }
-          
-        if (dom.questionLength) {
-            const currentLen = dom.questionText.textContent.length;
-            if (currentLen < 10) {
-                dom.questionLength.textContent = '0' + t.symbols;
-            } else {
-                dom.questionLength.textContent = currentLen + t.symbols;
-            }
-        }
-        if (dom.indicatorCount && currentGame) {
-            const count = dom.indicatorCount.textContent.match(/\d+/);
-            if (count) dom.indicatorCount.textContent = count[0] + ' ' + t.indicators;
-        }
-        if (dom.gameConfidence && currentGame) {
-            const conf = dom.gameConfidence.textContent.match(/\d+/);
-            if (conf) dom.gameConfidence.innerHTML = '<span class="confidence-badge">' + t.confidence + conf[0] + '</span>';
-        }
-
-        logDebug('UI Text updated for lang:', currentLang);
-    } catch (e) {
-        logError('updateAllText error', e);
-    }
+    } catch (e) { logError(e); }
 }
 
 function createPopup() {
     if (!overlayEl || popupEl) return;
     popupEl = document.createElement('div');
     popupEl.className = 'jf-popup';
-    popupEl.innerHTML = '<div class="jf-popup-subtitle"></div><div class="jf-popup-body"></div>';
+    popupEl.innerHTML = `<div class="jf-popup-subtitle"></div><div class="jf-popup-body"></div>`;
     overlayEl.appendChild(popupEl);
+
     popupDocClickHandler = function (e) {
         if (!popupEl) return;
-        if (!overlayEl || !overlayEl.contains) {
-            hidePopup();
-            return;
-        }
-        if (!overlayEl.contains(e.target)) {
-            hidePopup();
-        }
+        if (!overlayEl || !overlayEl.contains) { hidePopup(); return; }
+        if (!overlayEl.contains(e.target)) { hidePopup(); }
     };
     document.addEventListener('click', popupDocClickHandler);
 }
 
 function attachIconHoverHandlers() {
     if (!dom.gameIcon) return;
-    dom.gameIcon.addEventListener('mouseenter', (e) => {
+    dom.gameIcon.addEventListener('mouseenter', () => {
         if (!popupEl) createPopup();
-        setPopupContent(popupEl ? popupEl.querySelector('.jf-popup-body').textContent : '', currentContentLang);
         showPopupAt(dom.gameIcon);
     });
     dom.gameIcon.addEventListener('mouseleave', (e) => {
@@ -1059,92 +954,86 @@ function attachIconHoverHandlers() {
             }
         }, 80);
     });
-    if (overlayEl) overlayEl.addEventListener('mousemove', (ev) => {
-        if (!popupEl || popupEl.style.opacity === '0') return;
-        const r = popupEl.getBoundingClientRect();
-        if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
-            popupEl.style.pointerEvents = 'auto';
-        }
-    });
 }
 
 function createOverlay() {
     if (overlayEl) return;
     ensureStyle();
+
     overlayEl = document.createElement('div');
     overlayEl.id = OVERLAY_ID;
     overlayEl.innerHTML = `
-<div class="overlay-header">
-    <div class="header-left">
-        <div class="overlay-title">${getText('title')}</div>
-        <div class="db-info">
-            <div id="db-version">v?</div>
-            <div id="db-age">?</div>
-            <div id="db-status" class="db-status">✗</div>
-        </div>
-    </div>
-    <div class="overlay-controls">
-        <button id="lang-flag-btn" class="overlay-btn flag-btn" title="Toggle language">🌐</button>
-        <button id="minimize-btn" class="overlay-btn" title="${getText('minimize')}">-</button>
-        <button id="close-btn" class="overlay-btn" title="${getText('close')}">×</button>
-    </div>
-</div>
-
-<div class="overlay-content">
-    <div class="game-indicator">
-        <div class="game-indicator-main">
-            <div id="status-dot" class="indicator-dot"></div>
-            <img id="game-icon" class="game-icon" alt="">
-            <div class="game-branding">
-                <img id="game-logo" alt="">
-                <div class="game-title-block">
-                    <div id="game-name">${getText('notDetected')}</div>
-                    <div id="game-confidence" class="game-confidence-text"></div>
+        <div class="overlay-header">
+            <div class="header-left">
+                <div class="overlay-title">${getText('title')}</div>
+                <div class="db-info">
+                    <div id="db-version">v?</div>
+                    <div id="db-age">?</div>
+                    <div id="db-status" class="db-status">✗</div>
                 </div>
             </div>
-        </div>
-        <div id="indicator-count" class="indicator-count"></div>
-    </div>
-
-    <div class="overlay-grid">
-        <div class="qa-column question-column">
-            <div class="question-header">
-                <div style="font-weight:700">${getText('questionLabel')}</div>
-                <div id="question-length">0 ${getText('symbols')}</div>
+            <div class="overlay-controls">
+                <button id="lang-flag-btn" class="overlay-btn flag-btn" title="Toggle language">🌐</button>
+                <button id="minimize-btn" class="overlay-btn" title="${getText('minimize')}">-</button>
+                <button id="close-btn" class="overlay-btn" title="${getText('close')}">×</button>
             </div>
-            <div id="question-text" class="question-text scrollbar-custom">${getText('placeholderQuestion')}</div>
-            <div class="qa-footer">
-                <div class="qa-footer-left">
-                    <div id="question-spinner" class="qa-spinner"></div>
-                    <button id="question-copy-btn" class="qa-copy-btn" title="${getText('copyBtn')}" disabled>📋</button>
+        </div>
+
+        <div class="overlay-content">
+            <div class="game-indicator">
+                <div class="game-indicator-main">
+                    <div id="status-dot" class="indicator-dot"></div>
+                    <img id="game-icon" class="game-icon" alt="">
+                    <div class="game-branding">
+                        <img id="game-logo" alt="">
+                        <div class="game-title-block">
+                            <div id="game-name">${getText('notDetected')}</div>
+                            <div id="game-confidence" class="game-confidence-text"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="indicator-count" class="indicator-count"></div>
+            </div>
+
+            <div class="overlay-grid">
+                <div class="qa-column question-column">
+                    <div class="question-header">
+                        <div style="font-weight:700">${getText('questionLabel')}</div>
+                        <div id="question-length">0 ${getText('symbols')}</div>
+                    </div>
+                    <div id="question-text" class="question-text scrollbar-custom">${getText('placeholderQuestion')}</div>
+                    <div class="qa-footer">
+                        <div class="qa-footer-left">
+                            <div id="question-spinner" class="qa-spinner"></div>
+                            <button id="question-copy-btn" class="qa-copy-btn" title="${getText('copyBtn')}" disabled>📋</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="center-column">
+                    <button id="detect-btn" class="center-btn detect-btn">${getText('detectBtn')}</button>
+                    <button id="search-btn" class="center-btn search-btn" disabled>${getText('searchBtn')}</button>
+                    <button id="delete-btn" class="center-btn delete-btn" disabled>${getText('clearBtn')}</button>
+                </div>
+
+                <div id="answer-box" class="qa-column answer-box answer-column">
+                    <div class="answer-header">
+                        <div style="font-weight:700">${getText('answerLabel')}</div>
+                        <div id="answer-confidence"></div>
+                    </div>
+                    <div id="answer-text" class="answer-text scrollbar-custom">${getText('placeholderAnswer')}</div>
+                    <div class="qa-footer">
+                        <div class="qa-footer-left">
+                            <div id="answer-spinner" class="qa-spinner"></div>
+                            <button id="answer-copy-btn" class="qa-copy-btn" title="${getText('copyBtn')}" disabled>📋</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="center-column">
-            <button id="detect-btn" class="center-btn detect-btn">${getText('detectBtn')}</button>
-            <button id="search-btn" class="center-btn search-btn" disabled>${getText('searchBtn')}</button>
-            <button id="delete-btn" class="center-btn delete-btn" disabled>${getText('clearBtn')}</button>
+            <div id="overlay-status" class="overlay-status">${getText('loadingDB')}</div>
         </div>
-
-        <div id="answer-box" class="qa-column answer-box answer-column">
-            <div class="answer-header">
-                <div style="font-weight:700">${getText('answerLabel')}</div>
-                <div id="answer-confidence"></div>
-            </div>
-            <div id="answer-text" class="answer-text scrollbar-custom">${getText('placeholderAnswer')}</div>
-            <div class="qa-footer">
-                <div class="qa-footer-left">
-                    <div id="answer-spinner" class="qa-spinner"></div>
-                    <button id="answer-copy-btn" class="qa-copy-btn" title="${getText('copyBtn')}" disabled>📋</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="overlay-status" class="overlay-status">${getText('loadingDB')}</div>
-</div>
-`;
+    `;
     document.body.appendChild(overlayEl);
 
     cacheDom();
@@ -1152,21 +1041,12 @@ function createOverlay() {
     attachIconHoverHandlers();
     updateAllText();
 
-    if (dom.searchBtn) dom.searchBtn.disabled = true;
-    if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
-    if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
-    if (dom.deleteBtn) dom.deleteBtn.disabled = true;
-    if (dom.dbStatus) dom.dbStatus.className = 'db-status error';
-
     if (dom.detectBtn) {
         dom.detectBtn.addEventListener('click', async () => {
             try {
                 dom.detectBtn.disabled = true;
-                updateStatus('scanning', 'searching');
                 await detectGame();
-            } finally {
-                dom.detectBtn.disabled = false;
-            }
+            } finally { dom.detectBtn.disabled = false; }
         });
     }
 
@@ -1177,58 +1057,15 @@ function createOverlay() {
         });
     }
 
-    function copyTextToClipboard(text) {
-        try {
-            if (!text) return;
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text)
-                    .then(() => updateStatus('copySuccess', 'success'))
-                    .catch(() => updateStatus('copySuccess', 'success'));
-            } else {
-                const ta = document.createElement('textarea');
-                ta.value = text;
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                ta.remove();
-                updateStatus('copySuccess', 'success');
-            }
-        } catch (e) {
-            logError('Copy failed', e);
-        }
-    }
-
-    if (dom.questionCopyBtn) {
-        dom.questionCopyBtn.addEventListener('click', () => {
-            const text = currentQuestion || (dom.questionText && dom.questionText.textContent) || '';
-            if (!text || text === getText('placeholderQuestion')) return;
-            copyTextToClipboard(text);
-        });
-    }
-
-    if (dom.answerCopyBtn) {
-        dom.answerCopyBtn.addEventListener('click', () => {
-            const text = (dom.answerText && dom.answerText.textContent) ? dom.answerText.textContent : '';
-            if (!text || text === getText('answerNotFound')) return;
-            copyTextToClipboard(text);
-        });
-    }
-
     if (dom.deleteBtn) {
         dom.deleteBtn.addEventListener('click', () => {
             currentQuestion = '';
             displayQuestion(null);
             if (dom.answerText) dom.answerText.textContent = getText('placeholderAnswer');
-            if (dom.answerBox) { 
-                dom.answerBox.classList.remove('found');
-                dom.answerBox.classList.remove('not-found');
-            }
+            if (dom.answerBox) { dom.answerBox.classList.remove('found'); dom.answerBox.classList.remove('not-found'); }
             if (dom.answerConfidence) dom.answerConfidence.textContent = '';
             if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
             if (dom.deleteBtn) dom.deleteBtn.disabled = true;
-            setQuestionLoading(false);
-            setAnswerLoading(false);
-            // ИСПРАВЛЕНО: убран вызов adaptCenterButtonsHeight() при очистке
         });
     }
 
@@ -1237,114 +1074,43 @@ function createOverlay() {
         langBtn.addEventListener('click', () => {
             currentLang = currentLang === 'ru' ? 'en' : 'ru';
             updateAllText();
-            if (isDatabaseLoaded) updateStatus('dbLoaded', 'success');
-            log('Language switched to:', currentLang);
         });
     }
 
-    const minBtn = overlayEl.querySelector('#minimize-btn');
     const closeBtn = overlayEl.querySelector('#close-btn');
-
-    function cleanupOverlay() {
-        try {
-            if (popupDocClickHandler) {
-                document.removeEventListener('click', popupDocClickHandler);
-                popupDocClickHandler = null;
-            }
-            if (windowResizeHandler) {
-                window.removeEventListener('resize', windowResizeHandler);
-                windowResizeHandler = null;
-            }
-            hidePopup();
-            if (popupEl && popupEl.parentNode) {
-                popupEl.parentNode.removeChild(popupEl);
-            }
-            popupEl = null;
-            const s = document.getElementById(STYLE_ID);
-            if (s) s.remove();
-        } catch (e) {
-            logError('cleanup error', e);
-        }
-    }
-
-    if (minBtn) minBtn.addEventListener('click', () => overlayEl.classList.toggle('overlay-minimized'));
-    if (closeBtn) closeBtn.addEventListener('click', () => {
-        cleanupOverlay();
-        if (overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
-        overlayEl = null;
-    });
+    if (closeBtn) closeBtn.addEventListener('click', () => { if (overlayEl) overlayEl.remove(); });
 
     const headerEl = overlayEl.querySelector('.overlay-header');
-    let isDragging = false; 
+    let isDragging = false;
     let startX, startY, initialX, initialY;
 
     function onMouseMove(e) {
         if (!isDragging || !overlayEl) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY; 
-        let nextLeft = initialX + dx;
-        let nextTop = initialY + dy;
-
-        const rect = overlayEl.getBoundingClientRect();
-        const maxLeft = window.innerWidth - rect.width;
-        const maxTop = window.innerHeight - rect.height;
-
-        nextLeft = Math.max(0, Math.min(maxLeft, nextLeft));
-        nextTop = Math.max(0, Math.min(maxTop, nextTop));
-
-        overlayEl.style.left = nextLeft + 'px';
-        overlayEl.style.top = nextTop + 'px';
+        overlayEl.style.left = (initialX + (e.clientX - startX)) + 'px';
+        overlayEl.style.top = (initialY + (e.clientY - startY)) + 'px';
         overlayEl.style.right = 'auto';
         overlayEl.style.bottom = 'auto';
     }
 
-    function endDrag() {
-        if (!isDragging) return;
-        isDragging = false;
-        document.body.style.userSelect = '';
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', endDrag);
-    }
-
     if (headerEl) {
         headerEl.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
             isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
+            startX = e.clientX; startY = e.clientY;
             const rect = overlayEl.getBoundingClientRect();
-            initialX = rect.left;
-            initialY = rect.top;
-            document.body.style.userSelect = 'none';
+            initialX = rect.left; initialY = rect.top;
             window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', endDrag);
+            window.addEventListener('mouseup', () => { isDragging = false; window.removeEventListener('mousemove', onMouseMove); });
         });
     }
 
-    windowResizeHandler = () => {
-        updateIconSize();
-        // ИСПРАВЛЕНО: убран вызов adaptCenterButtonsHeight() при resize
-    };
+    windowResizeHandler = () => { updateIconSize(); };
     window.addEventListener('resize', windowResizeHandler);
-
-    log('Overlay created and initialized');
 }
 
 async function init() {
-    log('=== INIT STARTED ===');
     createOverlay();
-    updateStatus('loadingDB', 'info');
     const loaded = await loadDatabase();
-    log('Database load result:', loaded);
-
-    if (loaded) {
-        updateStatus('notDetected', 'info');
-        log('Initialization complete (DB loaded)');
-    } else {
-        logError('Initialization failed - database not loaded');
-    }
-
-    log('=== INIT COMPLETE ===');
+    if (loaded) updateStatus('notDetected', 'info');
 }
 
 if (document.readyState === 'loading') {
@@ -1352,5 +1118,4 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
-log('Overlay script loaded successfully');
 })();
