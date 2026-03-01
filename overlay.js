@@ -1,6 +1,7 @@
 (function () {
 const OVERLAY_ID = 'game-finder-overlay';
 const STYLE_ID = 'game-finder-overlay-style';
+//Давай также сделаем так, чтобы иконка статуса (stable, unstable, прочее) была по размеру как высота логтипа (тоесть автоматом адаптировалась под раазные логотипы. Ещё сделаем высвеичвание notes у иконки в виде крутого попапа при наведении, а не в виде стандартной подсказки, и пусть подзаголовок у этого попапа будет "Почему?", а при английском языке "Why?" (стиль попапа как у стиля оверлея). Не сломай всю структуру работы скрипта и его суть. Важно оставлять правильную работу. Также убери проблему с тем, что скрипт перекаршивает элементы самой игры в серый и высоту кнопок адаптируй под высоту question-text scrollbar-custom и answer-text scrollbar-custom 
 
 // === ЛОГГИРОВАНИЕ ===
 const LOG_PREFIX = '[JBG-Finder]';
@@ -109,6 +110,7 @@ let isDatabaseLoaded = false;
 let currentContentLang = CONFIG.defaultLang; // язык текущего вопроса (ru/en)
 
 const dom = {};
+let popupEl = null;
 
 function getText(key) {
     return (LANG[currentLang] && LANG[currentLang][key]) || (LANG.ru && LANG.ru[key]) || key;
@@ -135,9 +137,10 @@ function updateGameAssets() {
         } else {
             dom.gameIcon.src = '';
             dom.gameIcon.style.display = 'none';
+            hidePopup();
         }
-        const noteText = notes[currentContentLang] || notes.en || notes.ru || '';
-        dom.gameIcon.title = noteText;
+        // убираем системный тултип
+        dom.gameIcon.removeAttribute('title');
     }
 
     const logoUrls = config.logoUrls || (config.assets && config.assets.logoUrls);
@@ -158,6 +161,111 @@ function updateGameAssets() {
     if (dom.gameTitleBlock) {
         dom.gameTitleBlock.style.display = logoUrl ? 'none' : '';
     }
+
+    // notes для попапа
+    const noteText = notes[currentContentLang] || notes.en || notes.ru || '';
+    setPopupContent(noteText, currentContentLang);
+
+    // Подстроим размер иконки под высоту логотипа (или названия)
+    updateIconSize();
+
+    // Подстроим высоту центральных кнопок под высоты question/answer
+    adaptCenterButtonsHeight();
+}
+
+function updateIconSize() {
+    if (!dom.gameIcon) return;
+    try {
+        // Получаем реальную высоту логотипа (если есть)
+        let logoHeight = 0;
+        if (dom.gameLogo && dom.gameLogo.style.display !== 'none') {
+            logoHeight = dom.gameLogo.getBoundingClientRect().height;
+        }
+        // Если логотипа нет — используем высоту названия игры (game-name)
+        if ((!logoHeight || logoHeight < 6) && dom.gameName) {
+            logoHeight = dom.gameName.getBoundingClientRect().height || 18;
+        }
+        // Ограничим минимальную/максимальную высоту для иконки
+        const minH = 14;
+        const maxH = 48;
+        const finalH = Math.max(minH, Math.min(maxH, Math.round(logoHeight)));
+        dom.gameIcon.style.height = finalH + 'px';
+        dom.gameIcon.style.width = 'auto';
+        dom.gameIcon.style.objectFit = 'contain';
+    } catch (e) {
+        logWarn('updateIconSize error', e);
+    }
+}
+
+function setPopupContent(text, lang) {
+    if (!popupEl) return;
+    const subtitle = (lang === 'ru') ? 'Почему?' : 'Why?';
+    popupEl.querySelector('.jf-popup-subtitle').textContent = subtitle;
+    popupEl.querySelector('.jf-popup-body').textContent = text || '';
+}
+
+function showPopupAt(targetEl) {
+    if (!popupEl || !targetEl) return;
+    const rect = targetEl.getBoundingClientRect();
+    const overlayRect = overlayEl.getBoundingClientRect();
+
+    // позиционируем попап относительно overlay (absolute внутри overlay)
+    const popupRect = popupEl.getBoundingClientRect();
+    const spaceAbove = rect.top - overlayRect.top;
+    const desiredTop = spaceAbove - popupRect.height - 8; // above with margin
+    const belowTop = rect.bottom - overlayRect.top + 8; // below with margin
+
+    let top;
+    if (desiredTop > 8) top = desiredTop;
+    else top = belowTop;
+
+    // Поправим по горизонтали — чтобы не вылезать за правую/левую границы overlay
+    let left = rect.left - overlayRect.left;
+    // если элемент шире попапа, немного сдвигаем попап влево
+    if (left + popupRect.width > overlayRect.width - 8) {
+        left = Math.max(8, overlayRect.width - popupRect.width - 8);
+    }
+    // минимальный отступ
+    if (left < 8) left = 8;
+
+    popupEl.style.top = top + 'px';
+    popupEl.style.left = left + 'px';
+    popupEl.style.opacity = '1';
+    popupEl.style.pointerEvents = 'auto';
+}
+
+function hidePopup() {
+    if (!popupEl) return;
+    popupEl.style.opacity = '0';
+    popupEl.style.pointerEvents = 'none';
+}
+
+function adaptCenterButtonsHeight() {
+    if (!overlayEl) return;
+    try {
+        // Немного задержим вычисления, чтобы DOM успел отрисоваться
+        setTimeout(() => {
+            if (!dom.questionText || !dom.answerText || !dom.detectBtn || !dom.searchBtn || !dom.deleteBtn) return;
+            const leftH = dom.questionText.getBoundingClientRect().height || 80;
+            const rightH = dom.answerText.getBoundingClientRect().height || 80;
+            // Берём минимальную из двух высот (чтобы не выйти за пределы)
+            const base = Math.max(48, Math.floor(Math.min(leftH, rightH)));
+            // Каждый из трёх кнопок — примерно треть этой высоты минус промежутки
+            const gapTotal = 12; // примерно суммарный gap (2 * 6px)
+            const btnH = Math.max(36, Math.floor((base - gapTotal) / 3));
+            [dom.detectBtn, dom.searchBtn, dom.deleteBtn].forEach(btn => {
+                if (!btn) return;
+                btn.style.height = btnH + 'px';
+                btn.style.paddingTop = '0';
+                btn.style.paddingBottom = '0';
+                btn.style.lineHeight = btnH + 'px';
+                btn.style.display = 'block';
+                btn.style.boxSizing = 'border-box';
+            });
+        }, 80);
+    } catch (e) {
+        logWarn('adaptCenterButtonsHeight error', e);
+    }
 }
 
 function setQuestionLoading(isLoading) {
@@ -177,7 +285,7 @@ function ensureStyle() {
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-        /* Базовый сброс */
+        /* Базовый сброс только внутри оверлея */
         #${OVERLAY_ID} * {
             box-sizing: border-box !important;
             margin: 0;
@@ -205,7 +313,7 @@ function ensureStyle() {
         }
 
         /* Заголовок в стиле Windows 10 */
-        .overlay-header {
+        #${OVERLAY_ID} .overlay-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -216,14 +324,14 @@ function ensureStyle() {
             cursor: move;
         }
 
-        .header-left {
+        #${OVERLAY_ID} .header-left {
             display: flex;
             align-items: center;
             gap: 8px;
             min-width: 0;
         }
 
-        .overlay-title {
+        #${OVERLAY_ID} .overlay-title {
             font-size: 13px;
             font-weight: 500;
             color: #f5f5f5;
@@ -232,7 +340,7 @@ function ensureStyle() {
             text-overflow: ellipsis;
         }
 
-        .db-info {
+        #${OVERLAY_ID} .db-info {
             display: flex;
             align-items: center;
             gap: 6px;
@@ -244,12 +352,12 @@ function ensureStyle() {
             color: #a0a0a0;
         }
 
-        #db-version,
-        #db-age {
+        #${OVERLAY_ID} #db-version,
+        #${OVERLAY_ID} #db-age {
             font-size: 10px;
         }
 
-        .db-status {
+        #${OVERLAY_ID} .db-status {
             font-size: 9px;
             padding: 1px 6px;
             border-radius: 999px;
@@ -257,22 +365,22 @@ function ensureStyle() {
             letter-spacing: 0.08em;
         }
 
-        .db-status.loaded {
+        #${OVERLAY_ID} .db-status.loaded {
             background: #2f854f;
             color: #f5f5f5;
         }
 
-        .db-status.error {
+        #${OVERLAY_ID} .db-status.error {
             background: #8b3434;
             color: #f5f5f5;
         }
 
-        .overlay-controls {
+        #${OVERLAY_ID} .overlay-controls {
             display: flex;
             align-items: center;
         }
 
-        .overlay-btn {
+        #${OVERLAY_ID} .overlay-btn {
             width: 30px;
             height: 22px;
             border: none;
@@ -285,17 +393,17 @@ function ensureStyle() {
             justify-content: center;
         }
 
-        .overlay-btn:hover {
+        #${OVERLAY_ID} .overlay-btn:hover {
             background: #3b3b3b;
             color: #ffffff;
         }
 
-        #close-btn:hover {
+        #${OVERLAY_ID} #close-btn:hover {
             background: #c0392b;
             color: #ffffff;
         }
 
-        .overlay-content {
+        #${OVERLAY_ID} .overlay-content {
             padding: 14px 16px 10px 16px;
             background: #252525;
             height: calc(100% - 30px); /* минус заголовок */
@@ -304,7 +412,7 @@ function ensureStyle() {
         }
 
         /* Верхняя строка с игрой */
-        .game-indicator {
+        #${OVERLAY_ID} .game-indicator {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -315,35 +423,35 @@ function ensureStyle() {
             border: 1px solid #3b3b3b;
         }
 
-        .game-indicator-main {
+        #${OVERLAY_ID} .game-indicator-main {
             display: flex;
             align-items: center;
             gap: 8px;
             min-width: 0;
         }
 
-        .indicator-dot {
+        #${OVERLAY_ID} .indicator-dot {
             width: 14px;
             height: 14px;
             border-radius: 50%;
             background: #555555;
         }
 
-        .indicator-dot.active {
+        #${OVERLAY_ID} .indicator-dot.active {
             background: #29b765;
         }
 
-        .game-icon {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
+        #${OVERLAY_ID} .game-icon {
+            height: auto;
+            width: auto;
+            border-radius: 4px;
             background: #3b3b3b;
-            object-fit: cover;
+            object-fit: contain;
             flex-shrink: 0;
             display: none;
         }
 
-        #game-name {
+        #${OVERLAY_ID} #game-name {
             font-size: 13px;
             font-weight: 500;
             white-space: nowrap;
@@ -351,47 +459,47 @@ function ensureStyle() {
             text-overflow: ellipsis;
         }
 
-        #game-confidence {
+        #${OVERLAY_ID} #game-confidence {
             font-size: 11px;
             color: #a0a0a0;
             margin-top: 1px;
         }
 
-        .indicator-count {
+        #${OVERLAY_ID} .indicator-count {
             font-size: 10px;
             color: #808080;
             white-space: nowrap;
             text-align: right;
         }
 
-        .confidence-badge {
+        #${OVERLAY_ID} .confidence-badge {
             font-size: 10px;
             color: #a0e7c4;
         }
 
         /* Логотип игры наверху (в блоке игры); если нет URL — показывается название */
-        .game-branding {
+        #${OVERLAY_ID} .game-branding {
             display: flex;
             align-items: center;
             min-width: 0;
             flex: 1;
         }
 
-        #game-logo {
+        #${OVERLAY_ID} #game-logo {
             max-width: 160px;
             max-height: 36px;
             object-fit: contain;
             display: none;
         }
 
-        .game-title-block {
+        #${OVERLAY_ID} .game-title-block {
             display: flex;
             flex-direction: column;
             min-width: 0;
         }
 
         /* Основная сетка: ВОПРОС | КНОПКИ | ОТВЕТ */
-        .overlay-grid {
+        #${OVERLAY_ID} .overlay-grid {
             display: grid;
             grid-template-columns: 2fr 1fr 2fr;
             gap: 8px;
@@ -399,7 +507,7 @@ function ensureStyle() {
             flex: 1; /* занять всё доступное пространство над строкой статуса */
         }
 
-        .qa-column {
+        #${OVERLAY_ID} .qa-column {
             display: flex;
             flex-direction: column;
             background: #2b2b2b;
@@ -408,16 +516,16 @@ function ensureStyle() {
             padding: 6px;
         }
 
-        .question-header,
-        .answer-header {
+        #${OVERLAY_ID} .question-header,
+        #${OVERLAY_ID} .answer-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 4px;
         }
 
-        .question-header div[style*="font-weight:700"],
-        .answer-header div[style*="font-weight:700"] {
+        #${OVERLAY_ID} .question-header div[style*="font-weight:700"],
+        #${OVERLAY_ID} .answer-header div[style*="font-weight:700"] {
             font-size: 11px;
             font-weight: 600 !important;
             letter-spacing: 0.25em;
@@ -425,14 +533,14 @@ function ensureStyle() {
             color: #d0d0d0;
         }
 
-        #question-length,
-        #answer-confidence {
+        #${OVERLAY_ID} #question-length,
+        #${OVERLAY_ID} #answer-confidence {
             font-size: 10px;
             color: #909090;
         }
 
-        .question-text,
-        .answer-text {
+        #${OVERLAY_ID} .question-text,
+        #${OVERLAY_ID} .answer-text {
             font-size: 13px;
             line-height: 1.5;
             flex: 1;
@@ -444,28 +552,28 @@ function ensureStyle() {
             border-radius: 2px;
         }
 
-        .answer-box.found {
+        #${OVERLAY_ID} .answer-box.found {
             border-color: #29b765;
         }
 
-        .answer-box.not-found {
+        #${OVERLAY_ID} .answer-box.not-found {
             border-color: #c0392b;
         }
 
-        .qa-footer {
+        #${OVERLAY_ID} .qa-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-top: 4px;
         }
 
-        .qa-footer-left {
+        #${OVERLAY_ID} .qa-footer-left {
             display: flex;
             align-items: center;
             gap: 4px;
         }
 
-        .qa-spinner {
+        #${OVERLAY_ID} .qa-spinner {
             width: 16px;
             height: 16px;
             border-radius: 50%;
@@ -474,7 +582,7 @@ function ensureStyle() {
             display: none;
         }
 
-        .qa-spinner.active {
+        #${OVERLAY_ID} .qa-spinner.active {
             display: inline-block;
             animation: spin 0.8s linear infinite;
         }
@@ -485,7 +593,7 @@ function ensureStyle() {
             }
         }
 
-        .qa-copy-btn {
+        #${OVERLAY_ID} .qa-copy-btn {
             width: 20px;
             height: 20px;
             border-radius: 2px;
@@ -499,13 +607,13 @@ function ensureStyle() {
             justify-content: center;
         }
 
-        .qa-copy-btn:disabled {
+        #${OVERLAY_ID} .qa-copy-btn:disabled {
             opacity: 0.4;
             cursor: default;
         }
 
         /* Центральная колонка кнопок — на всю ширину колонки (до краёв полей) */
-        .center-column {
+        #${OVERLAY_ID} .center-column {
             display: flex;
             flex-direction: column;
             gap: 6px;
@@ -513,7 +621,7 @@ function ensureStyle() {
             min-width: 0;
         }
 
-        .center-btn {
+        #${OVERLAY_ID} .center-btn {
             width: 100%;
             padding: 10px 6px;
             border-radius: 3px;
@@ -525,37 +633,37 @@ function ensureStyle() {
             box-sizing: border-box;
         }
 
-        .center-btn:hover:not(:disabled) {
+        #${OVERLAY_ID} .center-btn:hover:not(:disabled) {
             background: #3a3a3a;
         }
 
-        .center-btn:disabled {
+        #${OVERLAY_ID} .center-btn:disabled {
             opacity: 0.5;
             cursor: default;
         }
 
-        .detect-btn {
+        #${OVERLAY_ID} .detect-btn {
             background: #2f7ed8;
             border-color: #2f7ed8;
         }
 
-        .detect-btn:hover:not(:disabled) {
+        #${OVERLAY_ID} .detect-btn:hover:not(:disabled) {
             background: #2b6bad;
             border-color: #2b6bad;
         }
 
-        .search-btn {
+        #${OVERLAY_ID} .search-btn {
             background: #2f9b5f;
             border-color: #2f9b5f;
         }
 
-        .delete-btn {
+        #${OVERLAY_ID} .delete-btn {
             background: #444444;
             border-color: #444444;
         }
 
         /* Строка статуса */
-        .overlay-status {
+        #${OVERLAY_ID} .overlay-status {
             font-size: 11px;
             color: #c0c0c0;
             padding: 6px 10px 8px 10px;
@@ -571,22 +679,53 @@ function ensureStyle() {
             overflow: hidden;
         }
 
-        .overlay-minimized .overlay-content {
+        #${OVERLAY_ID} .overlay-minimized .overlay-content {
             display: none !important;
         }
 
-        /* Скроллбар */
-        .scrollbar-custom::-webkit-scrollbar {
+        /* Скроллбар (ограничен классом внутри оверлея) */
+        #${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar {
             width: 6px;
         }
 
-        .scrollbar-custom::-webkit-scrollbar-track {
+        #${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar-track {
             background: #252525;
         }
 
-        .scrollbar-custom::-webkit-scrollbar-thumb {
+        #${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar-thumb {
             background: #3f3f3f;
             border-radius: 3px;
+        }
+
+        /* Попап подсказки для иконки */
+        #${OVERLAY_ID} .jf-popup {
+            position: absolute;
+            z-index: 1000000;
+            min-width: 160px;
+            max-width: 320px;
+            background: #2b2b2b;
+            border: 1px solid #3b3b3b;
+            border-radius: 6px;
+            padding: 8px 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+            transition: opacity 0.12s ease;
+            opacity: 0;
+            pointer-events: none;
+            color: #f0f0f0;
+            font-size: 12px;
+        }
+
+        #${OVERLAY_ID} .jf-popup .jf-popup-subtitle {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #d8d8d8;
+        }
+        #${OVERLAY_ID} .jf-popup .jf-popup-body {
+            display: block;
+            font-size: 12px;
+            color: #cfcfcf;
+            white-space: pre-wrap;
         }
 
         @media (max-width: 540px) {
@@ -796,6 +935,8 @@ function displayQuestion(q) {
         dom.searchBtn.disabled = true;
         if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
         setQuestionLoading(false);
+        // обновим размеры кнопок
+        adaptCenterButtonsHeight();
         return;
     }
 
@@ -914,6 +1055,8 @@ function searchAnswer() {
         updateStatus('dbError', 'error');
     } finally {
         setAnswerLoading(false);
+        // адаптируем высоты кнопок (контент мог измениться)
+        adaptCenterButtonsHeight();
     }
 }
 
@@ -981,6 +1124,56 @@ function updateAllText() {
     } catch (e) {
         logError('updateAllText error', e);
     }
+}
+
+function createPopup() {
+    if (!overlayEl || popupEl) return;
+    popupEl = document.createElement('div');
+    popupEl.className = 'jf-popup';
+    popupEl.innerHTML = `<div class="jf-popup-subtitle"></div><div class="jf-popup-body"></div>`;
+    // скрыт по умолчанию; добавляем в overlay
+    overlayEl.appendChild(popupEl);
+    // скроем при клике вне
+    document.addEventListener('click', (e) => {
+        if (!popupEl) return;
+        if (!overlayEl.contains(e.target)) {
+            hidePopup();
+        }
+    });
+}
+
+function attachIconHoverHandlers() {
+    if (!dom.gameIcon) return;
+    dom.gameIcon.addEventListener('mouseenter', (e) => {
+        // показываем попап (если есть текст)
+        if (!popupEl) createPopup();
+        // определяем язык для заголовка
+        setPopupContent(popupEl ? popupEl.querySelector('.jf-popup-body').textContent : '', currentContentLang);
+        // если нет контента — всё равно покажем "Почему?" и пустое тело
+        showPopupAt(dom.gameIcon);
+    });
+    dom.gameIcon.addEventListener('mouseleave', (e) => {
+        // скрываем с небольшим таймаутом (чтобы курсор мог попасть на попап, если нужно)
+        setTimeout(() => {
+            // если курсор не над попапом — скрываем
+            if (!popupEl) return;
+            // проверим куда ушёл курсор
+            const { clientX: x, clientY: y } = e;
+            const overPopup = popupEl.getBoundingClientRect();
+            if (!(x >= overPopup.left && x <= overPopup.right && y >= overPopup.top && y <= overPopup.bottom)) {
+                hidePopup();
+            }
+        }, 80);
+    });
+    // если курсор над попапом — не скрываем
+    overlayEl && overlayEl.addEventListener('mousemove', (ev) => {
+        if (!popupEl || popupEl.style.opacity === '0') return;
+        const r = popupEl.getBoundingClientRect();
+        if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
+            // оставляем видимым
+            popupEl.style.pointerEvents = 'auto';
+        }
+    });
 }
 
 function createOverlay() {
@@ -1064,6 +1257,8 @@ function createOverlay() {
     document.body.appendChild(overlayEl);
 
     cacheDom();
+    createPopup();
+    attachIconHoverHandlers();
     updateAllText();
 
     if (dom.searchBtn) dom.searchBtn.disabled = true;
@@ -1142,6 +1337,7 @@ function createOverlay() {
             if (dom.deleteBtn) dom.deleteBtn.disabled = true;
             setQuestionLoading(false);
             setAnswerLoading(false);
+            adaptCenterButtonsHeight();
         });
     }
 
@@ -1206,6 +1402,12 @@ function createOverlay() {
             window.addEventListener('mouseup', endDrag);
         });
     }
+
+    // Resize handler: подстроим размеры иконки/кнопок при изменении окна
+    window.addEventListener('resize', () => {
+        updateIconSize();
+        adaptCenterButtonsHeight();
+    });
 
     log('Overlay created and initialized');
 }
