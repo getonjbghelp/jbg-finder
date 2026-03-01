@@ -111,6 +111,9 @@ let currentContentLang = CONFIG.defaultLang; // язык текущего воп
 
 const dom = {};
 let popupEl = null;
+// переменные для хранения обработчиков, чтобы можно было их снять при удалении оверлея
+let popupDocClickHandler = null;
+let windowResizeHandler = null;
 
 function getText(key) {
     return (LANG[currentLang] && LANG[currentLang][key]) || (LANG.ru && LANG.ru[key]) || key;
@@ -205,7 +208,7 @@ function setPopupContent(text, lang) {
 }
 
 function showPopupAt(targetEl) {
-    if (!popupEl || !targetEl) return;
+    if (!popupEl || !targetEl || !overlayEl) return;
     const rect = targetEl.getBoundingClientRect();
     const overlayRect = overlayEl.getBoundingClientRect();
 
@@ -1133,13 +1136,22 @@ function createPopup() {
     popupEl.innerHTML = `<div class="jf-popup-subtitle"></div><div class="jf-popup-body"></div>`;
     // скрыт по умолчанию; добавляем в overlay
     overlayEl.appendChild(popupEl);
-    // скроем при клике вне
-    document.addEventListener('click', (e) => {
+
+    // скроем при клике вне - но внимательно: проверяем overlayEl перед contains
+    popupDocClickHandler = function (e) {
         if (!popupEl) return;
+        // если overlay уже удалён, считаем что нужно скрыть/очистить попап и выйти
+        if (!overlayEl || !overlayEl.contains) {
+            hidePopup();
+            return;
+        }
         if (!overlayEl.contains(e.target)) {
             hidePopup();
         }
-    });
+    };
+    document.addEventListener('click', popupDocClickHandler);
+
+    // скроем при клике вне (добавлено), остальные слушатели - в attachIconHoverHandlers
 }
 
 function attachIconHoverHandlers() {
@@ -1194,7 +1206,7 @@ function createOverlay() {
             </div>
             <div class="overlay-controls">
                 <button id="lang-flag-btn" class="overlay-btn flag-btn" title="Toggle language">🌐</button>
-                <button id="minimize-btn" class="overlay-btn" title="${getText('minimize')}">—</button>
+                <button id="minimize-btn" class="overlay-btn" title="${getText('minimize')}">-</button>
                 <button id="close-btn" class="overlay-btn" title="${getText('close')}">×</button>
             </div>
         </div>
@@ -1353,8 +1365,37 @@ function createOverlay() {
 
     const minBtn = overlayEl.querySelector('#minimize-btn');
     const closeBtn = overlayEl.querySelector('#close-btn');
+
+    // Функция очистки - снимает глобальные обработчики и удаляет попап/стили
+    function cleanupOverlay() {
+        try {
+            if (popupDocClickHandler) {
+                document.removeEventListener('click', popupDocClickHandler);
+                popupDocClickHandler = null;
+            }
+            if (windowResizeHandler) {
+                window.removeEventListener('resize', windowResizeHandler);
+                windowResizeHandler = null;
+            }
+            hidePopup();
+            if (popupEl && popupEl.parentNode) {
+                popupEl.parentNode.removeChild(popupEl);
+            }
+            popupEl = null;
+            // опционально убираем стили оверлея, чтобы не оставлять "следов"
+            const s = document.getElementById(STYLE_ID);
+            if (s) s.remove();
+        } catch (e) {
+            logError('cleanup error', e);
+        }
+    }
+
     if (minBtn) minBtn.addEventListener('click', () => overlayEl.classList.toggle('overlay-minimized'));
-    if (closeBtn) closeBtn.addEventListener('click', () => { overlayEl.remove(); overlayEl = null; });
+    if (closeBtn) closeBtn.addEventListener('click', () => {
+        cleanupOverlay();
+        if (overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
+        overlayEl = null;
+    });
 
     const headerEl = overlayEl.querySelector('.overlay-header');
     let isDragging = false;
@@ -1404,10 +1445,11 @@ function createOverlay() {
     }
 
     // Resize handler: подстроим размеры иконки/кнопок при изменении окна
-    window.addEventListener('resize', () => {
+    windowResizeHandler = () => {
         updateIconSize();
         adaptCenterButtonsHeight();
-    });
+    };
+    window.addEventListener('resize', windowResizeHandler);
 
     log('Overlay created and initialized');
 }
