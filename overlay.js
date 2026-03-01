@@ -1,6 +1,8 @@
 (function () {
 const OVERLAY_ID = 'game-finder-overlay';
 const STYLE_ID = 'game-finder-overlay-style';
+//При первом нажатии кнопки "Detct Question And Game" при запуске оверлея у меня уменьшаются три кнопки (Find Answer и Delete results) и текст вылетал за пределы кнопок, стиль из-за этого ломается. Исправь только эту ошибку, при этом оставь размер кнопок изначально тем, которым они были при запуске, текст тоже должен быть полностью читаемым и ничего другого не трогай. Выдай мне весь скрипт, но уже с исправленной ошибкой.
+
 
 // === ЛОГГИРОВАНИЕ ===
 const LOG_PREFIX = '[JBG-Finder]';
@@ -26,7 +28,8 @@ const CONFIG = {
     retryAttempts: 3
 };
 
-// Общие иконки статуса игры
+// Общие иконки статуса игры (маленький круг рядом с названием)
+// Задай здесь реальные URL-ы PNG под свой хостинг.
 const GAME_STATUS_ICONS = {
     stable:    'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/stable.png',
     unstable:  'https://getonjbghelp.github.io/jbg-finder/pngs/status/adapted/unstable.png',
@@ -105,10 +108,11 @@ let currentLang = CONFIG.defaultLang;
 let overlayEl = null;
 let dbLoadAttempts = 0;
 let isDatabaseLoaded = false;
-let currentContentLang = CONFIG.defaultLang;
+let currentContentLang = CONFIG.defaultLang; // язык текущего вопроса (ru/en)
 
 const dom = {};
 let popupEl = null;
+// переменные для хранения обработчиков, чтобы можно было их снять при удалении оверлея
 let popupDocClickHandler = null;
 let windowResizeHandler = null;
 
@@ -139,6 +143,7 @@ function updateGameAssets() {
             dom.gameIcon.style.display = 'none';
             hidePopup();
         }
+        // убираем системный тултип
         dom.gameIcon.removeAttribute('title');
     }
 
@@ -156,23 +161,35 @@ function updateGameAssets() {
             dom.gameLogo.style.display = 'none';
         }
     }
+    /* Название игры показываем только если логотип не указан */
     if (dom.gameTitleBlock) {
         dom.gameTitleBlock.style.display = logoUrl ? 'none' : '';
     }
 
+    // notes для попапа
+    const noteText = notes[currentContentLang] || notes.en || notes.ru || '';
+    setPopupContent(noteText, currentContentLang);
+
+    // Подстроим размер иконки под высоту логотипа (или названия)
     updateIconSize();
+
+    // Подстроим высоту центральных кнопок под высоты question/answer
+    adaptCenterButtonsHeight();
 }
 
 function updateIconSize() {
     if (!dom.gameIcon) return;
     try {
+        // Получаем реальную высоту логотипа (если есть)
         let logoHeight = 0;
         if (dom.gameLogo && dom.gameLogo.style.display !== 'none') {
             logoHeight = dom.gameLogo.getBoundingClientRect().height;
         }
+        // Если логотипа нет — используем высоту названия игры (game-name)
         if ((!logoHeight || logoHeight < 6) && dom.gameName) {
             logoHeight = dom.gameName.getBoundingClientRect().height || 18;
         }
+        // Ограничим минимальную/максимальную высоту для иконки
         const minH = 14;
         const maxH = 48;
         const finalH = Math.max(minH, Math.min(maxH, Math.round(logoHeight)));
@@ -195,19 +212,24 @@ function showPopupAt(targetEl) {
     if (!popupEl || !targetEl || !overlayEl) return;
     const rect = targetEl.getBoundingClientRect();
     const overlayRect = overlayEl.getBoundingClientRect();
+
+    // позиционируем попап относительно overlay (absolute внутри overlay)
     const popupRect = popupEl.getBoundingClientRect();
     const spaceAbove = rect.top - overlayRect.top;
-    const desiredTop = spaceAbove - popupRect.height - 8;
-    const belowTop = rect.bottom - overlayRect.top + 8;
+    const desiredTop = spaceAbove - popupRect.height - 8; // above with margin
+    const belowTop = rect.bottom - overlayRect.top + 8; // below with margin
 
     let top;
     if (desiredTop > 8) top = desiredTop;
     else top = belowTop;
 
+    // Поправим по горизонтали — чтобы не вылезать за правую/левую границы overlay
     let left = rect.left - overlayRect.left;
+    // если элемент шире попапа, немного сдвигаем попап влево
     if (left + popupRect.width > overlayRect.width - 8) {
         left = Math.max(8, overlayRect.width - popupRect.width - 8);
     }
+    // минимальный отступ
     if (left < 8) left = 8;
 
     popupEl.style.top = top + 'px';
@@ -222,6 +244,34 @@ function hidePopup() {
     popupEl.style.pointerEvents = 'none';
 }
 
+function adaptCenterButtonsHeight() {
+    if (!overlayEl) return;
+    try {
+        // Немного задержим вычисления, чтобы DOM успел отрисоваться
+        setTimeout(() => {
+            if (!dom.questionText || !dom.answerText || !dom.detectBtn || !dom.searchBtn || !dom.deleteBtn) return;
+            const leftH = dom.questionText.getBoundingClientRect().height || 80;
+            const rightH = dom.answerText.getBoundingClientRect().height || 80;
+            // Берём минимальную из двух высот (чтобы не выйти за пределы)
+            const base = Math.max(48, Math.floor(Math.min(leftH, rightH)));
+            // Каждый из трёх кнопок — примерно треть этой высоты минус промежутки
+            const gapTotal = 12; // примерно суммарный gap (2 * 6px)
+            const btnH = Math.max(36, Math.floor((base - gapTotal) / 3));
+            [dom.detectBtn, dom.searchBtn, dom.deleteBtn].forEach(btn => {
+                if (!btn) return;
+                btn.style.height = btnH + 'px';
+                btn.style.paddingTop = '0';
+                btn.style.paddingBottom = '0';
+                btn.style.lineHeight = btnH + 'px';
+                btn.style.display = 'block';
+                btn.style.boxSizing = 'border-box';
+            });
+        }, 80);
+    } catch (e) {
+        logWarn('adaptCenterButtonsHeight error', e);
+    }
+}
+
 function setQuestionLoading(isLoading) {
     if (!dom.questionSpinner) return;
     dom.questionSpinner.classList.toggle('active', !!isLoading);
@@ -232,18 +282,21 @@ function setAnswerLoading(isLoading) {
     dom.answerSpinner.classList.toggle('active', !!isLoading);
 }
 
+// === Минималистичный интерфейс в стиле Windows 10 ===
 function ensureStyle() {
     if (document.getElementById(STYLE_ID)) return;
     log('Creating overlay styles...');
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
+        /* Базовый сброс только внутри оверлея */
         #${OVERLAY_ID} * {
             box-sizing: border-box !important;
             margin: 0;
             padding: 0;
         }
 
+        /* Основное окно (фиксированный размер под макет 522x338) */
         #${OVERLAY_ID} {
             position: fixed;
             top: 40px;
@@ -263,6 +316,7 @@ function ensureStyle() {
             user-select: none;
         }
 
+        /* Заголовок в стиле Windows 10 */
         #${OVERLAY_ID} .overlay-header {
             display: flex;
             justify-content: space-between;
@@ -356,11 +410,12 @@ function ensureStyle() {
         #${OVERLAY_ID} .overlay-content {
             padding: 14px 16px 10px 16px;
             background: #252525;
-            height: calc(100% - 30px);
+            height: calc(100% - 30px); /* минус заголовок */
             display: flex;
             flex-direction: column;
         }
 
+        /* Верхняя строка с игрой */
         #${OVERLAY_ID} .game-indicator {
             display: flex;
             justify-content: space-between;
@@ -426,6 +481,7 @@ function ensureStyle() {
             color: #a0e7c4;
         }
 
+        /* Логотип игры наверху (в блоке игры); если нет URL — показывается название */
         #${OVERLAY_ID} .game-branding {
             display: flex;
             align-items: center;
@@ -446,12 +502,13 @@ function ensureStyle() {
             min-width: 0;
         }
 
+        /* Основная сетка: ВОПРОС | КНОПКИ | ОТВЕТ */
         #${OVERLAY_ID} .overlay-grid {
             display: grid;
             grid-template-columns: 2fr 1fr 2fr;
             gap: 8px;
             align-items: stretch;
-            flex: 1;
+            flex: 1; /* занять всё доступное пространство над строкой статуса */
         }
 
         #${OVERLAY_ID} .qa-column {
@@ -535,7 +592,9 @@ function ensureStyle() {
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         #${OVERLAY_ID} .qa-copy-btn {
@@ -552,6 +611,12 @@ function ensureStyle() {
             justify-content: center;
         }
 
+        #${OVERLAY_ID} .qa-copy-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        /* Центральная колонка кнопок — на всю ширину колонки (до краёв полей) */
         #${OVERLAY_ID} .center-column {
             display: flex;
             flex-direction: column;
@@ -562,8 +627,7 @@ function ensureStyle() {
 
         #${OVERLAY_ID} .center-btn {
             width: 100%;
-            min-height: 42px;
-            padding: 8px 6px;
+            padding: 10px 6px;
             border-radius: 3px;
             border: 1px solid #3b3b3b;
             background: #323232;
@@ -571,12 +635,6 @@ function ensureStyle() {
             font-size: 12px;
             cursor: pointer;
             box-sizing: border-box;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1.2;
-            text-align: center;
-            word-wrap: break-word;
         }
 
         #${OVERLAY_ID} .center-btn:hover:not(:disabled) {
@@ -608,6 +666,7 @@ function ensureStyle() {
             border-color: #444444;
         }
 
+        /* Строка статуса */
         #${OVERLAY_ID} .overlay-status {
             font-size: 11px;
             color: #c0c0c0;
@@ -617,6 +676,7 @@ function ensureStyle() {
             font-family: "Consolas", "JetBrains Mono", monospace;
         }
 
+        /* Свернутый режим — окно реально уменьшается до заголовка */
         #${OVERLAY_ID}.overlay-minimized {
             height: 30px !important;
             min-height: 30px;
@@ -627,6 +687,7 @@ function ensureStyle() {
             display: none !important;
         }
 
+        /* Скроллбар (ограничен классом внутри оверлея) */
         #${OVERLAY_ID} .scrollbar-custom::-webkit-scrollbar {
             width: 6px;
         }
@@ -640,6 +701,7 @@ function ensureStyle() {
             border-radius: 3px;
         }
 
+        /* Попап подсказки для иконки */
         #${OVERLAY_ID} .jf-popup {
             position: absolute;
             z-index: 1000000;
@@ -717,21 +779,38 @@ function cacheDom() {
 }
 
 function updateStatus(messageKey, type) {
-    if (!dom.status) return;
+    if (!dom.status) {
+        logWarn('Status element not found!');
+        return;
+    }
     const message = LANG[currentLang][messageKey] ? getText(messageKey) : messageKey;
-    const colors = { info: '#5a5a5a', success: '#4ecdc4', warning: '#ffd93d', error: '#ff6b6b', searching: '#667eea' };
+    
+    const colors = { 
+        info: '#5a5a5a', 
+        success: '#4ecdc4', 
+        warning: '#ffd93d', 
+        error: '#ff6b6b', 
+        searching: '#667eea' 
+    };
     dom.status.textContent = message;
     dom.status.style.color = colors[type] || colors.info;
+    logDebug('Status updated:', message, type);
 }
 
 function updateDBStatus(loaded) {
     if (!dom.dbStatus) return;
     dom.dbStatus.textContent = loaded ? '✓' : '✗';
     dom.dbStatus.className = 'db-status ' + (loaded ? 'loaded' : 'error');
+    logDebug('DB status updated:', loaded);
 }
 
 async function loadDatabase() {
+    log('=== DATABASE LOAD STARTED ===');
+    log('Database URL:', CONFIG.databaseURL);
+    log('Attempt:', dbLoadAttempts + 1);
+
     if (window.GameDatabase) {
+        log('Database already loaded in window.GameDatabase');
         gameDatabase = window.GameDatabase;
         updateStatus('dbLoaded', 'success');
         updateDBStatus(true);
@@ -747,6 +826,7 @@ async function loadDatabase() {
         script.async = true;
 
         script.onload = () => {
+            log('Script loaded successfully');
             if (window.GameDatabase) {
                 gameDatabase = window.GameDatabase;
                 updateStatus('dbLoaded', 'success');
@@ -755,37 +835,65 @@ async function loadDatabase() {
                 isDatabaseLoaded = true;
                 resolve(true);
             } else {
+                logError('✗ GameDatabase NOT found after script load');
+                updateStatus('dbError', 'error');
+                updateDBStatus(false);
                 if (dbLoadAttempts < CONFIG.retryAttempts) {
                     setTimeout(() => loadDatabase().then(resolve), 1000);
                 } else resolve(false);
             }
         };
 
-        script.onerror = () => {
+        script.onerror = (e) => {
+            logError('✗ Script load error:', e);
+            updateStatus('dbError', 'error');
+            updateDBStatus(false);
             if (dbLoadAttempts < CONFIG.retryAttempts) {
                 setTimeout(() => loadDatabase().then(resolve), 1000);
             } else resolve(false);
         };
 
+        const timeout = setTimeout(() => {
+            logError('✗ Database load timeout after', CONFIG.loadTimeout, 'ms');
+            script.remove();
+            updateStatus('dbError', 'error');
+            updateDBStatus(false);
+            resolve(false);
+        }, CONFIG.loadTimeout);
+
+        script.addEventListener('load', () => clearTimeout(timeout));
+        script.addEventListener('error', () => clearTimeout(timeout));
+
         document.head.appendChild(script);
+        log('Script tag appended to document head');
     });
 }
 
 function updateVersionInfo() {
-    if (!gameDatabase || typeof gameDatabase.getVersionInfo !== 'function') return;
+    if (!gameDatabase || typeof gameDatabase.getVersionInfo !== 'function') {
+        logWarn('getVersionInfo not available');
+        return;
+    }
     try {
         const info = gameDatabase.getVersionInfo() || {};
         if (dom.dbVersion) dom.dbVersion.textContent = info.version || 'v?';
         if (dom.dbAge) {
             const days = Number(info.daysSinceUpdate || 0);
             const langData = LANG[currentLang];
-            dom.dbAge.textContent = days === 0 ? (currentLang === 'ru' ? 'сегодня' : 'today') : days + ' ' + langData.daysAgo;
+            dom.dbAge.textContent = days === 0 
+                ? (currentLang === 'ru' ? 'сегодня' : 'today') 
+                : days + ' ' + langData.daysAgo;
             dom.dbAge.style.color = info.isOutdated ? '#ff6b6b' : '#4ecdc4';
         }
-    } catch (e) { logError(e); }
+    } catch (e) {
+        logError('Error updating version info:', e);
+    }
 }
 
 function updateIndicator(result) {
+    log('=== UPDATE INDICATOR ===');
+    log('Result:', result);
+
     if (!result || !result.gameId || !gameDatabase?.gameConfig?.[result.gameId]) {
         currentGame = null;
         if (dom.statusDot) dom.statusDot.className = 'indicator-dot';
@@ -793,8 +901,14 @@ function updateIndicator(result) {
         if (dom.gameConfidence) dom.gameConfidence.textContent = '';
         if (dom.watermark) dom.watermark.textContent = ''; 
         if (dom.indicatorCount) dom.indicatorCount.textContent = '';
-        if (dom.gameIcon) { dom.gameIcon.src = ''; dom.gameIcon.style.display = 'none'; }
-        if (dom.gameLogo) { dom.gameLogo.src = ''; dom.gameLogo.style.display = 'none'; }
+        if (dom.gameIcon) {
+            dom.gameIcon.src = '';
+            dom.gameIcon.style.display = 'none';
+        }
+        if (dom.gameLogo) {
+            dom.gameLogo.src = '';
+            dom.gameLogo.style.display = 'none';
+        }
         if (dom.gameTitleBlock) dom.gameTitleBlock.style.display = '';
         return;
     }
@@ -808,11 +922,16 @@ function updateIndicator(result) {
     if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
     if (dom.indicatorCount && result.foundIndicators) dom.indicatorCount.textContent = `${result.foundIndicators.length} ${getText('indicators')}`;
 
+    // Обновляем иконку статуса и логотип с учётом текущего языка контента
     updateGameAssets();
 }
 
 function displayQuestion(q) {
-    if (!dom.questionText || !dom.questionLength || !dom.searchBtn) return;
+    log('=== DISPLAY QUESTION ===');
+    if (!dom.questionText || !dom.questionLength || !dom.searchBtn) {
+        logError('Question DOM elements not found!');
+        return;
+    }
 
     if (!q) {
         dom.questionText.textContent = getText('placeholderQuestion');
@@ -820,6 +939,8 @@ function displayQuestion(q) {
         dom.searchBtn.disabled = true;
         if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
         setQuestionLoading(false);
+        // обновим размеры кнопок
+        adaptCenterButtonsHeight();
         return;
     }
 
@@ -828,6 +949,7 @@ function displayQuestion(q) {
     dom.questionLength.textContent = q.length + getText('symbols');
     dom.searchBtn.disabled = q.length < CONFIG.minQuestionLength;
 
+    // Определяем язык вопроса и обновляем визуальные элементы игры
     currentContentLang = detectLangFromText(q);
     updateGameAssets();
     if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = false;
@@ -835,12 +957,19 @@ function displayQuestion(q) {
 }
 
 function detectGame() {
-    if (!gameDatabase || typeof gameDatabase.detectGame !== 'function') return null;
+    log('=== DETECT GAME CLICKED ===');
+    if (!gameDatabase || typeof gameDatabase.detectGame !== 'function') {
+        logError('Database or detectGame function not available!');
+        updateStatus('dbError', 'error');
+        return null;
+    }
+
     updateStatus('scanning', 'searching');
     setQuestionLoading(true);
 
     try { 
         const result = gameDatabase.detectGame();
+        logDebug('detectGame result:', result);
         updateIndicator(result);
 
         if (result && result.gameId) {
@@ -851,7 +980,9 @@ function detectGame() {
             setTimeout(() => {
                 try {
                     const rawQuestion = (typeof gameDatabase.extractQuestion === 'function')
-                        ? gameDatabase.extractQuestion(result.gameId) : null;
+                        ? gameDatabase.extractQuestion(result.gameId)
+                        : null;
+                    logDebug('Raw question (preview):', rawQuestion ? rawQuestion.substring(0, 120) : null);
 
                     if (rawQuestion && rawQuestion.length >= CONFIG.minQuestionLength) {
                         currentQuestion = rawQuestion;
@@ -861,9 +992,12 @@ function detectGame() {
                         displayQuestion(null);
                     }
                 } catch (e) {
+                    logError('Error extracting question:', e);
                     currentQuestion = '';
                     displayQuestion(null);
-                } finally { setQuestionLoading(false); }
+                } finally {
+                    setQuestionLoading(false);
+                }
             }, 250);
         } else {
             updateStatus('notDetected', 'warning');
@@ -871,23 +1005,36 @@ function detectGame() {
             displayQuestion(null);
             setQuestionLoading(false);
         }
+
         return result;
     } catch (e) {
+        logError('Error in detectGame:', e);
+        updateStatus('dbError', 'error');
         setQuestionLoading(false);
         return null;
     }
 }
 
 function searchAnswer() {
+    log('=== SEARCH ANSWER CLICKED ===');
     if (!gameDatabase || !currentGame || !currentQuestion) {
+        logError('Cannot search - missing dependencies');
         updateStatus('detectFirst', 'warning');
         return;
     }
+    if (typeof gameDatabase.findAnswer !== 'function') {
+        logError('GameDatabase.findAnswer is not a function');
+        updateStatus('dbError', 'error');
+        return;
+    }
+
     updateStatus('scanning', 'searching');
     setAnswerLoading(true);
 
     try {
         const result = gameDatabase.findAnswer(currentQuestion, currentGame);
+        logDebug('findAnswer result:', result);
+
         displayQuestion(currentQuestion);
 
         if (result?.answer) {
@@ -907,7 +1054,14 @@ function searchAnswer() {
             if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
             updateStatus('answerNotFound', 'error');
         }
-    } catch (e) { logError(e); } finally { setAnswerLoading(false); }
+    } catch (e) {
+        logError('Error in searchAnswer:', e);
+        updateStatus('dbError', 'error');
+    } finally {
+        setAnswerLoading(false);
+        // адаптируем высоты кнопок (контент мог измениться)
+        adaptCenterButtonsHeight();
+    }
 }
 
 function updateAllText() {
@@ -918,9 +1072,62 @@ function updateAllText() {
         if (dom.detectBtn) dom.detectBtn.textContent = t.detectBtn;
         if (dom.searchBtn) dom.searchBtn.textContent = t.searchBtn;
         if (dom.deleteBtn) dom.deleteBtn.textContent = t.clearBtn;
+        
         if (dom.qLabelEl) dom.qLabelEl.textContent = t.questionLabel;
         if (dom.aLabelEl) dom.aLabelEl.textContent = t.answerLabel;
-    } catch (e) { logError(e); }
+        if (dom.questionCopyBtn) dom.questionCopyBtn.title = t.copyBtn;
+        if (dom.answerCopyBtn) dom.answerCopyBtn.title = t.copyBtn;
+
+        const minBtn = document.getElementById('minimize-btn');
+        const closeBtn = document.getElementById('close-btn');
+        if (minBtn) minBtn.title = t.minimize;
+        if (closeBtn) closeBtn.title = t.close;
+
+        if (dom.status.textContent === getText('loadingDB', 'en') || dom.status.textContent === getText('loadingDB', 'ru')) {
+            updateStatus('loadingDB', 'info');
+        } else if (dom.status.textContent.includes(getText('gameDetected', 'en')) || dom.status.textContent.includes(getText('gameDetected', 'ru'))) {
+            const gameName = dom.gameName ? dom.gameName.textContent : '';
+            if(gameName && gameName !== getText('notDetected')) {
+                dom.status.textContent = getText('gameDetected') + gameName + getText('gameDetectedSuffix');
+                dom.status.style.color = '#4ecdc4';
+            }
+        } else if (dom.answerBox.classList.contains('found')) {
+            const conf = dom.answerConfidence.textContent;
+            dom.status.textContent = getText('answerFound') + conf + ')';
+            dom.status.style.color = '#4ecdc4';
+        }
+        
+        if (dom.questionText.textContent === getText('placeholderQuestion', 'en') || dom.questionText.textContent === getText('placeholderQuestion', 'ru')) {
+            dom.questionText.textContent = t.placeholderQuestion;
+        }
+        if (dom.answerText.textContent === getText('placeholderAnswer', 'en') || dom.answerText.textContent === getText('placeholderAnswer', 'ru')) {
+            dom.answerText.textContent = t.placeholderAnswer;
+        }
+        if (dom.answerText.textContent === getText('answerNotFound', 'en') || dom.answerText.textContent === getText('answerNotFound', 'ru')) {
+            dom.answerText.textContent = t.answerNotFound;
+        }
+         
+        if (dom.questionLength) {
+            const currentLen = dom.questionText.textContent.length;
+            if (currentLen < 10) {
+                dom.questionLength.textContent = '0' + t.symbols;
+            } else {
+                dom.questionLength.textContent = currentLen + t.symbols;
+            }
+        }
+        if (dom.indicatorCount && currentGame) {
+            const count = dom.indicatorCount.textContent.match(/\d+/);
+            if(count) dom.indicatorCount.textContent = `${count[0]} ${t.indicators}`;
+        }
+        if (dom.gameConfidence && currentGame) {
+            const conf = dom.gameConfidence.textContent.match(/\d+/);
+            if(conf) dom.gameConfidence.innerHTML = `<span class="confidence-badge">${t.confidence} ${conf[0]}</span>`;
+        }
+
+        logDebug('UI Text updated for lang:', currentLang);
+    } catch (e) {
+        logError('updateAllText error', e);
+    }
 }
 
 function createPopup() {
@@ -928,31 +1135,57 @@ function createPopup() {
     popupEl = document.createElement('div');
     popupEl.className = 'jf-popup';
     popupEl.innerHTML = `<div class="jf-popup-subtitle"></div><div class="jf-popup-body"></div>`;
+    // скрыт по умолчанию; добавляем в overlay
     overlayEl.appendChild(popupEl);
 
+    // скроем при клике вне - но внимательно: проверяем overlayEl перед contains
     popupDocClickHandler = function (e) {
         if (!popupEl) return;
-        if (!overlayEl || !overlayEl.contains) { hidePopup(); return; }
-        if (!overlayEl.contains(e.target)) { hidePopup(); }
+        // если overlay уже удалён, считаем что нужно скрыть/очистить попап и выйти
+        if (!overlayEl || !overlayEl.contains) {
+            hidePopup();
+            return;
+        }
+        if (!overlayEl.contains(e.target)) {
+            hidePopup();
+        }
     };
     document.addEventListener('click', popupDocClickHandler);
+
+    // скроем при клике вне (добавлено), остальные слушатели - в attachIconHoverHandlers
 }
 
 function attachIconHoverHandlers() {
     if (!dom.gameIcon) return;
-    dom.gameIcon.addEventListener('mouseenter', () => {
+    dom.gameIcon.addEventListener('mouseenter', (e) => {
+        // показываем попап (если есть текст)
         if (!popupEl) createPopup();
+        // определяем язык для заголовка
+        setPopupContent(popupEl ? popupEl.querySelector('.jf-popup-body').textContent : '', currentContentLang);
+        // если нет контента — всё равно покажем "Почему?" и пустое тело
         showPopupAt(dom.gameIcon);
     });
     dom.gameIcon.addEventListener('mouseleave', (e) => {
+        // скрываем с небольшим таймаутом (чтобы курсор мог попасть на попап, если нужно)
         setTimeout(() => {
+            // если курсор не над попапом — скрываем
             if (!popupEl) return;
+            // проверим куда ушёл курсор
             const { clientX: x, clientY: y } = e;
             const overPopup = popupEl.getBoundingClientRect();
             if (!(x >= overPopup.left && x <= overPopup.right && y >= overPopup.top && y <= overPopup.bottom)) {
                 hidePopup();
             }
         }, 80);
+    });
+    // если курсор над попапом — не скрываем
+    overlayEl && overlayEl.addEventListener('mousemove', (ev) => {
+        if (!popupEl || popupEl.style.opacity === '0') return;
+        const r = popupEl.getBoundingClientRect();
+        if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
+            // оставляем видимым
+            popupEl.style.pointerEvents = 'auto';
+        }
     });
 }
 
@@ -1041,12 +1274,21 @@ function createOverlay() {
     attachIconHoverHandlers();
     updateAllText();
 
+    if (dom.searchBtn) dom.searchBtn.disabled = true;
+    if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
+    if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
+    if (dom.deleteBtn) dom.deleteBtn.disabled = true;
+    if (dom.dbStatus) dom.dbStatus.className = 'db-status error';
+
     if (dom.detectBtn) {
         dom.detectBtn.addEventListener('click', async () => {
             try {
                 dom.detectBtn.disabled = true;
+                updateStatus('scanning', 'searching');
                 await detectGame();
-            } finally { dom.detectBtn.disabled = false; }
+            } finally {
+                dom.detectBtn.disabled = false;
+            }
         });
     }
 
@@ -1057,15 +1299,58 @@ function createOverlay() {
         });
     }
 
+    function copyTextToClipboard(text) {
+        try {
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(() => updateStatus('copySuccess', 'success'))
+                    .catch(() => updateStatus('copySuccess', 'success'));
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                updateStatus('copySuccess', 'success');
+            }
+        } catch (e) {
+            logError('Copy failed', e);
+        }
+    }
+
+    if (dom.questionCopyBtn) {
+        dom.questionCopyBtn.addEventListener('click', () => {
+            const text = currentQuestion || (dom.questionText && dom.questionText.textContent) || '';
+            if (!text || text === getText('placeholderQuestion')) return;
+            copyTextToClipboard(text);
+        });
+    }
+
+    if (dom.answerCopyBtn) {
+        dom.answerCopyBtn.addEventListener('click', () => {
+            const text = (dom.answerText && dom.answerText.textContent) ? dom.answerText.textContent : '';
+            if (!text || text === getText('answerNotFound')) return;
+            copyTextToClipboard(text);
+        });
+    }
+
     if (dom.deleteBtn) {
         dom.deleteBtn.addEventListener('click', () => {
             currentQuestion = '';
             displayQuestion(null);
             if (dom.answerText) dom.answerText.textContent = getText('placeholderAnswer');
-            if (dom.answerBox) { dom.answerBox.classList.remove('found'); dom.answerBox.classList.remove('not-found'); }
+            if (dom.answerBox) {
+                dom.answerBox.classList.remove('found');
+                dom.answerBox.classList.remove('not-found');
+            }
             if (dom.answerConfidence) dom.answerConfidence.textContent = '';
             if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
             if (dom.deleteBtn) dom.deleteBtn.disabled = true;
+            setQuestionLoading(false);
+            setAnswerLoading(false);
+            adaptCenterButtonsHeight();
         });
     }
 
@@ -1074,11 +1359,44 @@ function createOverlay() {
         langBtn.addEventListener('click', () => {
             currentLang = currentLang === 'ru' ? 'en' : 'ru';
             updateAllText();
+            if(isDatabaseLoaded) updateStatus('dbLoaded', 'success');
+            log('Language switched to:', currentLang);
         });
     }
 
+    const minBtn = overlayEl.querySelector('#minimize-btn');
     const closeBtn = overlayEl.querySelector('#close-btn');
-    if (closeBtn) closeBtn.addEventListener('click', () => { if (overlayEl) overlayEl.remove(); });
+
+    // Функция очистки - снимает глобальные обработчики и удаляет попап/стили
+    function cleanupOverlay() {
+        try {
+            if (popupDocClickHandler) {
+                document.removeEventListener('click', popupDocClickHandler);
+                popupDocClickHandler = null;
+            }
+            if (windowResizeHandler) {
+                window.removeEventListener('resize', windowResizeHandler);
+                windowResizeHandler = null;
+            }
+            hidePopup();
+            if (popupEl && popupEl.parentNode) {
+                popupEl.parentNode.removeChild(popupEl);
+            }
+            popupEl = null;
+            // опционально убираем стили оверлея, чтобы не оставлять "следов"
+            const s = document.getElementById(STYLE_ID);
+            if (s) s.remove();
+        } catch (e) {
+            logError('cleanup error', e);
+        }
+    }
+
+    if (minBtn) minBtn.addEventListener('click', () => overlayEl.classList.toggle('overlay-minimized'));
+    if (closeBtn) closeBtn.addEventListener('click', () => {
+        cleanupOverlay();
+        if (overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
+        overlayEl = null;
+    });
 
     const headerEl = overlayEl.querySelector('.overlay-header');
     let isDragging = false;
@@ -1086,31 +1404,73 @@ function createOverlay() {
 
     function onMouseMove(e) {
         if (!isDragging || !overlayEl) return;
-        overlayEl.style.left = (initialX + (e.clientX - startX)) + 'px';
-        overlayEl.style.top = (initialY + (e.clientY - startY)) + 'px';
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let nextLeft = initialX + dx;
+        let nextTop = initialY + dy;
+
+        const rect = overlayEl.getBoundingClientRect();
+        const maxLeft = window.innerWidth - rect.width;
+        const maxTop = window.innerHeight - rect.height;
+
+        nextLeft = Math.max(0, Math.min(maxLeft, nextLeft));
+        nextTop = Math.max(0, Math.min(maxTop, nextTop));
+
+        overlayEl.style.left = nextLeft + 'px';
+        overlayEl.style.top = nextTop + 'px';
         overlayEl.style.right = 'auto';
         overlayEl.style.bottom = 'auto';
     }
 
+    function endDrag() {
+        if (!isDragging) return;
+        isDragging = false;
+        document.body.style.userSelect = '';
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', endDrag);
+    }
+
     if (headerEl) {
         headerEl.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
             isDragging = true;
-            startX = e.clientX; startY = e.clientY;
+            startX = e.clientX;
+            startY = e.clientY;
             const rect = overlayEl.getBoundingClientRect();
-            initialX = rect.left; initialY = rect.top;
+            initialX = rect.left;
+            initialY = rect.top;
+            document.body.style.userSelect = 'none';
             window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', () => { isDragging = false; window.removeEventListener('mousemove', onMouseMove); });
+            window.addEventListener('mouseup', endDrag);
         });
     }
 
-    windowResizeHandler = () => { updateIconSize(); };
+    // Resize handler: подстроим размеры иконки/кнопок при изменении окна
+    windowResizeHandler = () => {
+        updateIconSize();
+        adaptCenterButtonsHeight();
+    };
     window.addEventListener('resize', windowResizeHandler);
+
+    log('Overlay created and initialized');
 }
 
 async function init() {
+    log('=== INIT STARTED ===');
     createOverlay();
+    updateStatus('loadingDB', 'info');
+
     const loaded = await loadDatabase();
-    if (loaded) updateStatus('notDetected', 'info');
+    log('Database load result:', loaded);
+
+    if (loaded) {
+        updateStatus('notDetected', 'info');
+        log('Initialization complete (DB loaded)');
+    } else {
+        logError('Initialization failed - database not loaded');
+    }
+
+    log('=== INIT COMPLETE ===');
 }
 
 if (document.readyState === 'loading') {
@@ -1118,4 +1478,6 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+
+log('Overlay script loaded successfully');
 })();
