@@ -165,14 +165,14 @@ const GameDatabase = {
             status: {
                 level: 'unstable', // stable | unstable | nonfullwork
                 notes: {
-                    ru: 'Тестирование.',
-                    en: 'Testing.'
+                    ru: 'ОЧЕНЬ НЕСТАБИЛЬНО. Отображается неправильный ответ в 70+% случаев',
+                    en: 'VERY UNSTABLE. Shows the wrong answer 70+% of the time'
                 }
             },
             // Логотипы игры под RU / EN (по желанию)
             logoUrls: {
-                ru: '',
-                en: ''
+                ru: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/ydkj2018eng.png',
+                en: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/ydkj2018rus.png'
             },
             requiredIndicators: [
                 { selector: '.Lobby.scrollable', weight: 5, unique: true },
