@@ -1,9 +1,7 @@
 const GameDatabase = {
-    version: "DB2MARCHEXP",
-    lastUpdated: "2026-03-02",
-    buildDate: new Date("2026-03-02"),
-
-	//Очень плохая работа алгоритма поиска на данный момент. Нужно изменить систему так, чтобы всё работало хооршо даже с крайне короткими вопросами и держалось на DOM-индикаторах (длиной даже в 2 символа), ибо в ydkj2018 таких вопросов крайне много. Главное не сломать остальную логику и возможно внести изменения в overlay если тактика поиска будет изменена. Все вопросы везде по итогу должны здраво отображаться, как и их ответ.
+    version: "DB3MARCHEXP",
+    lastUpdated: "2026-03-03",
+    buildDate: new Date("2026-03-03"),
     
     gameConfig: {
         guesspy: {
@@ -31,7 +29,7 @@ const GameDatabase = {
                 { selector: '[data-game="guesspionage"]', weight: 5, unique: true },
                 { selector: '[class*="pollposition"]', weight: 2, unique: false }
             ],
-            questionSelectors: ['pollposition-text.question-text.pollposition-range-buffer'],
+            questionSelectors: ['.pollposition-text.question-text.pollposition-range-buffer'],
             backgroundColor: '#2d5a27',
             minConfidence: 8
         },
@@ -8477,7 +8475,7 @@ const GameDatabase = {
             ...document.querySelectorAll('[class*="question"], [class*="text"], [class*="content"]'),
             ...document.querySelectorAll('[data-game], [data-question]')
         ];
-        return elements.map(el => el?.innerText || '').join(' ').toLowerCase();
+        return elements.map(function(el) { return (el && el.innerText) || ''; }).join(' ').toLowerCase();
     },
 
     isElementVisible: function(element) {
@@ -8527,10 +8525,13 @@ const GameDatabase = {
         }
 
         const potentialQuestions = document.querySelectorAll('p, div, span');
-        for (const el of potentialQuestions) {
+        const maxFallbackScan = 200;
+        for (let i = 0; i < potentialQuestions.length && i < maxFallbackScan; i++) {
+            const el = potentialQuestions[i];
             if (this.isElementVisible(el) && !isInOverlay(el)) {
                 const raw = (el.textContent || '').trim();
-                if (raw.length > 30 && raw.length < 500 && 
+                if (raw.length > 30 && raw.length < 500 &&
+                    /\p{L}/u.test(raw) &&
                     (raw.includes('?') || raw.includes('_______') || raw.includes('...'))) {
                     const text = this.cleanQuestionText(raw);
                     if (text && text.length >= 2) return text;
@@ -8563,7 +8564,7 @@ const GameDatabase = {
         try {
             if (!question || !gameId) return null;
 
-            const rawQuestions = this.questions?.[gameId];
+            const rawQuestions = (this.questions && this.questions[gameId]);
             if (!rawQuestions) return null;
 
             const questionLang = /[\u0400-\u04FF]/.test(question) ? 'ru' : 'en';
