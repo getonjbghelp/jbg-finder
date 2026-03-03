@@ -1,8 +1,6 @@
 (function () {
 const OVERLAY_ID = 'game-finder-overlay';
 const STYLE_ID = 'game-finder-overlay-style';
-//При первом нажатии кнопки "Detct Question And Game" при запуске оверлея у меня уменьшаются три кнопки (Find Answer и Delete results) и текст вылетал за пределы кнопок, стиль из-за этого ломается. Исправь только эту ошибку, при этом оставь размер кнопок изначально тем, которым они были при запуске, текст тоже должен быть полностью читаемым и ничего другого не трогай. Выдай мне весь скрипт, но уже с исправленной ошибкой.
-
 
 // === ЛОГГИРОВАНИЕ ===
 const LOG_PREFIX = '[JBG-Finder]';
@@ -22,10 +20,11 @@ log('Initializing JBG-Finder overlay...');
 
 const CONFIG = {
     databaseURL: "https://getonjbghelp.github.io/jbg-finder/database.js",
-    minQuestionLength: 15,
+    minQuestionLength: 2,
     defaultLang: 'en',
     loadTimeout: 10000,
-    retryAttempts: 3
+    retryAttempts: 3,
+    debug: false
 };
 
 // Общие иконки статуса игры (маленький круг рядом с названием)
@@ -125,6 +124,29 @@ function detectLangFromText(text) {
     return /[\u0400-\u04FF]/.test(text) ? 'ru' : 'en';
 }
 
+function normalizeText(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+/** Очистка сырого текста вопроса: префиксы, таймеры, подсказки. Возвращает null если < 2 символов. */
+function cleanQuestionText(str) {
+    if (!str || typeof str !== 'string') return null;
+    let text = str.trim();
+    if (!text) return null;
+    text = text.replace(/\s+/g, ' ');
+    text = text.replace(/^(Вопрос:?|Question:?|№\s*\d+:?|\d+\.)\s*/i, '');
+    text = text.replace(/\s*(\(?\d{1,2}:\d{2}\)?)\s*$/, '');
+    text = text.replace(/\s*\(hint:.*\)$/i, '');
+    text = text.trim();
+    if (text.length < 2) return null;
+    return text;
+}
+
 function updateGameAssets() {
     if (!currentGame || !gameDatabase || !gameDatabase.gameConfig) return;
     const config = gameDatabase.gameConfig[currentGame];
@@ -172,9 +194,6 @@ function updateGameAssets() {
 
     // Подстроим размер иконки под высоту логотипа (или названия)
     updateIconSize();
-
-    // Подстроим высоту центральных кнопок под высоты question/answer
-    adaptCenterButtonsHeight();
 }
 
 function updateIconSize() {
@@ -244,29 +263,28 @@ function hidePopup() {
     popupEl.style.pointerEvents = 'none';
 }
 
+/** Адаптация высоты центральных кнопок только когда обе колонки достаточно высокие; не уменьшаем кнопки ниже 40px. */
 function adaptCenterButtonsHeight() {
     if (!overlayEl) return;
     try {
-        // Немного задержим вычисления, чтобы DOM успел отрисоваться
         setTimeout(() => {
             if (!dom.questionText || !dom.answerText || !dom.detectBtn || !dom.searchBtn || !dom.deleteBtn) return;
-            const leftH = dom.questionText.getBoundingClientRect().height || 80;
-            const rightH = dom.answerText.getBoundingClientRect().height || 80;
-            // Берём минимальную из двух высот (чтобы не выйти за пределы)
-            const base = Math.max(48, Math.floor(Math.min(leftH, rightH)));
-            // Каждый из трёх кнопок — примерно треть этой высоты минус промежутки
-            const gapTotal = 12; // примерно суммарный gap (2 * 6px)
-            const btnH = Math.max(36, Math.floor((base - gapTotal) / 3));
+            const leftH = dom.questionText.getBoundingClientRect().height || 0;
+            const rightH = dom.answerText.getBoundingClientRect().height || 0;
+            if (leftH < 48 || rightH < 48) return;
+            const base = Math.floor(Math.min(leftH, rightH));
+            const gapTotal = 12;
+            const btnH = Math.max(40, Math.floor((base - gapTotal) / 3));
             [dom.detectBtn, dom.searchBtn, dom.deleteBtn].forEach(btn => {
                 if (!btn) return;
                 btn.style.height = btnH + 'px';
                 btn.style.paddingTop = '0';
                 btn.style.paddingBottom = '0';
-                btn.style.lineHeight = btnH + 'px';
+                btn.style.lineHeight = (btnH - 4) + 'px';
                 btn.style.display = 'block';
                 btn.style.boxSizing = 'border-box';
             });
-        }, 80);
+        }, 120);
     } catch (e) {
         logWarn('adaptCenterButtonsHeight error', e);
     }
@@ -935,25 +953,32 @@ function displayQuestion(q) {
 
     if (!q) {
         dom.questionText.textContent = getText('placeholderQuestion');
-        dom.questionLength.textContent = '0' + getText('symbols');
+        dom.questionLength.textContent = '0 ' + getText('symbols');
         dom.searchBtn.disabled = true;
         if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
         setQuestionLoading(false);
-        // обновим размеры кнопок
-        adaptCenterButtonsHeight();
         return;
     }
 
-    const text = q.length > 200 ? q.slice(0, 200) + '...' : q;
-    dom.questionText.textContent = text;
-    dom.questionLength.textContent = q.length + getText('symbols');
-    dom.searchBtn.disabled = q.length < CONFIG.minQuestionLength;
+    dom.questionText.textContent = q;
+    dom.questionLength.textContent = q.length + ' ' + getText('symbols');
+    const minLen = Math.max(2, CONFIG.minQuestionLength || 2);
+    dom.searchBtn.disabled = q.length < minLen;
 
-    // Определяем язык вопроса и обновляем визуальные элементы игры
     currentContentLang = detectLangFromText(q);
     updateGameAssets();
     if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = false;
     setQuestionLoading(false);
+
+    setTimeout(() => {
+        try {
+            const leftH = dom.questionText && dom.questionText.getBoundingClientRect().height || 0;
+            const rightH = dom.answerText && dom.answerText.getBoundingClientRect().height || 0;
+            if (leftH >= 48 && rightH >= 48) adaptCenterButtonsHeight();
+        } catch (e) {
+            logWarn('adapt after displayQuestion', e);
+        }
+    }, 120);
 }
 
 function detectGame() {
@@ -982,10 +1007,13 @@ function detectGame() {
                     const rawQuestion = (typeof gameDatabase.extractQuestion === 'function')
                         ? gameDatabase.extractQuestion(result.gameId)
                         : null;
+                    const cleaned = rawQuestion ? cleanQuestionText(rawQuestion) : null;
                     logDebug('Raw question (preview):', rawQuestion ? rawQuestion.substring(0, 120) : null);
+                    logDebug('Cleaned question:', cleaned ? cleaned.substring(0, 120) : null);
 
-                    if (rawQuestion && rawQuestion.length >= CONFIG.minQuestionLength) {
-                        currentQuestion = rawQuestion;
+                    const minLen = Math.max(2, CONFIG.minQuestionLength || 2);
+                    if (cleaned && cleaned.length >= minLen) {
+                        currentQuestion = cleaned;
                         displayQuestion(currentQuestion);
                     } else {
                         currentQuestion = '';
@@ -1041,7 +1069,8 @@ function searchAnswer() {
             dom.answerText.textContent = result.answer;
             dom.answerBox.classList.remove('not-found'); 
             dom.answerBox.classList.add('found');
-            dom.answerConfidence.textContent = (result.confidence ?? 0) + '%';
+            const confStr = (result.confidence ?? 0) + '%';
+            dom.answerConfidence.textContent = CONFIG.debug && result.method ? confStr + ' [' + result.method + ']' : confStr;
             if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = false;
             if (dom.deleteBtn) dom.deleteBtn.disabled = false;
             dom.status.textContent = getText('answerFound') + (result.confidence ?? 0) + '%)';
@@ -1059,8 +1088,15 @@ function searchAnswer() {
         updateStatus('dbError', 'error');
     } finally {
         setAnswerLoading(false);
-        // адаптируем высоты кнопок (контент мог измениться)
-        adaptCenterButtonsHeight();
+        setTimeout(() => {
+            try {
+                const leftH = dom.questionText && dom.questionText.getBoundingClientRect().height || 0;
+                const rightH = dom.answerText && dom.answerText.getBoundingClientRect().height || 0;
+                if (leftH >= 48 && rightH >= 48) adaptCenterButtonsHeight();
+            } catch (e) {
+                logWarn('adapt after searchAnswer', e);
+            }
+        }, 120);
     }
 }
 
@@ -1350,7 +1386,13 @@ function createOverlay() {
             if (dom.deleteBtn) dom.deleteBtn.disabled = true;
             setQuestionLoading(false);
             setAnswerLoading(false);
-            adaptCenterButtonsHeight();
+            setTimeout(() => {
+                try {
+                    const leftH = dom.questionText && dom.questionText.getBoundingClientRect().height || 0;
+                    const rightH = dom.answerText && dom.answerText.getBoundingClientRect().height || 0;
+                    if (leftH >= 48 && rightH >= 48) adaptCenterButtonsHeight();
+                } catch (e) {}
+            }, 120);
         });
     }
 
