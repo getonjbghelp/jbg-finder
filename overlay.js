@@ -115,8 +115,9 @@ let popupEl = null;
 let popupDocClickHandler = null;
 let windowResizeHandler = null;
 
-function getText(key) {
-    return (LANG[currentLang] && LANG[currentLang][key]) || (LANG.ru && LANG.ru[key]) || key;
+function getText(key, lang) {
+    const l = (lang && LANG[lang]) ? LANG[lang] : (LANG[currentLang] || LANG.ru);
+    return (l && l[key]) || key;
 }
 
 function detectLangFromText(text) {
@@ -821,7 +822,8 @@ function updateStatus(messageKey, type) {
         logWarn('Status element not found!');
         return;
     }
-    const message = LANG[currentLang][messageKey] ? getText(messageKey) : messageKey;
+    const langObj = LANG[currentLang] || LANG.ru;
+    const message = (langObj && langObj[messageKey]) ? getText(messageKey) : messageKey;
     
     const colors = { 
         info: '#5a5a5a', 
@@ -1086,20 +1088,18 @@ function searchAnswer() {
         displayQuestion(currentQuestion);
 
         if (result?.answer) {
-            dom.answerText.textContent = result.answer;
-            dom.answerBox.classList.remove('not-found'); 
-            dom.answerBox.classList.add('found');
+            if (dom.answerText) dom.answerText.textContent = result.answer;
+            if (dom.answerBox) { dom.answerBox.classList.remove('not-found'); dom.answerBox.classList.add('found'); }
             const confStr = (result.confidence ?? 0) + '%';
-            dom.answerConfidence.textContent = CONFIG.debug && result.method ? confStr + ' [' + result.method + ']' : confStr;
+            if (dom.answerConfidence) dom.answerConfidence.textContent = CONFIG.debug && result.method ? confStr + ' [' + result.method + ']' : confStr;
             if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = false;
             if (dom.deleteBtn) dom.deleteBtn.disabled = false;
-            dom.status.textContent = getText('answerFound') + (result.confidence ?? 0) + '%)';
-            dom.status.style.color = '#4ecdc4';
+            if (dom.status) dom.status.textContent = getText('answerFound') + (result.confidence ?? 0) + '%)';
+            if (dom.status) dom.status.style.color = '#4ecdc4';
         } else {
-            dom.answerText.textContent = getText('answerNotFound');
-            dom.answerBox.classList.remove('found');
-            dom.answerBox.classList.add('not-found');
-            dom.answerConfidence.textContent = '';
+            if (dom.answerText) dom.answerText.textContent = getText('answerNotFound');
+            if (dom.answerBox) { dom.answerBox.classList.remove('found'); dom.answerBox.classList.add('not-found'); }
+            if (dom.answerConfidence) dom.answerConfidence.textContent = '';
             if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = true;
             updateStatus('answerNotFound', 'error');
         }
@@ -1147,10 +1147,10 @@ function updateAllText() {
                 dom.status.textContent = getText('gameDetected') + gameName + getText('gameDetectedSuffix');
                 dom.status.style.color = '#4ecdc4';
             }
-        } else if (dom.answerBox.classList.contains('found')) {
+        } else if (dom.answerBox && dom.answerBox.classList.contains('found') && dom.answerConfidence) {
             const conf = dom.answerConfidence.textContent;
-            dom.status.textContent = getText('answerFound') + conf + ')';
-            dom.status.style.color = '#4ecdc4';
+            if (dom.status) dom.status.textContent = getText('answerFound') + conf + ')';
+            if (dom.status) dom.status.style.color = '#4ecdc4';
         }
         
         if (dom.questionText.textContent === getText('placeholderQuestion', 'en') || dom.questionText.textContent === getText('placeholderQuestion', 'ru')) {
