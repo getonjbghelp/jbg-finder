@@ -263,6 +263,20 @@ function hidePopup() {
     popupEl.style.pointerEvents = 'none';
 }
 
+/** Сброс инлайн-стилей высоты кнопок — возврат к размерам по CSS (вызывать при resize). */
+function resetCenterButtonsHeight() {
+    if (!dom.detectBtn && !dom.searchBtn && !dom.deleteBtn) return;
+    [dom.detectBtn, dom.searchBtn, dom.deleteBtn].forEach(btn => {
+        if (!btn) return;
+        btn.style.height = '';
+        btn.style.paddingTop = '';
+        btn.style.paddingBottom = '';
+        btn.style.lineHeight = '';
+        btn.style.display = '';
+        btn.style.boxSizing = '';
+    });
+}
+
 /** Адаптация высоты центральных кнопок только когда обе колонки достаточно высокие; не уменьшаем кнопки ниже 40px. */
 function adaptCenterButtonsHeight() {
     if (!overlayEl) return;
@@ -645,6 +659,7 @@ function ensureStyle() {
 
         #${OVERLAY_ID} .center-btn {
             width: 100%;
+            min-height: 40px;
             padding: 10px 6px;
             border-radius: 3px;
             border: 1px solid #3b3b3b;
@@ -653,6 +668,11 @@ function ensureStyle() {
             font-size: 12px;
             cursor: pointer;
             box-sizing: border-box;
+            line-height: 1.3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
 
         #${OVERLAY_ID} .center-btn:hover:not(:disabled) {
@@ -1487,10 +1507,10 @@ function createOverlay() {
         });
     }
 
-    // Resize handler: подстроим размеры иконки/кнопок при изменении окна
+    // Resize: сбрасываем инлайн-высоту кнопок (чтобы не слетал текст при перетаскивании окна), подстраиваем иконку
     windowResizeHandler = () => {
+        resetCenterButtonsHeight();
         updateIconSize();
-        adaptCenterButtonsHeight();
     };
     window.addEventListener('resize', windowResizeHandler);
 
