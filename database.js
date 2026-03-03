@@ -2,6 +2,8 @@ const GameDatabase = {
     version: "DB2MARCHEXP",
     lastUpdated: "2026-03-02",
     buildDate: new Date("2026-03-02"),
+
+	//Очень плохая работа алгоритма поиска на данный момент. Нужно изменить систему так, чтобы всё работало хооршо даже с крайне короткими вопросами и держалось на DOM-индикаторах (длиной даже в 2 символа), ибо в ydkj2018 таких вопросов крайне много. Главное не сломать остальную логику и возможно внести изменения в overlay если тактика поиска будет изменена. Все вопросы везде по итогу должны здраво отображаться, как и их ответ.
     
     gameConfig: {
         guesspy: {
@@ -8488,6 +8490,20 @@ const GameDatabase = {
                element.offsetHeight > 0;
     },
 
+    /** Очистка сырого текста вопроса: префиксы, таймеры. Возвращает null если < 2 символов. */
+    cleanQuestionText: function(str) {
+        if (!str || typeof str !== 'string') return null;
+        let text = str.trim();
+        if (!text) return null;
+        text = text.replace(/\s+/g, ' ');
+        text = text.replace(/^(Вопрос:?|Question:?|№\s*\d+:?|\d+\.)\s*/i, '');
+        text = text.replace(/\s*(\(?\d{1,2}:\d{2}\)?)\s*$/, '');
+        text = text.replace(/\s*\(hint:.*\)$/i, '');
+        text = text.trim();
+        if (text.length < 2) return null;
+        return text;
+    },
+
     extractQuestion: function(gameId) {
         const config = this.gameConfig[gameId];
         if (!config) return null;
@@ -8497,109 +8513,133 @@ const GameDatabase = {
 
         const selectors = Array.isArray(config.questionSelectors) ? config.questionSelectors : [];
 
-        // 1) Жёстко придерживаемся приоритета селекторов:
-        //    берём ПЕРВЫЙ видимый элемент по каждому селектору, в указанном порядке.
         for (const selector of selectors) {
             try {
                 const elements = document.querySelectorAll(selector);
                 for (const el of elements) {
                     if (!el || isInOverlay(el) || !this.isElementVisible(el)) continue;
-                    const text = el.innerText.trim();
-                    if (!text) continue;
-                    if (text.length >= 3 && text.length < 500) {
-                        return text;
-                    }
+                    const raw = (el.textContent || '').trim();
+                    if (!raw || raw.length >= 500) continue;
+                    const text = this.cleanQuestionText(raw);
+                    if (text && text.length >= 2) return text;
                 }
             } catch (e) {}
         }
-        
-        // 2) Резервный поиск по странице, если ничего из целевых селекторов не подошло
+
         const potentialQuestions = document.querySelectorAll('p, div, span');
         for (const el of potentialQuestions) {
             if (this.isElementVisible(el) && !isInOverlay(el)) {
-                const text = el.innerText.trim();
-                if (text.length > 30 && text.length < 500 && 
-                    (text.includes('?') || text.includes('_______') || text.includes('...'))) {
-                    return text;
+                const raw = (el.textContent || '').trim();
+                if (raw.length > 30 && raw.length < 500 && 
+                    (raw.includes('?') || raw.includes('_______') || raw.includes('...'))) {
+                    const text = this.cleanQuestionText(raw);
+                    if (text && text.length >= 2) return text;
                 }
             }
         }
-        
+
         return null;
     },
 
+    charOverlapScore: function(a, b) {
+        if (!a || !b) return 0;
+        const A = a.split('');
+        const B = b.split('');
+        let match = 0;
+        const used = new Array(B.length).fill(false);
+        for (let i = 0; i < A.length; i++) {
+            for (let j = 0; j < B.length; j++) {
+                if (!used[j] && A[i] === B[j]) {
+                    used[j] = true;
+                    match++;
+                    break;
+                }
+            }
+        }
+        return match / Math.max(A.length, B.length, 1);
+    },
+
     findAnswer: function (question, gameId) {
-		try {
-			if (!question || !gameId) return null;
+        try {
+            if (!question || !gameId) return null;
 
-			const rawQuestions = this.questions?.[gameId];
-			if (!rawQuestions) return null;
+            const rawQuestions = this.questions?.[gameId];
+            if (!rawQuestions) return null;
 
-			// Определяем язык по наличию кириллических символов
-			const questionLang = /[\u0400-\u04FF]/.test(question) ? 'ru' : 'en';
+            const questionLang = /[\u0400-\u04FF]/.test(question) ? 'ru' : 'en';
 
-			// Поддержка двух форматов хранения: массив или { ru: [...], en: [...] }
-			let items = [];
-			if (Array.isArray(rawQuestions)) {
-				// Фильтруем по языку, если тексты смешаны в одном массиве
-				items = rawQuestions.filter(it => {
-					if (!it || !it.question) return false;
-					return questionLang === 'ru'
-						? /[\u0400-\u04FF]/.test(it.question)
-						: !/[\u0400-\u04FF]/.test(it.question);
-				});
-				if (!items.length) items = rawQuestions; // fallback — весь массив
-			} else {
-            items = rawQuestions[questionLang] || [...(rawQuestions.ru || []), ...(rawQuestions.en || [])];
-			}
+            let items = [];
+            if (Array.isArray(rawQuestions)) {
+                items = rawQuestions.filter(it => {
+                    if (!it || !it.question) return false;
+                    return questionLang === 'ru'
+                        ? /[\u0400-\u04FF]/.test(it.question)
+                        : !/[\u0400-\u04FF]/.test(it.question);
+                });
+                if (!items.length) items = rawQuestions;
+            } else {
+                items = rawQuestions[questionLang] || [...(rawQuestions.ru || []), ...(rawQuestions.en || [])];
+            }
 
-			const normalizedQuestion = this.normalizeText(question);
+            const normalizedQuestion = this.normalizeText(question);
+            const qTokens = normalizedQuestion.split(' ').filter(w => w.length >= 2);
 
-			for (const item of items) {
-				if (!item || !item.question) continue;
-				const normalizedDB = this.normalizeText(item.question);
+            for (const item of items) {
+                if (!item || !item.question) continue;
+                const normalizedDB = this.normalizeText(item.question);
 
-				// 1) Точное совпадение
-				if (normalizedQuestion === normalizedDB) {
-					return { answer: item.answer, confidence: 100 };
-				}
+                if (normalizedQuestion === normalizedDB) {
+                    return { answer: item.answer, confidence: 100, method: 'exact' };
+                }
 
-				// 2) Подстроковое включение (одна строка полностью содержит другую)
-				if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
-					return { answer: item.answer, confidence: 75 };
-				}
+                if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
+                    return { answer: item.answer, confidence: 75, method: 'substring' };
+                }
 
-				// 3) Совпадение по словам с жёсткими порогами, с дополнительной проверкой последнего слова
-				const qWords = normalizedQuestion.split(' ').filter(w => w.length > 3);
-				const dbWords = normalizedDB.split(' ').filter(w => w.length > 3);
+                const dbTokens = normalizedDB.split(' ').filter(w => w.length >= 2);
+                if (qTokens.length && dbTokens.length) {
+                    const matchCount = qTokens.filter(w => dbTokens.includes(w)).length;
+                    const score = matchCount / Math.max(qTokens.length, 1);
+                    const qThreshold = Math.ceil(qTokens.length * 0.7);
+                    const lastQ = qTokens.length ? qTokens[qTokens.length - 1] : null;
+                    const lastDB = dbTokens.length ? dbTokens[dbTokens.length - 1] : null;
+                    if (score >= 0.5 && (matchCount >= 2 || (lastQ && lastDB && lastQ === lastDB))) {
+                        const conf = Math.min(70, Math.round(score * 100));
+                        return { answer: item.answer, confidence: Math.max(50, conf), method: 'token' };
+                    }
+                }
+            }
 
-				if (qWords.length && dbWords.length) {
-					const matchCount = qWords.filter(w => dbWords.includes(w)).length;
-					const qThreshold = Math.ceil(qWords.length * 0.8);
-					const dbThreshold = Math.ceil(dbWords.length * 0.8);
+            let best = null;
+            let bestScore = 0;
+            const useCharOverlap = normalizedQuestion.length <= 4;
+            for (const item of items) {
+                if (!item || !item.question) continue;
+                const normalizedDB = this.normalizeText(item.question);
+                const score = useCharOverlap
+                    ? this.charOverlapScore(normalizedQuestion, normalizedDB)
+                    : (normalizedQuestion.length <= 1 ? 0 : (() => {
+                        const qt = normalizedQuestion.split(' ').filter(w => w.length >= 2);
+                        const dt = normalizedDB.split(' ').filter(w => w.length >= 2);
+                        const m = qt.filter(w => dt.includes(w)).length;
+                        return m / Math.max(qt.length, 1);
+                    })());
+                if (score > bestScore && score >= 0.4) {
+                    bestScore = score;
+                    best = { answer: item.answer, score };
+                }
+            }
+            if (best) {
+                const confidence = Math.min(50, Math.round(best.score * 100));
+                return { answer: best.answer, confidence: Math.max(35, confidence), method: 'fuzzy' };
+            }
 
-					// Определяем последние значимые слова (если есть)
-					const lastQ = qWords.length ? qWords[qWords.length - 1] : null;
-					const lastDB = dbWords.length ? dbWords[dbWords.length - 1] : null;
-
-					// Условие: должно быть минимум 5 совпадающих слов И один из порогов выполнен
-					// + последний значимый слово должен совпадать (исключает шаблонные вопросы с разными хвостами)
-					if (
-						matchCount >= 5 &&
-						(matchCount >= qThreshold || matchCount >= dbThreshold) &&
-						lastQ && lastDB && lastQ === lastDB
-					) {
-						return { answer: item.answer, confidence: 60 };
-					}
-				}
-			}
-
-			return null;
-		} catch (e) {
-			console.error('[GameDatabase] findAnswer error:', e);
-			return null;
-		}
-	},
+            return null;
+        } catch (e) {
+            console.error('[GameDatabase] findAnswer error:', e);
+            return null;
+        }
+    },
 
     normalizeText: function (text) {
 		if (!text || typeof text !== 'string') return '';
