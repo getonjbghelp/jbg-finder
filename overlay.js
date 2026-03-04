@@ -1,6 +1,37 @@
 (function () {
 const OVERLAY_ID = 'game-finder-overlay';
 const STYLE_ID = 'game-finder-overlay-style';
+const OVERLAY_SETTINGS_KEY = 'jbg-finder-overlay-settings';
+
+/** Настройки по умолчанию: 3D-наклоны выключены, силу можно включить в настройках (снять галочку «Отключить 3D»). */
+const DEFAULT_OVERLAY_SETTINGS = {
+    reduceGlass: false,
+    disable3d: true,
+    tiltStrength: 25
+};
+
+function getOverlaySettings() {
+    try {
+        const raw = localStorage.getItem(OVERLAY_SETTINGS_KEY);
+        if (!raw) return null;
+        const o = JSON.parse(raw);
+        return {
+            reduceGlass: !!o.reduceGlass,
+            disable3d: o.disable3d !== false,
+            tiltStrength: Math.max(25, Math.min(150, parseInt(o.tiltStrength, 10) || 25))
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
+function saveOverlaySettings(settings) {
+    try {
+        localStorage.setItem(OVERLAY_SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+        logWarn('Could not save overlay settings', e);
+    }
+}
 
 // === ЛОГГИРОВАНИЕ ===
 const LOG_PREFIX = '[JBG-Finder-PREALPHA]';
@@ -397,7 +428,7 @@ function ensureStyle() {
             z-index: 0;
             background: linear-gradient(160deg, rgba(18,18,22,0.72) 0%, rgba(28,28,34,0.68) 40%, rgba(22,22,28,0.75) 100%);
             border: 1px solid rgba(255,255,255,0.07);
-            box-shadow: inset 0 1px 2px rgba(255,255,255,0.05);
+            box-shadow: inset 0 2px 8px rgba(255,255,255,0.08), inset 0 -1px 0 rgba(255,255,255,0.04);
             backdrop-filter: blur(10px) saturate(120%);
             -webkit-backdrop-filter: blur(10px) saturate(120%);
         }
@@ -409,7 +440,19 @@ function ensureStyle() {
             right: 0;
             bottom: 0;
             border-radius: 6px;
-            background: radial-gradient(ellipse 80% 50% at 20% 20%, rgba(255,255,255,0.08) 0%, transparent 55%);
+            background: radial-gradient(ellipse 85% 60% at 18% 15%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 40%, transparent 65%);
+            mix-blend-mode: overlay;
+            pointer-events: none;
+        }
+        #${OVERLAY_ID} .jf-glass::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 6px;
+            background: radial-gradient(ellipse 60% 40% at 85% 88%, rgba(255,255,255,0.08) 0%, transparent 50%);
             mix-blend-mode: overlay;
             pointer-events: none;
         }
@@ -419,12 +462,17 @@ function ensureStyle() {
                 border: 1px solid rgba(255,255,255,0.08);
             }
         }
-        /* Режим «уменьшить эффект стекла»: без размытия, плотный фон; заголовок и контент непрозрачные */
+        /* Режим «уменьшить эффект стекла»: без размытия, плотный фон; отражения отключены */
         #${OVERLAY_ID}.jf-reduce-glass .jf-glass {
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
             background: linear-gradient(180deg, #2a2a30 0%, #242428 100%) !important;
             border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: none;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .jf-glass::before,
+        #${OVERLAY_ID}.jf-reduce-glass .jf-glass::after {
+            opacity: 0;
         }
         #${OVERLAY_ID}.jf-reduce-glass .overlay-header {
             background: #323232;
@@ -1699,11 +1747,11 @@ function createOverlay() {
                     <button id="jf-settings-btn" class="overlay-btn" title="${getText('settings')}">⚙</button>
                     <div class="jf-settings-dropdown" id="jf-settings-panel">
                         <label class="jf-settings-label"><input type="checkbox" id="jf-reduce-glass"> ${getText('reduceGlass')}</label>
-                        <label class="jf-settings-label"><input type="checkbox" id="jf-disable-3d"> ${getText('disable3d')}</label>
+                        <label class="jf-settings-label"><input type="checkbox" id="jf-disable-3d" checked> ${getText('disable3d')}</label>
                         <div class="jf-settings-row">
                             <span class="jf-settings-label-text">${getText('tiltStrength')}</span>
-                            <input type="range" id="jf-tilt-strength" min="25" max="150" value="100" step="25" title="${getText('tiltStrength')}">
-                            <span id="jf-tilt-strength-value" class="jf-tilt-value">100%</span>
+                            <input type="range" id="jf-tilt-strength" min="25" max="150" value="25" step="25" title="${getText('tiltStrength')}">
+                            <span id="jf-tilt-strength-value" class="jf-tilt-value">25%</span>
                         </div>
                     </div>
                 </div>
@@ -2002,21 +2050,46 @@ function createOverlay() {
     };
     window.addEventListener('resize', windowResizeHandler);
 
-    // Настройки в заголовке: кнопка ⚙ открывает выпадающую панель; закрытие по клику вне
+    // Настройки в заголовке: загрузка сохранённых/дефолтных и сохранение при изменении
     const settingsBtn = overlayEl.querySelector('#jf-settings-btn');
     const settingsPanel = overlayEl.querySelector('#jf-settings-panel');
     const reduceGlassCb = overlayEl.querySelector('#jf-reduce-glass');
     const disable3dCb = overlayEl.querySelector('#jf-disable-3d');
     const tiltStrengthRange = overlayEl.querySelector('#jf-tilt-strength');
     const tiltStrengthValueEl = overlayEl.querySelector('#jf-tilt-strength-value');
+
+    const stored = getOverlaySettings() || { ...DEFAULT_OVERLAY_SETTINGS };
+    if (reduceGlassCb) {
+        reduceGlassCb.checked = stored.reduceGlass;
+        overlayEl.classList.toggle('jf-reduce-glass', stored.reduceGlass);
+    }
+    if (disable3dCb) {
+        disable3dCb.checked = stored.disable3d;
+        if (stored.disable3d) overlayEl.setAttribute('data-jf-no-3d', 'true');
+        else overlayEl.removeAttribute('data-jf-no-3d');
+    }
+    if (tiltStrengthRange && tiltStrengthValueEl) {
+        tiltStrengthRange.value = stored.tiltStrength;
+        tiltStrengthValueEl.textContent = stored.tiltStrength + '%';
+        overlayEl.setAttribute('data-jf-tilt-strength', String(stored.tiltStrength / 100));
+    }
+
+    function persistOverlaySettings() {
+        saveOverlaySettings({
+            reduceGlass: reduceGlassCb ? reduceGlassCb.checked : false,
+            disable3d: disable3dCb ? disable3dCb.checked : true,
+            tiltStrength: tiltStrengthRange ? Math.max(25, Math.min(150, parseInt(tiltStrengthRange.value, 10) || 25)) : 25
+        });
+    }
+
     if (tiltStrengthRange && tiltStrengthValueEl) {
         function updateTiltStrengthLabel() {
             const v = tiltStrengthRange.value;
             tiltStrengthValueEl.textContent = v + '%';
             overlayEl.setAttribute('data-jf-tilt-strength', String(Number(v) / 100));
+            persistOverlaySettings();
         }
         tiltStrengthRange.addEventListener('input', updateTiltStrengthLabel);
-        updateTiltStrengthLabel();
     }
     if (settingsBtn && settingsPanel) {
         settingsBtn.addEventListener('click', (e) => {
@@ -2032,12 +2105,14 @@ function createOverlay() {
     if (reduceGlassCb) {
         reduceGlassCb.addEventListener('change', () => {
             overlayEl.classList.toggle('jf-reduce-glass', reduceGlassCb.checked);
+            persistOverlaySettings();
         });
     }
     if (disable3dCb) {
         disable3dCb.addEventListener('change', () => {
             if (disable3dCb.checked) overlayEl.setAttribute('data-jf-no-3d', 'true');
             else overlayEl.removeAttribute('data-jf-no-3d');
+            persistOverlaySettings();
         });
     }
 
