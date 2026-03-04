@@ -8518,6 +8518,15 @@ const GameDatabase = {
         const isInOverlay = (el) => overlayRoot ? overlayRoot.contains(el) : false;
 
         const selectors = Array.isArray(config.questionSelectors) ? config.questionSelectors : [];
+        const gameNameNorm = config.name ? this.normalizeText(config.name) : '';
+
+        function isLikelyTheme(text, nameNorm) {
+            if (!text || !nameNorm) return false;
+            if (text.length > 80) return false;
+            const tn = this.normalizeText(text);
+            if (!tn) return false;
+            return nameNorm.indexOf(tn) >= 0 || tn.indexOf(nameNorm) >= 0;
+        }
 
         for (const selector of selectors) {
             try {
@@ -8527,7 +8536,9 @@ const GameDatabase = {
                     const raw = this.getVisibleText(el);
                     if (!raw || raw.length >= 500) continue;
                     const text = this.cleanQuestionText(raw);
-                    if (text && text.length >= 2) return text;
+                    if (!text || text.length < 2) continue;
+                    if (gameNameNorm && isLikelyTheme.call(this, text, gameNameNorm)) continue;
+                    return text;
                 }
             } catch (e) {}
         }
@@ -8542,7 +8553,8 @@ const GameDatabase = {
                     /\p{L}/u.test(raw) &&
                     (raw.includes('?') || raw.includes('_______') || raw.includes('...'))) {
                     const text = this.cleanQuestionText(raw);
-                    if (text && text.length >= 2) return text;
+                    if (text && text.length >= 2 && !(gameNameNorm && isLikelyTheme.call(this, text, gameNameNorm)))
+                        return text;
                 }
             }
         }
@@ -8628,8 +8640,11 @@ const GameDatabase = {
                     return { answer: item.answer, confidence: 100, method: 'exact' };
                 }
 
-                if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
-                    return { answer: item.answer, confidence: 75, method: 'substring' };
+                const minSubstringLen = 4;
+                if (normalizedDB.length >= minSubstringLen && normalizedQuestion.length >= minSubstringLen) {
+                    if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
+                        return { answer: item.answer, confidence: 75, method: 'substring' };
+                    }
                 }
 
                 const dbTokens = normalizedDB.split(' ').filter(w => w.length >= 2);
