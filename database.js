@@ -8528,6 +8528,9 @@ const GameDatabase = {
             return nameNorm.indexOf(tn) >= 0 || tn.indexOf(nameNorm) >= 0;
         }
 
+        let best = null;
+        let bestLen = 0;
+
         for (const selector of selectors) {
             try {
                 const elements = document.querySelectorAll(selector);
@@ -8538,10 +8541,15 @@ const GameDatabase = {
                     const text = this.cleanQuestionText(raw);
                     if (!text || text.length < 2) continue;
                     if (gameNameNorm && isLikelyTheme.call(this, text, gameNameNorm)) continue;
-                    return text;
+                    if (text.length > bestLen) {
+                        bestLen = text.length;
+                        best = text;
+                    }
                 }
             } catch (e) {}
         }
+
+        if (best) return best;
 
         const potentialQuestions = document.querySelectorAll('p, div, span');
         const maxFallbackScan = 200;
@@ -8553,13 +8561,17 @@ const GameDatabase = {
                     /\p{L}/u.test(raw) &&
                     (raw.includes('?') || raw.includes('_______') || raw.includes('...'))) {
                     const text = this.cleanQuestionText(raw);
-                    if (text && text.length >= 2 && !(gameNameNorm && isLikelyTheme.call(this, text, gameNameNorm)))
-                        return text;
+                    if (text && text.length >= 2 && !(gameNameNorm && isLikelyTheme.call(this, text, gameNameNorm))) {
+                        if (text.length > bestLen) {
+                            bestLen = text.length;
+                            best = text;
+                        }
+                    }
                 }
             }
         }
 
-        return null;
+        return best;
     },
 
     /**
@@ -8640,9 +8652,13 @@ const GameDatabase = {
                     return { answer: item.answer, confidence: 100, method: 'exact' };
                 }
 
-                const minSubstringLen = 4;
-                if (normalizedDB.length >= minSubstringLen && normalizedQuestion.length >= minSubstringLen) {
-                    if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
+                const minContainedLen = 12;
+                if (normalizedQuestion.includes(normalizedDB)) {
+                    if (normalizedDB.length >= minContainedLen) {
+                        return { answer: item.answer, confidence: 75, method: 'substring' };
+                    }
+                } else if (normalizedDB.includes(normalizedQuestion)) {
+                    if (normalizedQuestion.length >= minContainedLen) {
                         return { answer: item.answer, confidence: 75, method: 'substring' };
                     }
                 }
@@ -8653,14 +8669,16 @@ const GameDatabase = {
                     const score = matchCount / Math.max(qTokens.length, 1);
                     const lastQ = qTokens.length ? qTokens[qTokens.length - 1] : null;
                     const lastDB = dbTokens.length ? dbTokens[dbTokens.length - 1] : null;
-                    if (score >= 0.5 && (matchCount >= 2 || (lastQ && lastDB && lastQ === lastDB))) {
+                    const shortDB = dbTokens.length <= 2;
+                    const enoughMatch = matchCount >= 2 || (lastQ && lastDB && lastQ === lastDB);
+                    if (score >= 0.5 && enoughMatch && (!shortDB || matchCount >= 2)) {
                         const conf = Math.min(70, Math.round(score * 100));
                         return { answer: item.answer, confidence: Math.max(50, conf), method: 'token' };
                     }
                 }
             }
 
-            // --- fuzzysort (работает хорошо на коротких совпадениях символов) ---
+            // --- fuzzysort ---
             if (typeof window.fuzzysort === 'object' && typeof window.fuzzysort.go === 'function' && items.length > 0) {
                 try {
                     const fsResults = window.fuzzysort.go(question, items, {
@@ -8669,13 +8687,15 @@ const GameDatabase = {
                         threshold: -10000
                     });
                     if (fsResults.length > 0) {
+                        const matched = fsResults[0].obj;
                         const raw = fsResults[0].score;
-                        // fuzzysort: 0 = точное совпадение, очень отрицательные = плохие
+                        const shortDBLongUser = (matched.question && matched.question.length < 20) && question.length > 50;
                         if (raw > -5000) {
                             const normalized = Math.max(0, Math.min(1, 1 - (-raw / 5000)));
-                            if (normalized >= 0.35) {
+                            const minNorm = shortDBLongUser ? 0.55 : 0.35;
+                            if (normalized >= minNorm) {
                                 const confidence = Math.min(68, Math.max(38, Math.round(normalized * 100)));
-                                return { answer: fsResults[0].obj.answer, confidence: confidence, method: 'fuzzysort' };
+                                return { answer: matched.answer, confidence: confidence, method: 'fuzzysort' };
                             }
                         }
                     }
@@ -8684,7 +8704,7 @@ const GameDatabase = {
                 }
             }
 
-            // --- Fuse.js (лучше для длинных предложений с опечатками/перестановками) ---
+            // --- Fuse.js ---
             if (typeof window.Fuse === 'function' && items.length > 0) {
                 try {
                     const fuse = new window.Fuse(items, {
@@ -8697,9 +8717,12 @@ const GameDatabase = {
                     const results = fuse.search(question);
                     if (results.length > 0 && results[0].score !== undefined) {
                         const score = 1 - Math.min(results[0].score, 1);
-                        if (score >= 0.35) {
+                        const matched = results[0].item;
+                        const shortDBLongUser = (matched.question && matched.question.length < 20) && question.length > 50;
+                        const minScore = shortDBLongUser ? 0.5 : 0.35;
+                        if (score >= minScore) {
                             const confidence = Math.min(65, Math.max(35, Math.round(score * 100)));
-                            return { answer: results[0].item.answer, confidence: confidence, method: 'fuse' };
+                            return { answer: matched.answer, confidence: confidence, method: 'fuse' };
                         }
                     }
                 } catch (fuseErr) {
@@ -8723,18 +8746,20 @@ const GameDatabase = {
                     const qt = normalizedQuestion.split(' ').filter(w => w.length >= 2);
                     const dt = normalizedDB.split(' ').filter(w => w.length >= 2);
                     const tokenScore = qt.filter(w => dt.includes(w)).length / Math.max(qt.length, 1);
-                    // При коротких запросах дополнительно проверяем Levenshtein по нормализованным строкам
                     const levScore = (normalizedQuestion.length <= 80 && normalizedDB.length <= 80)
                         ? this.levenshteinSimilarity(normalizedQuestion, normalizedDB)
                         : 0;
                     score = Math.max(tokenScore, levScore);
                 }
-                if (score > bestScore && score >= 0.4) {
+                const minScore = 0.4;
+                if (score > bestScore && score >= minScore) {
                     bestScore = score;
-                    best = { answer: item.answer, score };
+                    best = { answer: item.answer, score, dbQuestionLen: item.question.length };
                 }
             }
             if (best) {
+                const shortDBLongUser = best.dbQuestionLen < 20 && question.length > 50;
+                if (shortDBLongUser && bestScore < 0.55) return null;
                 const confidence = Math.min(50, Math.round(best.score * 100));
                 return { answer: best.answer, confidence: Math.max(35, confidence), method: 'fuzzy' };
             }
