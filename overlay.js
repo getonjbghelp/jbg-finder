@@ -71,7 +71,10 @@ const LANG = {
         placeholderQuestion: 'Нажмите "Найти вопрос и игру", когда вопрос УЖЕ будет на экране... В других случаях это вызовет нестабильную работу...',
         placeholderAnswer: 'Здесь появится ответ когда вы нажмёте на кнопку "Найти Ответ"...',
         version: 'Версия',
-        daysAgo: 'дн. назад'
+        daysAgo: 'дн. назад',
+        settings: 'Настройки',
+        reduceGlass: 'Уменьшить эффект стекла (эконом. режим)',
+        disable3d: 'Отключить 3D-наклон окна'
     },
     en: {
         title: 'JBG-Finder PREALPHA',
@@ -102,7 +105,10 @@ const LANG = {
         placeholderQuestion: 'Click "Detect question and game" when the question is ALREADY on the screen... In other cases, it will cause unstable work...',
         placeholderAnswer: 'The answer will appear here when you click on the "Find Answer" button...',
         version: 'Ver',
-        daysAgo: 'days ago'
+        daysAgo: 'days ago',
+        settings: 'Settings',
+        reduceGlass: 'Reduce glass effects (low power)',
+        disable3d: 'Disable 3D tilt effects'
     }
 };
 
@@ -239,6 +245,9 @@ function showPopupAt(targetEl) {
     if (!popupEl || !targetEl || !overlayEl) return;
     const rect = targetEl.getBoundingClientRect();
     const overlayRect = overlayEl.getBoundingClientRect();
+    // #region agent log
+    fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:showPopupAt',message:'popup position',data:{overlayW:overlayRect.width,overlayH:overlayRect.height,rectW:rect.width},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
 
     // позиционируем попап относительно overlay (absolute внутри overlay)
     const popupRect = popupEl.getBoundingClientRect();
@@ -337,6 +346,7 @@ function ensureStyle() {
         }
 
         /* Основное окно: минимальный размер, при длинном контенте — скролл внутри */
+        /* Точка интеграции: will-change для GPU-ускорения 3D-трансформаций */
         #${OVERLAY_ID} {
             position: fixed;
             top: 40px;
@@ -357,6 +367,59 @@ function ensureStyle() {
             display: flex;
             flex-direction: column;
             user-select: none;
+            will-change: transform;
+        }
+
+        /* Контент выше декоративного слоя .jf-glass (z-index: 0) */
+        #${OVERLAY_ID} .overlay-header,
+        #${OVERLAY_ID} .overlay-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Декоративный слой «матового стекла» — первый дочерний, не перехватывает клики */
+        #${OVERLAY_ID} .jf-glass {
+            position: absolute;
+            inset: 0;
+            border-radius: 6px;
+            pointer-events: none;
+            z-index: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.05) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.04);
+            backdrop-filter: blur(8px) saturate(110%);
+            -webkit-backdrop-filter: blur(8px) saturate(110%);
+        }
+        #${OVERLAY_ID} .jf-glass::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 6px;
+            background: radial-gradient(ellipse 80% 50% at 20% 20%, rgba(255,255,255,0.12) 0%, transparent 55%);
+            mix-blend-mode: overlay;
+            pointer-events: none;
+        }
+        @supports not (backdrop-filter: blur(1px)) and not (-webkit-backdrop-filter: blur(1px)) {
+            #${OVERLAY_ID} .jf-glass {
+                background: linear-gradient(135deg, rgba(40,40,45,0.95) 0%, rgba(30,30,35,0.92) 100%);
+                border: 1px solid rgba(255,255,255,0.08);
+            }
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .jf-glass {
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            background: linear-gradient(135deg, rgba(38,38,42,0.98) 0%, rgba(28,28,32,0.96) 100%);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #${OVERLAY_ID},
+            #${OVERLAY_ID} * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
 
         /* Заголовок в стиле Windows 10 */
@@ -790,6 +853,43 @@ function ensureStyle() {
             white-space: pre-wrap;
         }
 
+        /* Панель настроек (стекло / 3D) */
+        #${OVERLAY_ID} .jf-settings-toggle {
+            font-size: 11px;
+            color: #909090;
+            cursor: pointer;
+            padding: 4px 10px 6px;
+            border-top: 1px solid #2a2a2a;
+            margin-top: 2px;
+        }
+        #${OVERLAY_ID} .jf-settings-toggle:hover {
+            color: #c0c0c0;
+        }
+        #${OVERLAY_ID} .jf-settings-panel {
+            padding: 8px 10px 10px;
+            border-top: 1px solid #2a2a2a;
+            background: #252525;
+            display: none;
+        }
+        #${OVERLAY_ID} .jf-settings-panel.jf-open {
+            display: block;
+        }
+        #${OVERLAY_ID} .jf-settings-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: #b0b0b0;
+            cursor: pointer;
+            margin-bottom: 6px;
+        }
+        #${OVERLAY_ID} .jf-settings-label:last-child {
+            margin-bottom: 0;
+        }
+        #${OVERLAY_ID} .jf-settings-label input {
+            flex-shrink: 0;
+        }
+
         @media (max-width: 540px) {
             #${OVERLAY_ID} {
                 width: calc(100vw - 20px);
@@ -834,6 +934,181 @@ function cacheDom() {
     dom.answerCopyBtn = overlayEl.querySelector('#answer-copy-btn');
     dom.deleteBtn = overlayEl.querySelector('#delete-btn');
     log('DOM elements cached:', Object.keys(dom));
+    // #region agent log
+    fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:cacheDom',message:'cacheDom done',data:{hasOverlay:!!overlayEl,detectBtn:!!dom.detectBtn,status:!!dom.status},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+}
+
+/** Точка интеграции: 3D-эффекты (матовое стекло + наклон/масштаб при hover и drag). Вызывать после cacheDom() в createOverlay(). */
+function attach3dEffects() {
+    if (!overlayEl) return null;
+
+    const MAX_ROT_X = 8;
+    const MAX_ROT_Y = 10;
+    const HOVER_SCALE = 1.007;
+    const DRAG_SCALE = 1.02;
+    const LERP = 0.14;
+
+    let glassEl = overlayEl.querySelector('.jf-glass');
+    if (!glassEl) {
+        glassEl = document.createElement('div');
+        glassEl.className = 'jf-glass';
+        overlayEl.insertBefore(glassEl, overlayEl.firstChild);
+    }
+    // #region agent log
+    fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:attach3dEffects',message:'glass inserted',data:{firstChildClass:overlayEl.firstChild&&overlayEl.firstChild.className,detectBtnInOverlay:!!(dom.detectBtn&&overlayEl.contains(dom.detectBtn))},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    let targetRx = 0, targetRy = 0, currentRx = 0, currentRy = 0;
+    let targetScale = 1, currentScale = 1;
+    let isDragging = false;
+    let overlayRect = { left: 0, top: 0, width: 1, height: 1 };
+    let rafId = 0;
+    let lastDragX = 0, lastDragY = 0;
+    let destroyed = false;
+
+    const reducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const no3d = () => overlayEl.getAttribute('data-jf-no-3d') === 'true' || reducedMotion;
+
+    function updateRect() {
+        if (!overlayEl) return;
+        const r = overlayEl.getBoundingClientRect();
+        overlayRect.left = r.left;
+        overlayRect.top = r.top;
+        overlayRect.width = r.width;
+        overlayRect.height = r.height;
+    }
+
+    function clamp(v, min, max) {
+        return v < min ? min : (v > max ? max : v);
+    }
+
+    function tick() {
+        if (destroyed || !overlayEl) return;
+        if (no3d()) {
+            overlayEl.style.transform = '';
+            rafId = requestAnimationFrame(tick);
+            return;
+        }
+        const t = LERP;
+        currentRx += (targetRx - currentRx) * t;
+        currentRy += (targetRy - currentRy) * t;
+        currentScale += (targetScale - currentScale) * t;
+        if (Math.abs(currentRx) < 0.01) currentRx = 0;
+        if (Math.abs(currentRy) < 0.01) currentRy = 0;
+        if (Math.abs(currentScale - 1) < 0.0001) currentScale = 1;
+        overlayEl.style.transform = 'perspective(1000px) rotateX(' + currentRx + 'deg) rotateY(' + currentRy + 'deg) scale(' + currentScale + ')';
+        rafId = requestAnimationFrame(tick);
+    }
+
+    function onMouseEnter() {
+        updateRect();
+    }
+
+    function onMouseMove(e) {
+        if (isDragging || no3d()) return;
+        const clientX = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const clientY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+        const cx = overlayRect.left + overlayRect.width / 2;
+        const cy = overlayRect.top + overlayRect.height / 2;
+        const dx = (clientX - cx) / (overlayRect.width * 0.5 || 1);
+        const dy = (clientY - cy) / (overlayRect.height * 0.5 || 1);
+        targetRy = clamp(-dx * MAX_ROT_Y * 2, -MAX_ROT_Y * 2, MAX_ROT_Y * 2);
+        targetRx = clamp(dy * MAX_ROT_X * 2, -MAX_ROT_X * 2, MAX_ROT_X * 2);
+        targetScale = HOVER_SCALE;
+    }
+
+    function onMouseLeave() {
+        if (no3d()) return;
+        targetRx = targetRy = 0;
+        targetScale = 1;
+    }
+
+    function onDragStart() {
+        if (no3d()) return;
+        isDragging = true;
+        overlayEl.classList.add('jf-dragging');
+        targetScale = DRAG_SCALE;
+    }
+
+    function onDragMove(dxFrame, dyFrame) {
+        if (no3d()) return;
+        targetRy = clamp(targetRy + (-dxFrame * 0.06), -MAX_ROT_Y * 1.8, MAX_ROT_Y * 1.8);
+        targetRx = clamp(targetRx + (dyFrame * 0.06), -MAX_ROT_X * 1.8, MAX_ROT_X * 1.8);
+    }
+
+    function onDragEnd() {
+        if (no3d()) return;
+        isDragging = false;
+        overlayEl.classList.remove('jf-dragging');
+        targetScale = 1;
+        targetRx = targetRy = 0;
+    }
+
+    function onResize() {
+        updateRect();
+    }
+
+    function onTouchStart(e) {
+        updateRect();
+        if (e.touches.length) {
+            lastDragX = e.touches[0].clientX;
+            lastDragY = e.touches[0].clientY;
+        }
+    }
+    function onTouchMove(e) {
+        if (e.touches.length && !no3d()) {
+            const tx = e.touches[0].clientX;
+            const ty = e.touches[0].clientY;
+            const cx = overlayRect.left + overlayRect.width / 2;
+            const cy = overlayRect.top + overlayRect.height / 2;
+            const dx = (tx - cx) / (overlayRect.width * 0.5 || 1);
+            const dy = (ty - cy) / (overlayRect.height * 0.5 || 1);
+            targetRy = clamp(-dx * MAX_ROT_Y * 2, -MAX_ROT_Y * 2, MAX_ROT_Y * 2);
+            targetRx = clamp(dy * MAX_ROT_X * 2, -MAX_ROT_X * 2, MAX_ROT_X * 2);
+            targetScale = HOVER_SCALE;
+        }
+    }
+
+    overlayEl.addEventListener('mouseenter', onMouseEnter);
+    overlayEl.addEventListener('mousemove', onMouseMove);
+    overlayEl.addEventListener('mouseleave', onMouseLeave);
+    overlayEl.addEventListener('touchstart', onTouchStart, { passive: true });
+    overlayEl.addEventListener('touchmove', onTouchMove, { passive: true });
+    overlayEl.addEventListener('touchend', onMouseLeave, { passive: true });
+
+    if (window.addEventListener) {
+        window.addEventListener('resize', onResize);
+    }
+
+    rafId = requestAnimationFrame(tick);
+
+    function cleanup() {
+        // #region agent log
+        fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:attach3dEffects.cleanup',message:'3d cleanup entered',data:{rafIdBefore:rafId},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        destroyed = true;
+        if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = 0;
+        }
+        if (overlayEl) {
+            overlayEl.removeEventListener('mouseenter', onMouseEnter);
+            overlayEl.removeEventListener('mousemove', onMouseMove);
+            overlayEl.removeEventListener('mouseleave', onMouseLeave);
+            overlayEl.removeEventListener('touchstart', onTouchStart);
+            overlayEl.removeEventListener('touchmove', onTouchMove);
+            overlayEl.removeEventListener('touchend', onMouseLeave);
+            overlayEl.style.transform = '';
+            overlayEl.classList.remove('jf-dragging');
+            if (glassEl && glassEl.parentNode) glassEl.parentNode.removeChild(glassEl);
+        }
+        if (window.removeEventListener) {
+            window.removeEventListener('resize', onResize);
+        }
+    }
+
+    return { onDragStart, onDragMove, onDragEnd, cleanup };
 }
 
 function updateStatus(messageKey, type) {
@@ -1063,7 +1338,10 @@ function detectGame() {
     updateStatus('scanning', 'searching');
     setQuestionLoading(true);
 
-    try { 
+    // #region agent log
+    fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:detectGame',message:'detectGame start',data:{hasDb:!!gameDatabase,hasDetectBtn:!!dom.detectBtn,hasStatus:!!dom.status},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    try {
         const result = gameDatabase.detectGame();
         logDebug('detectGame result:', result);
         updateIndicator(result);
@@ -1166,6 +1444,9 @@ function searchAnswer() {
 function updateAllText() {
     if (!overlayEl) return;
     try {
+        // #region agent log
+        fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:updateAllText',message:'updateAllText',data:{minBtn:!!document.getElementById('minimize-btn'),closeBtn:!!document.getElementById('close-btn')},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         const t = LANG[currentLang];
         if (dom.titleEl) dom.titleEl.textContent = t.title;
         if (dom.detectBtn) dom.detectBtn.textContent = t.detectBtn;
@@ -1363,11 +1644,18 @@ function createOverlay() {
             </div>
 
             <div id="overlay-status" class="overlay-status">${getText('loadingDB')}</div>
+            <div id="jf-settings-toggle" class="jf-settings-toggle">⚙ ${getText('settings')}</div>
+            <div class="jf-settings-panel" id="jf-settings-panel">
+                <label class="jf-settings-label"><input type="checkbox" id="jf-reduce-glass"> ${getText('reduceGlass')}</label>
+                <label class="jf-settings-label"><input type="checkbox" id="jf-disable-3d"> ${getText('disable3d')}</label>
+            </div>
         </div>
     `;
     document.body.appendChild(overlayEl);
 
     cacheDom();
+    /* Точка интеграции: подключение 3D-эффектов (стекло + наклон). Очистка — в cleanupOverlay(). */
+    const api3d = attach3dEffects();
     createPopup();
     attachIconHoverHandlers();
     updateAllText();
@@ -1465,9 +1753,15 @@ function createOverlay() {
     const minBtn = overlayEl.querySelector('#minimize-btn');
     const closeBtn = overlayEl.querySelector('#close-btn');
 
-    // Функция очистки - снимает глобальные обработчики и удаляет попап/стили
+    // Функция очистки - снимает глобальные обработчики, останавливает 3D-RAF, удаляет попап/стили
     function cleanupOverlay() {
         try {
+            // #region agent log
+            fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:cleanupOverlay',message:'cleanupOverlay start',data:{hasApi3d:!!api3d,hasCleanup:!!(api3d&&typeof api3d.cleanup==='function')},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
+            if (api3d && typeof api3d.cleanup === 'function') {
+                api3d.cleanup();
+            }
             if (popupDocClickHandler) {
                 document.removeEventListener('click', popupDocClickHandler);
                 popupDocClickHandler = null;
@@ -1499,48 +1793,89 @@ function createOverlay() {
     const headerEl = overlayEl.querySelector('.overlay-header');
     let isDragging = false;
     let startX, startY, initialX, initialY;
+    let lastDragX, lastDragY;
+    let dragByTouch = false;
 
-    function onMouseMove(e) {
-        if (!isDragging || !overlayEl) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+    function applyDragDelta(clientX, clientY) {
+        const dx = clientX - startX;
+        const dy = clientY - startY;
         let nextLeft = initialX + dx;
         let nextTop = initialY + dy;
-
         const rect = overlayEl.getBoundingClientRect();
         const maxLeft = window.innerWidth - rect.width;
         const maxTop = window.innerHeight - rect.height;
-
         nextLeft = Math.max(0, Math.min(maxLeft, nextLeft));
         nextTop = Math.max(0, Math.min(maxTop, nextTop));
-
         overlayEl.style.left = nextLeft + 'px';
         overlayEl.style.top = nextTop + 'px';
         overlayEl.style.right = 'auto';
         overlayEl.style.bottom = 'auto';
+        if (api3d && api3d.onDragMove) {
+            const dxFrame = clientX - lastDragX;
+            const dyFrame = clientY - lastDragY;
+            lastDragX = clientX;
+            lastDragY = clientY;
+            api3d.onDragMove(dxFrame, dyFrame);
+        }
+    }
+
+    function onMouseMove(e) {
+        if (!isDragging || !overlayEl || dragByTouch) return;
+        applyDragDelta(e.clientX, e.clientY);
+    }
+
+    function onTouchMove(e) {
+        if (!isDragging || !overlayEl || !dragByTouch || !e.touches.length) return;
+        e.preventDefault();
+        applyDragDelta(e.touches[0].clientX, e.touches[0].clientY);
     }
 
     function endDrag() {
         if (!isDragging) return;
         isDragging = false;
+        dragByTouch = false;
+        if (api3d && api3d.onDragEnd) api3d.onDragEnd();
         document.body.style.userSelect = '';
         window.removeEventListener('mousemove', onMouseMove);
         window.removeEventListener('mouseup', endDrag);
+        window.removeEventListener('touchmove', onTouchMove, { capture: true });
+        window.removeEventListener('touchend', endDragTouch, { capture: true });
+    }
+
+    function endDragTouch(e) {
+        if (e.touches.length === 0) endDrag();
+    }
+
+    function startHeaderDrag(clientX, clientY, byTouch) {
+        isDragging = true;
+        dragByTouch = !!byTouch;
+        startX = clientX;
+        startY = clientY;
+        lastDragX = clientX;
+        lastDragY = clientY;
+        const rect = overlayEl.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+        document.body.style.userSelect = 'none';
+        if (api3d && api3d.onDragStart) api3d.onDragStart();
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', endDrag);
+        if (byTouch) {
+            window.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
+            window.addEventListener('touchend', endDragTouch, { capture: true });
+        }
     }
 
     if (headerEl) {
         headerEl.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            const rect = overlayEl.getBoundingClientRect();
-            initialX = rect.left;
-            initialY = rect.top;
-            document.body.style.userSelect = 'none';
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', endDrag);
+            startHeaderDrag(e.clientX, e.clientY, false);
         });
+        headerEl.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 0) return;
+            e.preventDefault();
+            startHeaderDrag(e.touches[0].clientX, e.touches[0].clientY, true);
+        }, { passive: false });
     }
 
     // Resize: сбрасываем инлайн-высоту кнопок (чтобы не слетал текст при перетаскивании окна), подстраиваем иконку
@@ -1549,6 +1884,26 @@ function createOverlay() {
         updateIconSize();
     };
     window.addEventListener('resize', windowResizeHandler);
+
+    // Настройки: уменьшение эффекта стекла и отключение 3D-наклона
+    const settingsToggle = overlayEl.querySelector('#jf-settings-toggle');
+    const settingsPanel = overlayEl.querySelector('#jf-settings-panel');
+    const reduceGlassCb = overlayEl.querySelector('#jf-reduce-glass');
+    const disable3dCb = overlayEl.querySelector('#jf-disable-3d');
+    if (settingsToggle && settingsPanel) {
+        settingsToggle.addEventListener('click', () => settingsPanel.classList.toggle('jf-open'));
+    }
+    if (reduceGlassCb) {
+        reduceGlassCb.addEventListener('change', () => {
+            overlayEl.classList.toggle('jf-reduce-glass', reduceGlassCb.checked);
+        });
+    }
+    if (disable3dCb) {
+        disable3dCb.addEventListener('change', () => {
+            if (disable3dCb.checked) overlayEl.setAttribute('data-jf-no-3d', 'true');
+            else overlayEl.removeAttribute('data-jf-no-3d');
+        });
+    }
 
     log('Overlay created and initialized');
 }
