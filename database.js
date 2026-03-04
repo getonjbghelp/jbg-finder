@@ -2,6 +2,8 @@ const GameDatabase = {
     version: "DB4MARCHEXP",
     lastUpdated: "2026-03-04",
     buildDate: new Date("2026-03-04"),
+    _searchCache: {},
+    _fuseCache: {},
 
     
     gameConfig: {
@@ -6995,7 +6997,7 @@ const GameDatabase = {
 			{ question: "Если бы земляне убедили злодея из Звёздных войн Кайло Рена в реальности подписать «Договор о космосе», то какое из этих злодеяний он всё равно бы мог совершить, не нарушая «Договора»?", answer: "отправка шпионского дроида на Марс без разрешения ООН" },
 			{ question: "Предположим, что люди в Apple решили переключиться на мультяшных котов в названиях своих ОС. Какой из вариантов НЕ подошёл бы?", answer: "Mac OS: Щекотка" },
 			{ question: "Расположите слова из названия этого вопроса в алфавитном порядке.", answer: "Булок выпей да да ещё же мягких съешь французских чаю этих" },
-			{ question: "Представьте, что события романа Преступление и наказание Фёдора Достоевского привлекли к себе внимание редакторов шоу Пусть говорят.Как в таком случае стоит правильно назвать выпуск передачи?", answer: "Долг топором красен" },
+			{ question: "Представьте, что события романа Преступление и наказание Фёдора Достоевского привлекли к себе внимание редакторов шоу Пусть говорят. Как в таком случае стоит правильно назвать выпуск передачи?", answer: "Долг топором красен" },
 			{ question: "Какой классический литературный персонаж больше всего возненавидел бы ветряные электростанции?", answer: "Дон Кихот" },
 			{ question: "Первый фильм серии Mamma Mia! называется Mamma Mia!.Затем вышел сиквел под названием Mamma Mia! Here We Go Again.Как должен называться третий фильм серии Mamma Mia!?", answer: "Mamma Mia! Here We Go Again: My My" },
 			{ question: "Какая актриса с фамилией Суинтон снималась в ряде фильмов Уэса Андерсона?", answer: "~ Суинтон" },
@@ -7284,7 +7286,7 @@ const GameDatabase = {
 			{ question: "Представьте, что во время бродвейского мюзикла Холодное сердце фанаты настолько сойдут с ума, что от восторга начнут поливать актёров антифризом.А какой фанат лучше всего продемонстрирует свою любовь?", answer: "тот, кто будет бросаться жидким гелием" },
 			{ question: "13 причин почему, 17 причин почему, 19 причин почему, 23 причины почему...", answer: "29 причин почему" },
 			{ question: "Про кого рассказывает фильм Алексея Учителя Матильда?", answer: "про Николая Александровича и Матильду Кшесинскую" },
-			{ question: "Что должно пройзойти с нашей игрой, чтобы философы применили к ней парадокс Тесея?", answer: "все вопросы из этой игры позже будут заменены на другие" },
+			{ question: "Что должно произойти с нашей игрой, чтобы философы применили к ней парадокс Тесея?", answer: "все вопросы из этой игры позже будут заменены на другие" },
 			{ question: "Когда я перееду в НЬЮ-ЙОРК за новой жизнью и открою там свою радиостанцию, то какое название она, скорее всего, должна будет иметь?", answer: "WUKI-FM" },
 			{ question: "Какую кружку с пивом охотнее всего подаст вам невероятно жадный бармен?", answer: "ПИКОкружку" },
 			{ question: "Представьте, что участники одного из выпусков шоу Адская кухня будут готовить только десерты. Какую фразу вероятнее всего будет услышать от Константина Ивлева?", answer: "«Больше трайфлов, червяк!»" },
@@ -7341,7 +7343,7 @@ const GameDatabase = {
 			{ question: "Сколько получится, если от спасения британцами отнять спасение американцами?", answer: "88" },
 			{ question: "Как назывался бы флешмоб, в котором все люди танцуют под мотив песни Мальчик хочет в Тамбов?", answer: "Tic Tic Tac Challenge" },
 			{ question: "Какое сообщение придёт вам от Яндекс.Такси, если ближайшей к вам машиной будет ECTO-1, за рулём которой будет один из охотников за привидениями?", answer: "«Водитель Рэймонд прибыл на Кадиллаке»" },
-			{ question: "Какую высочайшую оценку может поставить ваша учительницана фото в «Одноклассниках»?", answer: "5+" },
+			{ question: "Какую высочайшую оценку может поставить ваша учительница на фото в «Одноклассниках»?", answer: "5+" },
 			{ question: "Если новый сезон Последнего героя будет снят на самом большом скоплении мусора в Мировом океане, как он будет называться?", answer: "Последний герой: Великое ТИХООКЕАНСКОЕ мусорное пятно" },
 			{ question: "О чём маленький монстрик Грендель побежит жаловаться своей маме?", answer: "«Беовульф оторвал мою руку!»" },
 			{ question: "Представим, что фанаты Ростислава Хаита из «Квартета И» называют себя Хаитерами и любят только фильмы с «Квартетом И».Какой из этих фильмов будут хейтить эти хаитеры?", answer: "Гуляй, Вася!" },
@@ -7398,7 +7400,7 @@ const GameDatabase = {
 			{ question: "Какой МЕТАЛЛист может похвастаться тем, что имеет свою группировку?", answer: "Платина" },
 			{ question: "Если для хороших посиделок понадобится 5 бутылок виски, к которым нужно будет прихватить 5 галлонов колы, то в какой таре лучше всего будет эту колу купить?...гипотетически, разумеется.", answer: "в бутыли для кулера" },
 			{ question: "Мне нужно срочно написать какое-то предложение правильно!В какой из этих фраз НЕ была допущена ошибка?", answer: "Если не дать Майонезику еды, он уйдёт несолоно хлебавши." },
-			{ question: "Какая из этих переделанных строчек из песни группы Братья ГримНЕ заканчивается отсылкой на сказку братьев Гримм?", answer: "Ира, Ира, составь из льдинок слово «Вечность»!" },
+			{ question: "Какая из этих переделанных строчек из песни группы Братья Грим НЕ заканчивается отсылкой на сказку братьев Гримм?", answer: "Ира, Ира, составь из льдинок слово «Вечность»!" },
 			{ question: "Если Малыш из фильма Малыш на драйве научится водить в том же возрасте, в каком новорождённый жираф встаёт на ноги...то через какое время после рождения он станет малышом на драйве?", answer: "через час" },
 			{ question: "Если Том Харди на самом деле потеряет способность связно говорить, какая часть мозга у него, скорее всего, будет повреждена?", answer: "зона Брока" },
 			{ question: "Какой роман можно назвать изначально русским?(Потому что его действие начинается в России)", answer: "«Франкенштейн, или Современный Прометей»" },
@@ -7430,7 +7432,7 @@ const GameDatabase = {
 			{ question: "Если госпожа Удача станет брокером, играющим на понижении цен, то какое новое прозвище она получит?", answer: "Госпожа Медведь" },
 			{ question: "Сэмюэл Л. Джексон: «How do you do?» Вы:", answer: "«How do you do!»" },
 			{ question: "Какие часы показывают наиболее ПОЗДНЕЕ время?", answer: "Часы на здании мэрии, в которую ударила молния в Назад в будущее" },
-			{ question: "Какой из этих фильмов является настоящейкнижной находкой?", answer: "Первому игроку приготовиться" },
+			{ question: "Какой из этих фильмов является настоящей книжной находкой?", answer: "Первому игроку приготовиться" },
 			{ question: "Если Дюймовочку наконец приведут к стандартам, которые использует весь мир, то как её будут после этого звать?", answer: "2,54-сантиметровочка" },
 			{ question: "Если бы группа Little Big смогла выступить на Евровидении в 2020 году, то какая компания поблагодарила бы их за бесплатную рекламу своей продукции?", answer: "Mattel" },
 			{ question: "Кто в сериале Наша Russia играл гастарбайтера по имени Равшан?", answer: "Ншан Галустян" },
@@ -8643,39 +8645,118 @@ const GameDatabase = {
 
             const normalizedQuestion = this.normalizeText(question);
             const qTokens = normalizedQuestion.split(' ').filter(w => w.length >= 2);
+            const stopwordsRu = new Set([
+                'что', 'кто', 'как', 'какой', 'какая', 'какие', 'какое', 'какого',
+                'из', 'этих', 'этого', 'это', 'этот', 'эта', 'эти', 'не', 'ни',
+                'является', 'был', 'было', 'была', 'были', 'один', 'одна', 'одно',
+                'одной', 'одного', 'одну', 'в', 'во', 'на', 'по', 'для', 'и', 'или',
+                'а', 'но', 'у', 'с', 'со', 'к', 'о', 'об', 'от', 'за'
+            ]);
+            const stopwordsEn = new Set([
+                'which', 'what', 'who', 'how', 'of', 'these', 'this', 'that', 'is',
+                'are', 'was', 'were', 'not', 'one', 'the', 'a', 'an', 'to', 'in',
+                'on', 'for', 'and', 'or', 'with', 'from', 'by', 'at', 'as'
+            ]);
+            const stopwords = questionLang === 'ru' ? stopwordsRu : stopwordsEn;
+            const normalizeTokens = (text) => this.normalizeText(text).split(' ').filter(w => w.length >= 2);
+            const getInformativeTokens = (tokens) => tokens.filter(w => w.length >= 3 && !stopwords.has(w));
+            const startsWithTemplatePrefix = (text) => {
+                return text.startsWith('что из этого') ||
+                    text.startsWith('какой из этих') ||
+                    text.startsWith('какая из этих') ||
+                    text.startsWith('какие из этих') ||
+                    text.startsWith('which of these') ||
+                    text.startsWith('what of these');
+            };
 
-            for (const item of items) {
-                if (!item || !item.question) continue;
-                const normalizedDB = this.normalizeText(item.question);
+            const qInformativeTokens = getInformativeTokens(qTokens);
+            const cacheKey = gameId + ':' + questionLang + ':' + items.length;
+            let candidateCache = this._searchCache[cacheKey];
+            if (!candidateCache) {
+                candidateCache = items
+                    .filter(item => item && item.question)
+                    .map(item => {
+                        const normalizedDB = this.normalizeText(item.question);
+                        const dbTokens = normalizeTokens(item.question);
+                        const dbInformativeTokens = getInformativeTokens(dbTokens);
+                        return {
+                            item,
+                            normalizedDB,
+                            dbTokens,
+                            dbInformativeTokens,
+                            isTemplatePrefix: startsWithTemplatePrefix(normalizedDB)
+                        };
+                    });
+                this._searchCache[cacheKey] = candidateCache;
+            }
+            let bestSubstring = null;
+            let bestToken = null;
+            let secondTokenScore = 0;
+
+            for (const candidate of candidateCache) {
+                const item = candidate.item;
+                const normalizedDB = candidate.normalizedDB;
 
                 if (normalizedQuestion === normalizedDB) {
                     return { answer: item.answer, confidence: 100, method: 'exact' };
                 }
 
                 const minContainedLen = 12;
-                if (normalizedQuestion.includes(normalizedDB)) {
-                    if (normalizedDB.length >= minContainedLen) {
-                        return { answer: item.answer, confidence: 75, method: 'substring' };
-                    }
-                } else if (normalizedDB.includes(normalizedQuestion)) {
-                    if (normalizedQuestion.length >= minContainedLen) {
-                        return { answer: item.answer, confidence: 75, method: 'substring' };
+                if (normalizedQuestion.includes(normalizedDB) || normalizedDB.includes(normalizedQuestion)) {
+                    const contained = normalizedQuestion.includes(normalizedDB) ? normalizedDB : normalizedQuestion;
+                    if (contained.length >= minContainedLen) {
+                        const dbInformativeTmp = candidate.dbInformativeTokens;
+                        const infoMatchCount = qInformativeTokens.filter(w => dbInformativeTmp.includes(w)).length;
+                        const templatePair = startsWithTemplatePrefix(normalizedQuestion) && candidate.isTemplatePrefix;
+                        const hasEnoughInfo = infoMatchCount >= 2 || qInformativeTokens.length <= 1 || dbInformativeTmp.length <= 1;
+                        if (!templatePair || hasEnoughInfo) {
+                            const overlap = contained.length / Math.max(normalizedQuestion.length, normalizedDB.length, 1);
+                            const candidateScore = 0.7 + Math.min(0.2, overlap * 0.2);
+                            if (!bestSubstring || candidateScore > bestSubstring.score) {
+                                bestSubstring = { answer: item.answer, score: candidateScore };
+                            }
+                        }
                     }
                 }
 
-                const dbTokens = normalizedDB.split(' ').filter(w => w.length >= 2);
+                const dbTokens = candidate.dbTokens;
                 if (qTokens.length && dbTokens.length) {
+                    const dbInformativeTokens = candidate.dbInformativeTokens;
                     const matchCount = qTokens.filter(w => dbTokens.includes(w)).length;
-                    const score = matchCount / Math.max(qTokens.length, 1);
+                    const infoMatchCount = qInformativeTokens.filter(w => dbInformativeTokens.includes(w)).length;
+                    const scoreQ = matchCount / Math.max(qTokens.length, 1);
+                    const scoreDB = matchCount / Math.max(dbTokens.length, 1);
+                    const infoScoreQ = infoMatchCount / Math.max(qInformativeTokens.length, 1);
+                    const infoScoreDB = infoMatchCount / Math.max(dbInformativeTokens.length, 1);
                     const lastQ = qTokens.length ? qTokens[qTokens.length - 1] : null;
                     const lastDB = dbTokens.length ? dbTokens[dbTokens.length - 1] : null;
                     const shortDB = dbTokens.length <= 2;
+                    const longBoth = qTokens.length >= 5 && dbTokens.length >= 5;
+                    const minMatchForLong = longBoth ? matchCount >= 4 : true;
+                    const templatePair = startsWithTemplatePrefix(normalizedQuestion) && candidate.isTemplatePrefix;
+                    const enoughInformative = infoMatchCount >= 2 || qInformativeTokens.length <= 1 || dbInformativeTokens.length <= 1;
                     const enoughMatch = matchCount >= 2 || (lastQ && lastDB && lastQ === lastDB);
-                    if (score >= 0.5 && enoughMatch && (!shortDB || matchCount >= 2)) {
-                        const conf = Math.min(70, Math.round(score * 100));
-                        return { answer: item.answer, confidence: Math.max(50, conf), method: 'token' };
+                    const bothSides = scoreQ >= 0.5 && scoreDB >= 0.5;
+                    const bothSidesInformative = infoScoreQ >= 0.4 && infoScoreDB >= 0.4;
+                    if (bothSides && enoughMatch && minMatchForLong && (!shortDB || matchCount >= 2) && (!templatePair || enoughInformative) && bothSidesInformative) {
+                        const combinedScore = Math.min(scoreQ, scoreDB) * 0.4 + Math.min(infoScoreQ, infoScoreDB) * 0.6;
+                        if (!bestToken || combinedScore > bestToken.score) {
+                            secondTokenScore = bestToken ? bestToken.score : secondTokenScore;
+                            bestToken = { answer: item.answer, score: combinedScore };
+                        } else if (combinedScore > secondTokenScore) {
+                            secondTokenScore = combinedScore;
+                        }
                     }
                 }
+            }
+
+            if (bestToken && ((bestToken.score - secondTokenScore) >= 0.12 || bestToken.score >= 0.78)) {
+                const conf = Math.min(72, Math.round(bestToken.score * 100));
+                return { answer: bestToken.answer, confidence: Math.max(52, conf), method: 'token' };
+            }
+            if (bestSubstring) {
+                const conf = Math.min(74, Math.round(bestSubstring.score * 100));
+                return { answer: bestSubstring.answer, confidence: Math.max(55, conf), method: 'substring' };
             }
 
             // --- fuzzysort ---
@@ -8707,13 +8788,17 @@ const GameDatabase = {
             // --- Fuse.js ---
             if (typeof window.Fuse === 'function' && items.length > 0) {
                 try {
-                    const fuse = new window.Fuse(items, {
-                        keys: ['question'],
-                        threshold: 0.45,
-                        includeScore: true,
-                        ignoreLocation: true,
-                        minMatchCharLength: 2
-                    });
+                    let fuse = this._fuseCache[cacheKey];
+                    if (!fuse) {
+                        fuse = new window.Fuse(items, {
+                            keys: ['question'],
+                            threshold: 0.45,
+                            includeScore: true,
+                            ignoreLocation: true,
+                            minMatchCharLength: 2
+                        });
+                        this._fuseCache[cacheKey] = fuse;
+                    }
                     const results = fuse.search(question);
                     if (results.length > 0 && results[0].score !== undefined) {
                         const score = 1 - Math.min(results[0].score, 1);
@@ -8745,11 +8830,21 @@ const GameDatabase = {
                 } else {
                     const qt = normalizedQuestion.split(' ').filter(w => w.length >= 2);
                     const dt = normalizedDB.split(' ').filter(w => w.length >= 2);
-                    const tokenScore = qt.filter(w => dt.includes(w)).length / Math.max(qt.length, 1);
+                    const qti = getInformativeTokens(qt);
+                    const dti = getInformativeTokens(dt);
+                    const tokenMatchCount = qt.filter(w => dt.includes(w)).length;
+                    const infoMatchCount = qti.filter(w => dti.includes(w)).length;
+                    const tokenScore = tokenMatchCount / Math.max(qt.length, 1);
+                    const infoScore = infoMatchCount / Math.max(qti.length, 1);
+                    const templatePair = startsWithTemplatePrefix(normalizedQuestion) && startsWithTemplatePrefix(normalizedDB);
+                    const combinedTokenScore = (tokenScore * 0.35) + (infoScore * 0.65);
                     const levScore = (normalizedQuestion.length <= 80 && normalizedDB.length <= 80)
                         ? this.levenshteinSimilarity(normalizedQuestion, normalizedDB)
                         : 0;
-                    score = Math.max(tokenScore, levScore);
+                    score = Math.max(combinedTokenScore, levScore);
+                    if (templatePair && infoMatchCount < 2) {
+                        score = Math.min(score, 0.39);
+                    }
                 }
                 const minScore = 0.4;
                 if (score > bestScore && score >= minScore) {
