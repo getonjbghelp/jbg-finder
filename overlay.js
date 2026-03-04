@@ -3,7 +3,7 @@ const OVERLAY_ID = 'game-finder-overlay';
 const STYLE_ID = 'game-finder-overlay-style';
 
 // === ЛОГГИРОВАНИЕ ===
-const LOG_PREFIX = '[JBG-Finder]';
+const LOG_PREFIX = '[JBG-Finder-PREALPHA]';
 const LOG_ENABLED = true;
 function log(...args) { if (LOG_ENABLED) console.log(LOG_PREFIX, ...args); }
 function logError(...args) { if (LOG_ENABLED) console.error(LOG_PREFIX, ...args); }
@@ -20,6 +20,12 @@ log('Initializing JBG-Finder overlay...');
 
 const CONFIG = {
     databaseURL: "https://getonjbghelp.github.io/jbg-finder/database.js",
+    // URL для каждой CDN-библиотеки. По умолчанию — сайт (работает с любого сайта).
+    // Можно заменить на локальный путь при локальной разработке.
+    cdn: {
+        fuse:      "https://getonjbghelp.github.io/jbg-finder/CDNlibs/fuse.min.js",
+        fuzzysort: "https://getonjbghelp.github.io/jbg-finder/CDNlibs/fuzzysort.js"
+    },
     minQuestionLength: 2,
     defaultLang: 'en',
     loadTimeout: 10000,
@@ -278,7 +284,7 @@ function resetCenterButtonsHeight() {
     });
 }
 
-/** Адаптация высоты центральных кнопок только когда обе колонки достаточно высокие; не уменьшаем кнопки ниже 40px. */
+/** Адаптация высоты центральных кнопок только когда обе колонки высокие; не уменьшаем ниже 44px, чтобы текст не обрезался. */
 function adaptCenterButtonsHeight() {
     if (!overlayEl) return;
     try {
@@ -286,17 +292,17 @@ function adaptCenterButtonsHeight() {
             if (!dom.questionText || !dom.answerText || !dom.detectBtn || !dom.searchBtn || !dom.deleteBtn) return;
             const leftH = dom.questionText.getBoundingClientRect().height || 0;
             const rightH = dom.answerText.getBoundingClientRect().height || 0;
-            if (leftH < 48 || rightH < 48) return;
+            if (leftH < 80 || rightH < 80) return;
             const base = Math.floor(Math.min(leftH, rightH));
             const gapTotal = 12;
-            const btnH = Math.max(40, Math.floor((base - gapTotal) / 3));
+            const btnH = Math.max(44, Math.floor((base - gapTotal) / 3));
             [dom.detectBtn, dom.searchBtn, dom.deleteBtn].forEach(btn => {
                 if (!btn) return;
                 btn.style.height = btnH + 'px';
-                btn.style.paddingTop = '0';
-                btn.style.paddingBottom = '0';
-                btn.style.lineHeight = (btnH - 4) + 'px';
-                btn.style.display = 'block';
+                btn.style.paddingTop = '4px';
+                btn.style.paddingBottom = '4px';
+                btn.style.lineHeight = (btnH - 10) + 'px';
+                btn.style.display = 'flex';
                 btn.style.boxSizing = 'border-box';
             });
         }, 120);
@@ -649,19 +655,21 @@ function ensureStyle() {
             cursor: default;
         }
 
-        /* Центральная колонка кнопок — на всю ширину колонки (до краёв полей) */
+        /* Центральная колонка кнопок — фиксированный минимум, чтобы текст не слетал при коротком вопросе */
         #${OVERLAY_ID} .center-column {
             display: flex;
             flex-direction: column;
             gap: 6px;
             justify-content: center;
             min-width: 0;
+            min-height: 132px;
+            flex-shrink: 0;
         }
 
         #${OVERLAY_ID} .center-btn {
             width: 100%;
             min-height: 40px;
-            padding: 10px 6px;
+            padding: 8px 6px;
             border-radius: 3px;
             border: 1px solid #3b3b3b;
             background: #323232;
@@ -674,6 +682,10 @@ function ensureStyle() {
             align-items: center;
             justify-content: center;
             text-align: center;
+            white-space: normal;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            flex-shrink: 0;
         }
 
         #${OVERLAY_ID} .center-btn:hover:not(:disabled) {
@@ -844,6 +856,38 @@ function updateDBStatus(loaded) {
     logDebug('DB status updated:', loaded);
 }
 
+/** Загружает один JS-файл по URL; resolve(true/false) — успех/провал. */
+function loadScript(url, label) {
+    return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.async = true;
+        script.onload = () => { log('CDNlib loaded:', label); resolve(true); };
+        script.onerror = () => { logWarn('CDNlib FAILED:', label, url); resolve(false); };
+        document.head.appendChild(script);
+    });
+}
+
+/** Загружает все CDN-библиотеки параллельно. Каждая — по своей ссылке из CONFIG.cdn. */
+async function loadCdnLibs() {
+    const tasks = [];
+
+    if (!window.__jbgFuseLoaded) {
+        tasks.push(
+            loadScript(CONFIG.cdn.fuse, 'Fuse.js').then(ok => { if (ok) window.__jbgFuseLoaded = true; })
+        );
+    }
+
+    if (!window.__jbgFuzzysortLoaded) {
+        tasks.push(
+            loadScript(CONFIG.cdn.fuzzysort, 'fuzzysort').then(ok => { if (ok) window.__jbgFuzzysortLoaded = true; })
+        );
+    }
+
+    await Promise.all(tasks);
+    log('CDNlibs ready — Fuse:', !!window.__jbgFuseLoaded, '| fuzzysort:', !!window.__jbgFuzzysortLoaded);
+}
+
 async function loadDatabase() {
     log('=== DATABASE LOAD STARTED ===');
     log('Database URL:', CONFIG.databaseURL);
@@ -860,6 +904,8 @@ async function loadDatabase() {
     }
 
     dbLoadAttempts++;
+    await loadCdnLibs();
+
     return new Promise((resolve) => {
         const script = document.createElement('script');
         script.src = CONFIG.databaseURL + '?t=' + Date.now();
@@ -962,7 +1008,7 @@ function updateIndicator(result) {
     if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
     if (dom.indicatorCount && result.foundIndicators) dom.indicatorCount.textContent = `${result.foundIndicators.length} ${getText('indicators')}`;
 
-    // Обновляем иконку статуса и логотип с учётом текущего языка контента
+    if (!currentQuestion && config.name) currentContentLang = detectLangFromText(config.name);
     updateGameAssets();
 }
 
@@ -979,6 +1025,10 @@ function displayQuestion(q) {
         dom.searchBtn.disabled = true;
         if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
         setQuestionLoading(false);
+        if (currentGame && gameDatabase?.gameConfig?.[currentGame]?.name) {
+            currentContentLang = detectLangFromText(gameDatabase.gameConfig[currentGame].name);
+            updateGameAssets();
+        }
         return;
     }
 
