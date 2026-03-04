@@ -13,6 +13,7 @@ const DEFAULT_OVERLAY_SETTINGS = {
     fontSize: 'medium',
     debugMode: false,
     rememberPosition: false,
+    uiLang: 'en',
     overlayLeft: null,
     overlayTop: null
 };
@@ -34,6 +35,7 @@ function getOverlaySettings() {
             fontSize: font,
             debugMode: !!o.debugMode,
             rememberPosition: !!o.rememberPosition,
+            uiLang: (o.uiLang === 'ru' || o.uiLang === 'en') ? o.uiLang : 'en',
             overlayLeft: typeof o.overlayLeft === 'number' ? o.overlayLeft : null,
             overlayTop: typeof o.overlayTop === 'number' ? o.overlayTop : null
         };
@@ -53,10 +55,25 @@ function saveOverlaySettings(settings) {
 // === ЛОГГИРОВАНИЕ ===
 const LOG_PREFIX = '[JBG-Finder-PREALPHA]';
 const LOG_ENABLED = true;
-function log(...args) { if (LOG_ENABLED) console.log(LOG_PREFIX, ...args); }
-function logError(...args) { if (LOG_ENABLED) console.error(LOG_PREFIX, ...args); }
-function logDebug(...args) { if (LOG_ENABLED) console.debug(LOG_PREFIX, ...args); }
-function logWarn(...args) { if (LOG_ENABLED) console.warn(LOG_PREFIX, ...args); }
+const LOG_BUFFER = [];
+const LOG_BUFFER_MAX = 2000;
+function pushLog(level, args) {
+    if (!LOG_BUFFER) return;
+    const msg = args.map(function (a) { return a != null && typeof a === 'object' ? JSON.stringify(a) : String(a); }).join(' ');
+    LOG_BUFFER.push({ t: Date.now(), level: level, msg: msg });
+    if (LOG_BUFFER.length > LOG_BUFFER_MAX) LOG_BUFFER.shift();
+}
+function log(...args) { pushLog('log', args); if (LOG_ENABLED) console.log(LOG_PREFIX, ...args); }
+function logError(...args) { pushLog('error', args); if (LOG_ENABLED) console.error(LOG_PREFIX, ...args); }
+function logDebug(...args) { pushLog('debug', args); if (LOG_ENABLED) console.debug(LOG_PREFIX, ...args); }
+function logWarn(...args) { pushLog('warn', args); if (LOG_ENABLED) console.warn(LOG_PREFIX, ...args); }
+function getLogsAsText() {
+    return LOG_BUFFER.map(function (e) {
+        const d = new Date(e.t);
+        const ts = d.toISOString ? d.toISOString() : (d.getTime() + '');
+        return '[' + ts + '] [' + e.level + '] ' + e.msg;
+    }).join('\n');
+}
 
 const existing = document.getElementById(OVERLAY_ID);
 if (existing) {
@@ -140,7 +157,9 @@ const LANG = {
         sizeMedium: 'Средний',
         sizeLarge: 'Крупный',
         debugMode: 'Показывать метод поиска в ответе',
-        rememberPosition: 'Запоминать позицию окна'
+        rememberPosition: 'Запоминать позицию окна',
+        copyLogs: 'Копировать логи',
+        downloadLogs: 'Скачать логи'
     },
     en: {
         title: 'JBG-Finder PREALPHA',
@@ -192,7 +211,9 @@ const LANG = {
         sizeMedium: 'Medium',
         sizeLarge: 'Large',
         debugMode: 'Show search method in answer',
-        rememberPosition: 'Remember window position'
+        rememberPosition: 'Remember window position',
+        copyLogs: 'Copy logs',
+        downloadLogs: 'Download logs'
     }
 };
 
@@ -897,9 +918,9 @@ function ensureStyle() {
         #${OVERLAY_ID} .center-btn {
             width: 100%;
             min-height: 46px;
-            padding: 10px 12px;
-            border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.08);
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.1);
             background: rgba(42,42,48,0.82);
             color: #f0f0f0;
             font-size: 12px;
@@ -913,6 +934,7 @@ function ensureStyle() {
             white-space: normal;
             word-wrap: break-word;
             overflow-wrap: break-word;
+            transition: background 0.15s ease, border-color 0.15s ease;
         }
 
         #${OVERLAY_ID} .center-btn:hover:not(:disabled) {
@@ -961,6 +983,32 @@ function ensureStyle() {
             border-top: 1px solid rgba(255,255,255,0.06);
             background: rgba(32,32,36,0.82);
             font-family: "Consolas", "JetBrains Mono", monospace;
+        }
+        #${OVERLAY_ID} .jf-log-actions {
+            display: flex;
+            gap: 8px;
+            padding: 6px 10px 8px 10px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            background: rgba(28,28,32,0.75);
+        }
+        #${OVERLAY_ID} .jf-log-btn {
+            flex: 1;
+            min-height: 28px;
+            padding: 4px 8px;
+            font-size: 11px;
+            color: #c0c0c0;
+            background: rgba(50,50,55,0.9);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        #${OVERLAY_ID} .jf-log-btn:hover {
+            background: rgba(60,60,65,0.95);
+            color: #fff;
         }
 
         /* Свернутый режим — окно реально уменьшается до заголовка */
@@ -1753,6 +1801,10 @@ function updateAllText() {
         }
 
         updateSettingsPanelLabels();
+        const copyLogsBtn = overlayEl ? overlayEl.querySelector('#jf-copy-logs') : null;
+        const downloadLogsBtn = overlayEl ? overlayEl.querySelector('#jf-download-logs') : null;
+        if (copyLogsBtn) { copyLogsBtn.textContent = '📋 ' + getText('copyLogs'); copyLogsBtn.title = getText('copyLogs'); }
+        if (downloadLogsBtn) { downloadLogsBtn.textContent = '💾 ' + getText('downloadLogs'); downloadLogsBtn.title = getText('downloadLogs'); }
         logDebug('UI Text updated for lang:', currentLang);
     } catch (e) {
         logError('updateAllText error', e);
@@ -1846,6 +1898,8 @@ function attachIconHoverHandlers() {
 
 function createOverlay() {
     if (overlayEl) return;
+    const stored = getOverlaySettings() || { ...DEFAULT_OVERLAY_SETTINGS };
+    currentLang = (stored.uiLang === 'ru' || stored.uiLang === 'en') ? stored.uiLang : currentLang;
     ensureStyle();
 
     overlayEl = document.createElement('div');
@@ -1962,6 +2016,10 @@ function createOverlay() {
             </div>
 
             <div id="overlay-status" class="overlay-status">${getText('loadingDB')}</div>
+            <div class="jf-log-actions">
+                <button type="button" id="jf-copy-logs" class="jf-log-btn" title="${getText('copyLogs')}">📋 ${getText('copyLogs')}</button>
+                <button type="button" id="jf-download-logs" class="jf-log-btn" title="${getText('downloadLogs')}">💾 ${getText('downloadLogs')}</button>
+            </div>
         </div>
     `;
     document.body.appendChild(overlayEl);
@@ -2058,8 +2116,9 @@ function createOverlay() {
         langBtn.addEventListener('click', () => {
             currentLang = currentLang === 'ru' ? 'en' : 'ru';
             updateAllText();
-            if(isDatabaseLoaded) updateStatus('dbLoaded', 'success');
+            if (isDatabaseLoaded) updateStatus('dbLoaded', 'success');
             log('Language switched to:', currentLang);
+            if (typeof persistOverlaySettings === 'function') persistOverlaySettings();
         });
     }
 
@@ -2212,7 +2271,6 @@ function createOverlay() {
     const tiltStrengthRange = overlayEl.querySelector('#jf-tilt-strength');
     const tiltStrengthValueEl = overlayEl.querySelector('#jf-tilt-strength-value');
 
-    const stored = getOverlaySettings() || { ...DEFAULT_OVERLAY_SETTINGS };
     if (reduceGlassCb) {
         reduceGlassCb.checked = stored.reduceGlass;
         overlayEl.classList.toggle('jf-reduce-glass', stored.reduceGlass);
@@ -2274,6 +2332,7 @@ function createOverlay() {
             fontSize: fontSelect && fontSelect.value ? fontSelect.value : 'medium',
             debugMode: debugCb ? debugCb.checked : false,
             rememberPosition: rememberPosCb ? rememberPosCb.checked : false,
+            uiLang: currentLang,
             overlayLeft: null,
             overlayTop: null
         };
@@ -2348,6 +2407,33 @@ function createOverlay() {
     if (rememberPosCb) {
         rememberPosCb.addEventListener('change', () => {
             persistOverlaySettings();
+        });
+    }
+    const copyLogsBtn = overlayEl.querySelector('#jf-copy-logs');
+    const downloadLogsBtn = overlayEl.querySelector('#jf-download-logs');
+    if (copyLogsBtn) {
+        copyLogsBtn.addEventListener('click', () => {
+            const text = getLogsAsText();
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => updateStatus('copySuccess', 'success')).catch(() => updateStatus('copySuccess', 'success'));
+                } else {
+                    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+                    updateStatus('copySuccess', 'success');
+                }
+            } catch (e) { logWarn('Copy logs failed', e); }
+        });
+    }
+    if (downloadLogsBtn) {
+        downloadLogsBtn.addEventListener('click', () => {
+            const text = getLogsAsText();
+            try {
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'jbg-finder-logs-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.txt'; a.click();
+                URL.revokeObjectURL(url);
+                updateStatus('copySuccess', 'success');
+            } catch (e) { logWarn('Download logs failed', e); }
         });
     }
 
