@@ -74,7 +74,11 @@ const LANG = {
         daysAgo: 'дн. назад',
         settings: 'Настройки',
         reduceGlass: 'Уменьшить эффект стекла (эконом. режим)',
-        disable3d: 'Отключить 3D-наклон окна'
+        disable3d: 'Отключить 3D-наклон окна',
+        tiltStrength: 'Сила 3D-наклона',
+        tiltLow: 'Слабо',
+        tiltMedium: 'Средне',
+        tiltStrong: 'Сильно'
     },
     en: {
         title: 'JBG-Finder PREALPHA',
@@ -108,7 +112,11 @@ const LANG = {
         daysAgo: 'days ago',
         settings: 'Settings',
         reduceGlass: 'Reduce glass effects (low power)',
-        disable3d: 'Disable 3D tilt effects'
+        disable3d: 'Disable 3D tilt effects',
+        tiltStrength: '3D tilt strength',
+        tiltLow: 'Low',
+        tiltMedium: 'Medium',
+        tiltStrong: 'Strong'
     }
 };
 
@@ -294,7 +302,7 @@ function resetCenterButtonsHeight() {
     });
 }
 
-/** Адаптация высоты центральных кнопок только когда обе колонки высокие; не уменьшаем ниже 44px, чтобы текст не обрезался. */
+/** Адаптация высоты центральных кнопок только когда обе колонки высокие; не ниже 46px, чтобы текст не обрезался. */
 function adaptCenterButtonsHeight() {
     if (!overlayEl) return;
     try {
@@ -305,7 +313,7 @@ function adaptCenterButtonsHeight() {
             if (leftH < 80 || rightH < 80) return;
             const base = Math.floor(Math.min(leftH, rightH));
             const gapTotal = 12;
-            const btnH = Math.max(44, Math.floor((base - gapTotal) / 3));
+            const btnH = Math.max(46, Math.floor((base - gapTotal) / 3));
             [dom.detectBtn, dom.searchBtn, dom.deleteBtn].forEach(btn => {
                 if (!btn) return;
                 btn.style.height = btnH + 'px';
@@ -370,8 +378,11 @@ function ensureStyle() {
             will-change: transform;
         }
 
-        /* Контент выше декоративного слоя .jf-glass (z-index: 0) */
-        #${OVERLAY_ID} .overlay-header,
+        /* Слои: стекло (0), контент (1), заголовок (2) — чтобы выпадающие настройки были поверх контента */
+        #${OVERLAY_ID} .overlay-header {
+            position: relative;
+            z-index: 2;
+        }
         #${OVERLAY_ID} .overlay-content {
             position: relative;
             z-index: 1;
@@ -421,6 +432,45 @@ function ensureStyle() {
         #${OVERLAY_ID}.jf-reduce-glass .overlay-content {
             background: #252525;
         }
+        #${OVERLAY_ID}.jf-reduce-glass .db-info {
+            background: #2b2b2b;
+            border-color: #3b3b3b;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .game-indicator {
+            background: #2f2f2f;
+            border-color: #3b3b3b;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .qa-column {
+            background: #2b2b2b;
+            border-color: #3b3b3b;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .center-btn {
+            background: #323232;
+            border-color: #3b3b3b;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .qa-copy-btn {
+            background: #323232;
+            border-color: #3b3b3b;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .detect-btn {
+            background: #2f7ed8;
+            border-color: #2f7ed8;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .search-btn {
+            background: #2f9b5f;
+            border-color: #2f9b5f;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .delete-btn {
+            background: #444444;
+            border-color: #444444;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .overlay-btn:hover {
+            background: #3b3b3b;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .overlay-status {
+            background: #292929;
+            border-top-color: #3b3b3b;
+        }
         @media (prefers-reduced-motion: reduce) {
             #${OVERLAY_ID},
             #${OVERLAY_ID} * {
@@ -464,8 +514,8 @@ function ensureStyle() {
             gap: 6px;
             padding: 2px 6px;
             border-radius: 4px;
-            background: #2b2b2b;
-            border: 1px solid #3b3b3b;
+            background: rgba(35,35,40,0.75);
+            border: 1px solid rgba(255,255,255,0.06);
             font-size: 10px;
             color: #a0a0a0;
         }
@@ -499,8 +549,9 @@ function ensureStyle() {
         }
 
         #${OVERLAY_ID} .overlay-btn {
-            width: 30px;
-            height: 22px;
+            min-width: 30px;
+            min-height: 28px;
+            padding: 0 2px;
             border: none;
             background: transparent;
             color: #c0c0c0;
@@ -509,10 +560,11 @@ function ensureStyle() {
             display: flex;
             align-items: center;
             justify-content: center;
+            box-sizing: border-box;
         }
 
         #${OVERLAY_ID} .overlay-btn:hover {
-            background: #3b3b3b;
+            background: rgba(59,59,59,0.9);
             color: #ffffff;
         }
 
@@ -531,7 +583,7 @@ function ensureStyle() {
             flex-direction: column;
         }
 
-        /* Верхняя строка с игрой */
+        /* Верхняя строка с игрой — полупрозрачная над стеклом */
         #${OVERLAY_ID} .game-indicator {
             display: flex;
             justify-content: space-between;
@@ -539,8 +591,8 @@ function ensureStyle() {
             padding: 6px 10px;
             margin-bottom: 10px;
             border-radius: 4px;
-            background: #2f2f2f;
-            border: 1px solid #3b3b3b;
+            background: rgba(40,40,46,0.78);
+            border: 1px solid rgba(255,255,255,0.06);
         }
 
         #${OVERLAY_ID} .game-indicator-main {
@@ -632,8 +684,8 @@ function ensureStyle() {
             display: flex;
             flex-direction: column;
             min-height: 0;
-            background: #2b2b2b;
-            border: 1px solid #3b3b3b;
+            background: rgba(38,38,44,0.75);
+            border: 1px solid rgba(255,255,255,0.06);
             border-radius: 4px;
             padding: 6px;
         }
@@ -716,17 +768,19 @@ function ensureStyle() {
         }
 
         #${OVERLAY_ID} .qa-copy-btn {
-            width: 20px;
-            height: 20px;
-            border-radius: 2px;
-            border: 1px solid #3b3b3b;
-            background: #323232;
+            min-width: 24px;
+            min-height: 24px;
+            padding: 2px;
+            border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(42,42,48,0.85);
             color: #f0f0f0;
             font-size: 11px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-sizing: border-box;
         }
 
         #${OVERLAY_ID} .qa-copy-btn:disabled {
@@ -747,14 +801,14 @@ function ensureStyle() {
 
         #${OVERLAY_ID} .center-btn {
             width: 100%;
-            min-height: 44px;
-            padding: 8px 10px;
-            border-radius: 3px;
-            border: 1px solid #3b3b3b;
-            background: #323232;
+            min-height: 46px;
+            padding: 10px 12px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(42,42,48,0.82);
             color: #f0f0f0;
             font-size: 12px;
-            line-height: 1.3;
+            line-height: 1.35;
             cursor: pointer;
             box-sizing: border-box;
             display: flex;
@@ -776,32 +830,41 @@ function ensureStyle() {
         }
 
         #${OVERLAY_ID} .detect-btn {
-            background: #2f7ed8;
-            border-color: #2f7ed8;
+            background: rgba(47,126,216,0.92);
+            border-color: rgba(47,126,216,0.9);
         }
 
         #${OVERLAY_ID} .detect-btn:hover:not(:disabled) {
-            background: #2b6bad;
-            border-color: #2b6bad;
+            background: rgba(43,107,173,0.95);
+            border-color: rgba(43,107,173,0.95);
         }
 
         #${OVERLAY_ID} .search-btn {
-            background: #2f9b5f;
-            border-color: #2f9b5f;
+            background: rgba(47,155,95,0.92);
+            border-color: rgba(47,155,95,0.9);
+        }
+
+        #${OVERLAY_ID} .search-btn:hover:not(:disabled) {
+            background: rgba(42,140,85,0.95);
+            border-color: rgba(42,140,85,0.95);
         }
 
         #${OVERLAY_ID} .delete-btn {
-            background: #444444;
-            border-color: #444444;
+            background: rgba(68,68,68,0.9);
+            border-color: rgba(68,68,68,0.9);
         }
 
-        /* Строка статуса */
+        #${OVERLAY_ID} .delete-btn:hover:not(:disabled) {
+            background: rgba(72,72,72,0.95);
+        }
+
+        /* Строка статуса — полупрозрачная над стеклом */
         #${OVERLAY_ID} .overlay-status {
             font-size: 11px;
             color: #c0c0c0;
             padding: 6px 10px 8px 10px;
-            border-top: 1px solid #3b3b3b;
-            background: #292929;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            background: rgba(32,32,36,0.82);
             font-family: "Consolas", "JetBrains Mono", monospace;
         }
 
@@ -873,16 +936,23 @@ function ensureStyle() {
             right: 0;
             margin-top: 4px;
             padding: 10px 12px;
-            min-width: 220px;
-            background: #2b2b2b;
-            border: 1px solid #3b3b3b;
+            min-width: 240px;
+            background: rgba(38,38,42,0.97);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 6px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-            z-index: 10000;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+            z-index: 999999;
             display: none;
         }
         #${OVERLAY_ID} .jf-settings-dropdown.jf-open {
             display: block;
+            animation: jf-dropdown-in 0.15s ease-out;
+        }
+        @keyframes jf-dropdown-in {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         #${OVERLAY_ID} .jf-settings-label {
             display: flex;
@@ -898,6 +968,29 @@ function ensureStyle() {
         }
         #${OVERLAY_ID} .jf-settings-label input {
             flex-shrink: 0;
+        }
+        #${OVERLAY_ID} .jf-settings-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        #${OVERLAY_ID} .jf-settings-label-text {
+            font-size: 11px;
+            color: #b0b0b0;
+            white-space: nowrap;
+        }
+        #${OVERLAY_ID} .jf-tilt-value {
+            font-size: 11px;
+            color: #909090;
+            min-width: 2.5em;
+        }
+        #${OVERLAY_ID} #jf-tilt-strength {
+            flex: 1;
+            min-width: 60px;
+            accent-color: #4a9eff;
         }
 
         @media (max-width: 540px) {
@@ -979,6 +1072,7 @@ function attach3dEffects() {
 
     const reducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const no3d = () => overlayEl.getAttribute('data-jf-no-3d') === 'true' || reducedMotion;
+    const getTiltStrength = () => Math.max(0.25, Math.min(1.5, parseFloat(overlayEl.getAttribute('data-jf-tilt-strength')) || 1));
 
     function updateRect() {
         if (!overlayEl) return;
@@ -1023,9 +1117,10 @@ function attach3dEffects() {
         const cy = overlayRect.top + overlayRect.height / 2;
         const dx = (clientX - cx) / (overlayRect.width * 0.5 || 1);
         const dy = (clientY - cy) / (overlayRect.height * 0.5 || 1);
-        /* Наклон в противоположную от курсора сторону: курсор слева -> окно наклоняется влево (левая грань назад) */
-        targetRy = clamp(dx * MAX_ROT_Y * 2, -MAX_ROT_Y * 2, MAX_ROT_Y * 2);
-        targetRx = clamp(-dy * MAX_ROT_X * 2, -MAX_ROT_X * 2, MAX_ROT_X * 2);
+        const k = getTiltStrength();
+        const maxRy = MAX_ROT_Y * 2 * k, maxRx = MAX_ROT_X * 2 * k;
+        targetRy = clamp(dx * maxRy, -maxRy, maxRy);
+        targetRx = clamp(-dy * maxRx, -maxRx, maxRx);
         targetScale = HOVER_SCALE;
     }
 
@@ -1044,8 +1139,10 @@ function attach3dEffects() {
 
     function onDragMove(dxFrame, dyFrame) {
         if (no3d()) return;
-        targetRy = clamp(targetRy + (dxFrame * 0.06), -MAX_ROT_Y * 1.8, MAX_ROT_Y * 1.8);
-        targetRx = clamp(targetRx + (-dyFrame * 0.06), -MAX_ROT_X * 1.8, MAX_ROT_X * 1.8);
+        const k = getTiltStrength();
+        const limRy = MAX_ROT_Y * 1.8 * k, limRx = MAX_ROT_X * 1.8 * k;
+        targetRy = clamp(targetRy + (dxFrame * 0.06 * k), -limRy, limRy);
+        targetRx = clamp(targetRx + (-dyFrame * 0.06 * k), -limRx, limRx);
     }
 
     function onDragEnd() {
@@ -1075,8 +1172,10 @@ function attach3dEffects() {
             const cy = overlayRect.top + overlayRect.height / 2;
             const dx = (tx - cx) / (overlayRect.width * 0.5 || 1);
             const dy = (ty - cy) / (overlayRect.height * 0.5 || 1);
-            targetRy = clamp(dx * MAX_ROT_Y * 2, -MAX_ROT_Y * 2, MAX_ROT_Y * 2);
-            targetRx = clamp(-dy * MAX_ROT_X * 2, -MAX_ROT_X * 2, MAX_ROT_X * 2);
+            const k = getTiltStrength();
+            const maxRy = MAX_ROT_Y * 2 * k, maxRx = MAX_ROT_X * 2 * k;
+            targetRy = clamp(dx * maxRy, -maxRy, maxRy);
+            targetRx = clamp(-dy * maxRx, -maxRx, maxRx);
             targetScale = HOVER_SCALE;
         }
     }
@@ -1601,6 +1700,11 @@ function createOverlay() {
                     <div class="jf-settings-dropdown" id="jf-settings-panel">
                         <label class="jf-settings-label"><input type="checkbox" id="jf-reduce-glass"> ${getText('reduceGlass')}</label>
                         <label class="jf-settings-label"><input type="checkbox" id="jf-disable-3d"> ${getText('disable3d')}</label>
+                        <div class="jf-settings-row">
+                            <span class="jf-settings-label-text">${getText('tiltStrength')}</span>
+                            <input type="range" id="jf-tilt-strength" min="25" max="150" value="100" step="25" title="${getText('tiltStrength')}">
+                            <span id="jf-tilt-strength-value" class="jf-tilt-value">100%</span>
+                        </div>
                     </div>
                 </div>
                 <button id="lang-flag-btn" class="overlay-btn flag-btn" title="Toggle language">🌐</button>
@@ -1903,6 +2007,17 @@ function createOverlay() {
     const settingsPanel = overlayEl.querySelector('#jf-settings-panel');
     const reduceGlassCb = overlayEl.querySelector('#jf-reduce-glass');
     const disable3dCb = overlayEl.querySelector('#jf-disable-3d');
+    const tiltStrengthRange = overlayEl.querySelector('#jf-tilt-strength');
+    const tiltStrengthValueEl = overlayEl.querySelector('#jf-tilt-strength-value');
+    if (tiltStrengthRange && tiltStrengthValueEl) {
+        function updateTiltStrengthLabel() {
+            const v = tiltStrengthRange.value;
+            tiltStrengthValueEl.textContent = v + '%';
+            overlayEl.setAttribute('data-jf-tilt-strength', String(Number(v) / 100));
+        }
+        tiltStrengthRange.addEventListener('input', updateTiltStrengthLabel);
+        updateTiltStrengthLabel();
+    }
     if (settingsBtn && settingsPanel) {
         settingsBtn.addEventListener('click', (e) => {
             e.stopPropagation();
