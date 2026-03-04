@@ -345,7 +345,7 @@ function ensureStyle() {
             padding: 0;
         }
 
-        /* Основное окно: минимальный размер, при длинном контенте — скролл внутри */
+        /* Основное окно: фон прозрачный, чтобы слой .jf-glass давал эффект матового стекла поверх страницы */
         /* Точка интеграции: will-change для GPU-ускорения 3D-трансформаций */
         #${OVERLAY_ID} {
             position: fixed;
@@ -356,8 +356,8 @@ function ensureStyle() {
             max-height: 90vh;
             height: 338px;
             max-width: 98vw;
-            background: #2b2b2b;
-            border: 1px solid #3b3b3b;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.08);
             border-radius: 6px;
             box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
             z-index: 999999;
@@ -377,18 +377,18 @@ function ensureStyle() {
             z-index: 1;
         }
 
-        /* Декоративный слой «матового стекла» — первый дочерний, не перехватывает клики */
+        /* Декоративный слой «матового стекла» — размытие страницы + тёмный полупрозрачный оверлей */
         #${OVERLAY_ID} .jf-glass {
             position: absolute;
             inset: 0;
             border-radius: 6px;
             pointer-events: none;
             z-index: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.05) 100%);
-            border: 1px solid rgba(255,255,255,0.06);
-            box-shadow: inset 0 1px 2px rgba(255,255,255,0.04);
-            backdrop-filter: blur(8px) saturate(110%);
-            -webkit-backdrop-filter: blur(8px) saturate(110%);
+            background: linear-gradient(160deg, rgba(18,18,22,0.72) 0%, rgba(28,28,34,0.68) 40%, rgba(22,22,28,0.75) 100%);
+            border: 1px solid rgba(255,255,255,0.07);
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px) saturate(120%);
+            -webkit-backdrop-filter: blur(10px) saturate(120%);
         }
         #${OVERLAY_ID} .jf-glass::before {
             content: '';
@@ -398,20 +398,28 @@ function ensureStyle() {
             right: 0;
             bottom: 0;
             border-radius: 6px;
-            background: radial-gradient(ellipse 80% 50% at 20% 20%, rgba(255,255,255,0.12) 0%, transparent 55%);
+            background: radial-gradient(ellipse 80% 50% at 20% 20%, rgba(255,255,255,0.08) 0%, transparent 55%);
             mix-blend-mode: overlay;
             pointer-events: none;
         }
         @supports not (backdrop-filter: blur(1px)) and not (-webkit-backdrop-filter: blur(1px)) {
             #${OVERLAY_ID} .jf-glass {
-                background: linear-gradient(135deg, rgba(40,40,45,0.95) 0%, rgba(30,30,35,0.92) 100%);
+                background: linear-gradient(160deg, rgba(32,32,38,0.96) 0%, rgba(38,38,44,0.94) 100%);
                 border: 1px solid rgba(255,255,255,0.08);
             }
         }
+        /* Режим «уменьшить эффект стекла»: без размытия, плотный фон; заголовок и контент непрозрачные */
         #${OVERLAY_ID}.jf-reduce-glass .jf-glass {
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-            background: linear-gradient(135deg, rgba(38,38,42,0.98) 0%, rgba(28,28,32,0.96) 100%);
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            background: linear-gradient(180deg, #2a2a30 0%, #242428 100%) !important;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .overlay-header {
+            background: #323232;
+        }
+        #${OVERLAY_ID}.jf-reduce-glass .overlay-content {
+            background: #252525;
         }
         @media (prefers-reduced-motion: reduce) {
             #${OVERLAY_ID},
@@ -422,15 +430,15 @@ function ensureStyle() {
             }
         }
 
-        /* Заголовок в стиле Windows 10 */
+        /* Заголовок: полупрозрачный, чтобы просвечивал слой матового стекла */
         #${OVERLAY_ID} .overlay-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             height: 30px;
             padding: 0 8px;
-            background: #323232;
-            border-bottom: 1px solid #3f3f3f;
+            background: rgba(50,50,50,0.88);
+            border-bottom: 1px solid rgba(63,63,63,0.8);
             cursor: move;
         }
 
@@ -515,7 +523,7 @@ function ensureStyle() {
 
         #${OVERLAY_ID} .overlay-content {
             padding: 14px 16px 10px 16px;
-            background: #252525;
+            background: rgba(28,28,32,0.85);
             flex: 1;
             min-height: 0;
             overflow-y: auto;
@@ -853,25 +861,27 @@ function ensureStyle() {
             white-space: pre-wrap;
         }
 
-        /* Панель настроек (стекло / 3D) */
-        #${OVERLAY_ID} .jf-settings-toggle {
-            font-size: 11px;
-            color: #909090;
-            cursor: pointer;
-            padding: 4px 10px 6px;
-            border-top: 1px solid #2a2a2a;
-            margin-top: 2px;
+        /* Настройки в заголовке: обёртка + выпадающая панель */
+        #${OVERLAY_ID} .jf-settings-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
         }
-        #${OVERLAY_ID} .jf-settings-toggle:hover {
-            color: #c0c0c0;
-        }
-        #${OVERLAY_ID} .jf-settings-panel {
-            padding: 8px 10px 10px;
-            border-top: 1px solid #2a2a2a;
-            background: #252525;
+        #${OVERLAY_ID} .jf-settings-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            padding: 10px 12px;
+            min-width: 220px;
+            background: #2b2b2b;
+            border: 1px solid #3b3b3b;
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            z-index: 10000;
             display: none;
         }
-        #${OVERLAY_ID} .jf-settings-panel.jf-open {
+        #${OVERLAY_ID} .jf-settings-dropdown.jf-open {
             display: block;
         }
         #${OVERLAY_ID} .jf-settings-label {
@@ -881,7 +891,7 @@ function ensureStyle() {
             font-size: 11px;
             color: #b0b0b0;
             cursor: pointer;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         #${OVERLAY_ID} .jf-settings-label:last-child {
             margin-bottom: 0;
@@ -1013,8 +1023,9 @@ function attach3dEffects() {
         const cy = overlayRect.top + overlayRect.height / 2;
         const dx = (clientX - cx) / (overlayRect.width * 0.5 || 1);
         const dy = (clientY - cy) / (overlayRect.height * 0.5 || 1);
-        targetRy = clamp(-dx * MAX_ROT_Y * 2, -MAX_ROT_Y * 2, MAX_ROT_Y * 2);
-        targetRx = clamp(dy * MAX_ROT_X * 2, -MAX_ROT_X * 2, MAX_ROT_X * 2);
+        /* Наклон в противоположную от курсора сторону: курсор слева -> окно наклоняется влево (левая грань назад) */
+        targetRy = clamp(dx * MAX_ROT_Y * 2, -MAX_ROT_Y * 2, MAX_ROT_Y * 2);
+        targetRx = clamp(-dy * MAX_ROT_X * 2, -MAX_ROT_X * 2, MAX_ROT_X * 2);
         targetScale = HOVER_SCALE;
     }
 
@@ -1033,8 +1044,8 @@ function attach3dEffects() {
 
     function onDragMove(dxFrame, dyFrame) {
         if (no3d()) return;
-        targetRy = clamp(targetRy + (-dxFrame * 0.06), -MAX_ROT_Y * 1.8, MAX_ROT_Y * 1.8);
-        targetRx = clamp(targetRx + (dyFrame * 0.06), -MAX_ROT_X * 1.8, MAX_ROT_X * 1.8);
+        targetRy = clamp(targetRy + (dxFrame * 0.06), -MAX_ROT_Y * 1.8, MAX_ROT_Y * 1.8);
+        targetRx = clamp(targetRx + (-dyFrame * 0.06), -MAX_ROT_X * 1.8, MAX_ROT_X * 1.8);
     }
 
     function onDragEnd() {
@@ -1064,8 +1075,8 @@ function attach3dEffects() {
             const cy = overlayRect.top + overlayRect.height / 2;
             const dx = (tx - cx) / (overlayRect.width * 0.5 || 1);
             const dy = (ty - cy) / (overlayRect.height * 0.5 || 1);
-            targetRy = clamp(-dx * MAX_ROT_Y * 2, -MAX_ROT_Y * 2, MAX_ROT_Y * 2);
-            targetRx = clamp(dy * MAX_ROT_X * 2, -MAX_ROT_X * 2, MAX_ROT_X * 2);
+            targetRy = clamp(dx * MAX_ROT_Y * 2, -MAX_ROT_Y * 2, MAX_ROT_Y * 2);
+            targetRx = clamp(-dy * MAX_ROT_X * 2, -MAX_ROT_X * 2, MAX_ROT_X * 2);
             targetScale = HOVER_SCALE;
         }
     }
@@ -1585,6 +1596,13 @@ function createOverlay() {
                 </div>
             </div>
             <div class="overlay-controls">
+                <div class="jf-settings-wrap">
+                    <button id="jf-settings-btn" class="overlay-btn" title="${getText('settings')}">⚙</button>
+                    <div class="jf-settings-dropdown" id="jf-settings-panel">
+                        <label class="jf-settings-label"><input type="checkbox" id="jf-reduce-glass"> ${getText('reduceGlass')}</label>
+                        <label class="jf-settings-label"><input type="checkbox" id="jf-disable-3d"> ${getText('disable3d')}</label>
+                    </div>
+                </div>
                 <button id="lang-flag-btn" class="overlay-btn flag-btn" title="Toggle language">🌐</button>
                 <button id="minimize-btn" class="overlay-btn" title="${getText('minimize')}">-</button>
                 <button id="close-btn" class="overlay-btn" title="${getText('close')}">×</button>
@@ -1644,11 +1662,6 @@ function createOverlay() {
             </div>
 
             <div id="overlay-status" class="overlay-status">${getText('loadingDB')}</div>
-            <div id="jf-settings-toggle" class="jf-settings-toggle">⚙ ${getText('settings')}</div>
-            <div class="jf-settings-panel" id="jf-settings-panel">
-                <label class="jf-settings-label"><input type="checkbox" id="jf-reduce-glass"> ${getText('reduceGlass')}</label>
-                <label class="jf-settings-label"><input type="checkbox" id="jf-disable-3d"> ${getText('disable3d')}</label>
-            </div>
         </div>
     `;
     document.body.appendChild(overlayEl);
@@ -1885,13 +1898,21 @@ function createOverlay() {
     };
     window.addEventListener('resize', windowResizeHandler);
 
-    // Настройки: уменьшение эффекта стекла и отключение 3D-наклона
-    const settingsToggle = overlayEl.querySelector('#jf-settings-toggle');
+    // Настройки в заголовке: кнопка ⚙ открывает выпадающую панель; закрытие по клику вне
+    const settingsBtn = overlayEl.querySelector('#jf-settings-btn');
     const settingsPanel = overlayEl.querySelector('#jf-settings-panel');
     const reduceGlassCb = overlayEl.querySelector('#jf-reduce-glass');
     const disable3dCb = overlayEl.querySelector('#jf-disable-3d');
-    if (settingsToggle && settingsPanel) {
-        settingsToggle.addEventListener('click', () => settingsPanel.classList.toggle('jf-open'));
+    if (settingsBtn && settingsPanel) {
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsPanel.classList.toggle('jf-open');
+        });
+        document.addEventListener('click', function closeSettingsPanel(e) {
+            if (settingsPanel.classList.contains('jf-open') && !settingsPanel.contains(e.target) && e.target !== settingsBtn) {
+                settingsPanel.classList.remove('jf-open');
+            }
+        });
     }
     if (reduceGlassCb) {
         reduceGlassCb.addEventListener('change', () => {
