@@ -1015,7 +1015,8 @@ function updateIndicator(result) {
     if (dom.watermark) dom.watermark.textContent = (config.name || '').toUpperCase();
     if (dom.indicatorCount && result.foundIndicators) dom.indicatorCount.textContent = `${result.foundIndicators.length} ${getText('indicators')}`;
 
-    if (!currentQuestion && config.name) currentContentLang = detectLangFromText(config.name);
+    // До извлечения вопроса держим язык UI, чтобы не подменять EN на RU из двуязычного имени игры.
+    if (!currentQuestion) currentContentLang = currentLang || CONFIG.defaultLang;
     updateGameAssets();
 }
 
@@ -1033,8 +1034,8 @@ function displayQuestion(q) {
         dom.searchBtn.disabled = true;
         if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = true;
         setQuestionLoading(false);
-        if (currentGame && gameDatabase?.gameConfig?.[currentGame]?.name) {
-            currentContentLang = detectLangFromText(gameDatabase.gameConfig[currentGame].name);
+        if (currentGame) {
+            currentContentLang = currentLang || CONFIG.defaultLang;
             updateGameAssets();
         }
         return;
@@ -1069,8 +1070,10 @@ function detectGame() {
 
         if (result && result.gameId) {
             const gameName = gameDatabase.gameConfig?.[result.gameId]?.name || getText('notDetected');
-            dom.status.textContent = getText('gameDetected') + gameName;
-            dom.status.style.color = '#4ecdc4';
+            if (dom.status) {
+                dom.status.textContent = getText('gameDetected') + gameName;
+                dom.status.style.color = '#4ecdc4';
+            }
 
             setTimeout(() => {
                 try {
