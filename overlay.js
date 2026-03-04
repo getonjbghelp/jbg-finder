@@ -229,9 +229,10 @@ function updateIconSize() {
 
 function setPopupContent(text, lang) {
     if (!popupEl) return;
-    const subtitle = (lang === 'ru') ? 'Почему?' : 'Why?';
-    popupEl.querySelector('.jf-popup-subtitle').textContent = subtitle;
-    popupEl.querySelector('.jf-popup-body').textContent = text || '';
+    const sub = popupEl.querySelector('.jf-popup-subtitle');
+    const body = popupEl.querySelector('.jf-popup-body');
+    if (sub) sub.textContent = (lang === 'ru') ? 'Почему?' : 'Why?';
+    if (body) body.textContent = text || '';
 }
 
 function showPopupAt(targetEl) {
@@ -1255,7 +1256,7 @@ function attachIconHoverHandlers() {
         // показываем попап (если есть текст)
         if (!popupEl) createPopup();
         // определяем язык для заголовка
-        setPopupContent(popupEl ? popupEl.querySelector('.jf-popup-body').textContent : '', currentContentLang);
+        setPopupContent(popupEl?.querySelector('.jf-popup-body')?.textContent ?? '', currentContentLang);
         // если нет контента — всё равно покажем "Почему?" и пустое тело
         showPopupAt(dom.gameIcon);
     });
