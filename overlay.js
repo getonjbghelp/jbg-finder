@@ -3,11 +3,18 @@ const OVERLAY_ID = 'game-finder-overlay';
 const STYLE_ID = 'game-finder-overlay-style';
 const OVERLAY_SETTINGS_KEY = 'jbg-finder-overlay-settings';
 
-/** Настройки по умолчанию: 3D-наклоны выключены, силу можно включить в настройках (снять галочку «Отключить 3D»). */
+/** Настройки по умолчанию: 3D выключен, можно включить в настройках. */
 const DEFAULT_OVERLAY_SETTINGS = {
     reduceGlass: false,
     disable3d: true,
-    tiltStrength: 25
+    tiltStrength: 25,
+    blurStrength: 'medium',
+    tiltSpeed: 'normal',
+    fontSize: 'medium',
+    debugMode: false,
+    rememberPosition: false,
+    overlayLeft: null,
+    overlayTop: null
 };
 
 function getOverlaySettings() {
@@ -15,10 +22,20 @@ function getOverlaySettings() {
         const raw = localStorage.getItem(OVERLAY_SETTINGS_KEY);
         if (!raw) return null;
         const o = JSON.parse(raw);
+        const blur = o.blurStrength === 'low' || o.blurStrength === 'high' ? o.blurStrength : 'medium';
+        const speed = o.tiltSpeed === 'slow' || o.tiltSpeed === 'fast' ? o.tiltSpeed : 'normal';
+        const font = o.fontSize === 'small' || o.fontSize === 'large' ? o.fontSize : 'medium';
         return {
             reduceGlass: !!o.reduceGlass,
             disable3d: o.disable3d !== false,
-            tiltStrength: Math.max(25, Math.min(150, parseInt(o.tiltStrength, 10) || 25))
+            tiltStrength: Math.max(25, Math.min(150, parseInt(o.tiltStrength, 10) || 25)),
+            blurStrength: blur,
+            tiltSpeed: speed,
+            fontSize: font,
+            debugMode: !!o.debugMode,
+            rememberPosition: !!o.rememberPosition,
+            overlayLeft: typeof o.overlayLeft === 'number' ? o.overlayLeft : null,
+            overlayTop: typeof o.overlayTop === 'number' ? o.overlayTop : null
         };
     } catch (e) {
         return null;
@@ -109,7 +126,21 @@ const LANG = {
         tiltStrength: 'Сила 3D-наклона',
         tiltLow: 'Слабо',
         tiltMedium: 'Средне',
-        tiltStrong: 'Сильно'
+        tiltStrong: 'Сильно',
+        blurStrength: 'Сила размытия стекла',
+        blurLow: 'Слабое',
+        blurMedium: 'Среднее',
+        blurHigh: 'Сильное',
+        tiltSpeed: 'Скорость анимации наклона',
+        speedSlow: 'Медленно',
+        speedNormal: 'Нормально',
+        speedFast: 'Быстро',
+        fontSize: 'Размер шрифта',
+        sizeSmall: 'Маленький',
+        sizeMedium: 'Средний',
+        sizeLarge: 'Крупный',
+        debugMode: 'Показывать метод поиска в ответе',
+        rememberPosition: 'Запоминать позицию окна'
     },
     en: {
         title: 'JBG-Finder PREALPHA',
@@ -147,7 +178,21 @@ const LANG = {
         tiltStrength: '3D tilt strength',
         tiltLow: 'Low',
         tiltMedium: 'Medium',
-        tiltStrong: 'Strong'
+        tiltStrong: 'Strong',
+        blurStrength: 'Glass blur strength',
+        blurLow: 'Low',
+        blurMedium: 'Medium',
+        blurHigh: 'High',
+        tiltSpeed: 'Tilt animation speed',
+        speedSlow: 'Slow',
+        speedNormal: 'Normal',
+        speedFast: 'Fast',
+        fontSize: 'Font size',
+        sizeSmall: 'Small',
+        sizeMedium: 'Medium',
+        sizeLarge: 'Large',
+        debugMode: 'Show search method in answer',
+        rememberPosition: 'Remember window position'
     }
 };
 
@@ -159,6 +204,8 @@ let overlayEl = null;
 let dbLoadAttempts = 0;
 let isDatabaseLoaded = false;
 let currentContentLang = CONFIG.defaultLang; // язык текущего вопроса (ru/en)
+/** Включён ли показ метода поиска в ответе (из настроек оверлея). */
+let overlayShowDebugMode = false;
 
 const dom = {};
 let popupEl = null;
@@ -984,7 +1031,7 @@ function ensureStyle() {
             right: 0;
             margin-top: 4px;
             padding: 10px 12px;
-            min-width: 240px;
+            min-width: 280px;
             background: rgba(38,38,42,0.97);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
@@ -1040,6 +1087,49 @@ function ensureStyle() {
             min-width: 60px;
             accent-color: #4a9eff;
         }
+        #${OVERLAY_ID} .jf-settings-section {
+            margin-bottom: 8px;
+        }
+        #${OVERLAY_ID} .jf-settings-section:last-child {
+            margin-bottom: 0;
+        }
+        #${OVERLAY_ID} .jf-settings-select {
+            flex: 1;
+            min-width: 0;
+            max-width: 120px;
+            padding: 4px 6px;
+            font-size: 11px;
+            color: #e0e0e0;
+            background: rgba(50,50,55,0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Сила размытия стекла (в режиме reduce-glass переопределяется) */
+        #${OVERLAY_ID}[data-jf-blur="low"] .jf-glass {
+            backdrop-filter: blur(6px) saturate(110%);
+            -webkit-backdrop-filter: blur(6px) saturate(110%);
+        }
+        #${OVERLAY_ID}[data-jf-blur="high"] .jf-glass {
+            backdrop-filter: blur(14px) saturate(130%);
+            -webkit-backdrop-filter: blur(14px) saturate(130%);
+        }
+
+        /* Размер шрифта оверлея */
+        #${OVERLAY_ID}.jf-font-small {
+            font-size: 12px;
+        }
+        #${OVERLAY_ID}.jf-font-small .overlay-title,
+        #${OVERLAY_ID}.jf-font-small .question-text,
+        #${OVERLAY_ID}.jf-font-small .answer-text { font-size: 12px; }
+        #${OVERLAY_ID}.jf-font-large {
+            font-size: 15px;
+        }
+        #${OVERLAY_ID}.jf-font-large .overlay-title { font-size: 14px; }
+        #${OVERLAY_ID}.jf-font-large .question-text,
+        #${OVERLAY_ID}.jf-font-large .answer-text { font-size: 14px; }
+        #${OVERLAY_ID}.jf-font-large .center-btn { font-size: 13px; }
 
         @media (max-width: 540px) {
             #${OVERLAY_ID} {
@@ -1121,6 +1211,7 @@ function attach3dEffects() {
     const reducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const no3d = () => overlayEl.getAttribute('data-jf-no-3d') === 'true' || reducedMotion;
     const getTiltStrength = () => Math.max(0.25, Math.min(1.5, parseFloat(overlayEl.getAttribute('data-jf-tilt-strength')) || 1));
+    const getLERP = () => Math.max(0.05, Math.min(0.3, parseFloat(overlayEl.getAttribute('data-jf-lerp')) || 0.14));
 
     function updateRect() {
         if (!overlayEl) return;
@@ -1142,7 +1233,7 @@ function attach3dEffects() {
             rafId = requestAnimationFrame(tick);
             return;
         }
-        const t = LERP;
+        const t = getLERP();
         currentRx += (targetRx - currentRx) * t;
         currentRy += (targetRy - currentRy) * t;
         currentScale += (targetScale - currentScale) * t;
@@ -1578,7 +1669,7 @@ function searchAnswer() {
             if (dom.answerText) dom.answerText.textContent = result.answer;
             if (dom.answerBox) { dom.answerBox.classList.remove('not-found'); dom.answerBox.classList.add('found'); }
             const confStr = (result.confidence ?? 0) + '%';
-            if (dom.answerConfidence) dom.answerConfidence.textContent = CONFIG.debug && result.method ? confStr + ' [' + result.method + ']' : confStr;
+            if (dom.answerConfidence) dom.answerConfidence.textContent = (CONFIG.debug || overlayShowDebugMode) && result.method ? confStr + ' [' + result.method + ']' : confStr;
             if (dom.answerCopyBtn) dom.answerCopyBtn.disabled = false;
             if (dom.deleteBtn) dom.deleteBtn.disabled = false;
             if (dom.status) dom.status.textContent = getText('answerFound') + (result.confidence ?? 0) + '%)';
@@ -1661,9 +1752,36 @@ function updateAllText() {
             if(conf) dom.gameConfidence.innerHTML = `<span class="confidence-badge">${t.confidence} ${conf[0]}</span>`;
         }
 
+        updateSettingsPanelLabels();
         logDebug('UI Text updated for lang:', currentLang);
     } catch (e) {
         logError('updateAllText error', e);
+    }
+}
+
+function updateSettingsPanelLabels() {
+    if (!overlayEl) return;
+    overlayEl.querySelectorAll('[data-i18n]').forEach(function (el) {
+        const k = el.getAttribute('data-i18n');
+        if (k) el.textContent = getText(k);
+    });
+    const blurSelect = overlayEl.querySelector('#jf-blur-strength');
+    const speedSelect = overlayEl.querySelector('#jf-tilt-speed');
+    const fontSelect = overlayEl.querySelector('#jf-font-size');
+    if (blurSelect && blurSelect.options.length >= 3) {
+        blurSelect.options[0].textContent = getText('blurLow');
+        blurSelect.options[1].textContent = getText('blurMedium');
+        blurSelect.options[2].textContent = getText('blurHigh');
+    }
+    if (speedSelect && speedSelect.options.length >= 3) {
+        speedSelect.options[0].textContent = getText('speedSlow');
+        speedSelect.options[1].textContent = getText('speedNormal');
+        speedSelect.options[2].textContent = getText('speedFast');
+    }
+    if (fontSelect && fontSelect.options.length >= 3) {
+        fontSelect.options[0].textContent = getText('sizeSmall');
+        fontSelect.options[1].textContent = getText('sizeMedium');
+        fontSelect.options[2].textContent = getText('sizeLarge');
     }
 }
 
@@ -1746,12 +1864,42 @@ function createOverlay() {
                 <div class="jf-settings-wrap">
                     <button id="jf-settings-btn" class="overlay-btn" title="${getText('settings')}">⚙</button>
                     <div class="jf-settings-dropdown" id="jf-settings-panel">
-                        <label class="jf-settings-label"><input type="checkbox" id="jf-reduce-glass"> ${getText('reduceGlass')}</label>
-                        <label class="jf-settings-label"><input type="checkbox" id="jf-disable-3d" checked> ${getText('disable3d')}</label>
-                        <div class="jf-settings-row">
-                            <span class="jf-settings-label-text">${getText('tiltStrength')}</span>
-                            <input type="range" id="jf-tilt-strength" min="25" max="150" value="25" step="25" title="${getText('tiltStrength')}">
-                            <span id="jf-tilt-strength-value" class="jf-tilt-value">25%</span>
+                        <div class="jf-settings-section">
+                            <label class="jf-settings-label"><input type="checkbox" id="jf-reduce-glass"><span class="jf-settings-label-text" data-i18n="reduceGlass">${getText('reduceGlass')}</span></label>
+                            <label class="jf-settings-label"><input type="checkbox" id="jf-disable-3d" checked><span class="jf-settings-label-text" data-i18n="disable3d">${getText('disable3d')}</span></label>
+                            <div class="jf-settings-row">
+                                <span class="jf-settings-label-text" data-i18n="tiltStrength">${getText('tiltStrength')}</span>
+                                <input type="range" id="jf-tilt-strength" min="25" max="150" value="25" step="25" title="${getText('tiltStrength')}">
+                                <span id="jf-tilt-strength-value" class="jf-tilt-value">25%</span>
+                            </div>
+                            <div class="jf-settings-row">
+                                <span class="jf-settings-label-text" data-i18n="blurStrength">${getText('blurStrength')}</span>
+                                <select id="jf-blur-strength" class="jf-settings-select" title="${getText('blurStrength')}">
+                                    <option value="low">${getText('blurLow')}</option>
+                                    <option value="medium" selected>${getText('blurMedium')}</option>
+                                    <option value="high">${getText('blurHigh')}</option>
+                                </select>
+                            </div>
+                            <div class="jf-settings-row">
+                                <span class="jf-settings-label-text" data-i18n="tiltSpeed">${getText('tiltSpeed')}</span>
+                                <select id="jf-tilt-speed" class="jf-settings-select" title="${getText('tiltSpeed')}">
+                                    <option value="slow">${getText('speedSlow')}</option>
+                                    <option value="normal" selected>${getText('speedNormal')}</option>
+                                    <option value="fast">${getText('speedFast')}</option>
+                                </select>
+                            </div>
+                            <div class="jf-settings-row">
+                                <span class="jf-settings-label-text" data-i18n="fontSize">${getText('fontSize')}</span>
+                                <select id="jf-font-size" class="jf-settings-select" title="${getText('fontSize')}">
+                                    <option value="small">${getText('sizeSmall')}</option>
+                                    <option value="medium" selected>${getText('sizeMedium')}</option>
+                                    <option value="large">${getText('sizeLarge')}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="jf-settings-section">
+                            <label class="jf-settings-label"><input type="checkbox" id="jf-debug-mode"><span class="jf-settings-label-text" data-i18n="debugMode">${getText('debugMode')}</span></label>
+                            <label class="jf-settings-label"><input type="checkbox" id="jf-remember-position"><span class="jf-settings-label-text" data-i18n="rememberPosition">${getText('rememberPosition')}</span></label>
                         </div>
                     </div>
                 </div>
@@ -1935,6 +2083,10 @@ function createOverlay() {
                 window.removeEventListener('resize', windowResizeHandler);
                 windowResizeHandler = null;
             }
+            if (closeSettingsPanelHandler) {
+                document.removeEventListener('click', closeSettingsPanelHandler);
+                closeSettingsPanelHandler = null;
+            }
             hidePopup();
             if (popupEl && popupEl.parentNode) {
                 popupEl.parentNode.removeChild(popupEl);
@@ -2005,6 +2157,7 @@ function createOverlay() {
         window.removeEventListener('mouseup', endDrag);
         window.removeEventListener('touchmove', onTouchMove, { capture: true });
         window.removeEventListener('touchend', endDragTouch, { capture: true });
+        if (typeof persistOverlaySettings === 'function') persistOverlaySettings();
     }
 
     function endDragTouch(e) {
@@ -2051,6 +2204,7 @@ function createOverlay() {
     window.addEventListener('resize', windowResizeHandler);
 
     // Настройки в заголовке: загрузка сохранённых/дефолтных и сохранение при изменении
+    let closeSettingsPanelHandler = null;
     const settingsBtn = overlayEl.querySelector('#jf-settings-btn');
     const settingsPanel = overlayEl.querySelector('#jf-settings-panel');
     const reduceGlassCb = overlayEl.querySelector('#jf-reduce-glass');
@@ -2073,13 +2227,62 @@ function createOverlay() {
         tiltStrengthValueEl.textContent = stored.tiltStrength + '%';
         overlayEl.setAttribute('data-jf-tilt-strength', String(stored.tiltStrength / 100));
     }
+    const blurSelect = overlayEl.querySelector('#jf-blur-strength');
+    const speedSelect = overlayEl.querySelector('#jf-tilt-speed');
+    const fontSelect = overlayEl.querySelector('#jf-font-size');
+    const debugCb = overlayEl.querySelector('#jf-debug-mode');
+    const rememberPosCb = overlayEl.querySelector('#jf-remember-position');
+    if (blurSelect) {
+        blurSelect.value = stored.blurStrength;
+        overlayEl.setAttribute('data-jf-blur', stored.blurStrength);
+    }
+    if (speedSelect) {
+        speedSelect.value = stored.tiltSpeed;
+        const lerpMap = { slow: 0.08, normal: 0.14, fast: 0.22 };
+        overlayEl.setAttribute('data-jf-lerp', String(lerpMap[stored.tiltSpeed] || 0.14));
+    }
+    if (fontSelect) {
+        fontSelect.value = stored.fontSize;
+        overlayEl.classList.remove('jf-font-small', 'jf-font-medium', 'jf-font-large');
+        overlayEl.classList.add('jf-font-' + stored.fontSize);
+    }
+    if (debugCb) {
+        debugCb.checked = stored.debugMode;
+        overlayShowDebugMode = stored.debugMode;
+    }
+    if (rememberPosCb) rememberPosCb.checked = stored.rememberPosition;
+    if (stored.rememberPosition && stored.overlayLeft != null && stored.overlayTop != null) {
+        const rect = overlayEl.getBoundingClientRect();
+        const maxLeft = window.innerWidth - rect.width;
+        const maxTop = window.innerHeight - rect.height;
+        const left = Math.max(0, Math.min(maxLeft, stored.overlayLeft));
+        const top = Math.max(0, Math.min(maxTop, stored.overlayTop));
+        overlayEl.style.left = left + 'px';
+        overlayEl.style.top = top + 'px';
+        overlayEl.style.right = 'auto';
+        overlayEl.style.bottom = 'auto';
+    }
 
     function persistOverlaySettings() {
-        saveOverlaySettings({
+        const lerpMap = { slow: 0.08, normal: 0.14, fast: 0.22 };
+        const s = {
             reduceGlass: reduceGlassCb ? reduceGlassCb.checked : false,
             disable3d: disable3dCb ? disable3dCb.checked : true,
-            tiltStrength: tiltStrengthRange ? Math.max(25, Math.min(150, parseInt(tiltStrengthRange.value, 10) || 25)) : 25
-        });
+            tiltStrength: tiltStrengthRange ? Math.max(25, Math.min(150, parseInt(tiltStrengthRange.value, 10) || 25)) : 25,
+            blurStrength: blurSelect && blurSelect.value ? blurSelect.value : 'medium',
+            tiltSpeed: speedSelect && speedSelect.value ? speedSelect.value : 'normal',
+            fontSize: fontSelect && fontSelect.value ? fontSelect.value : 'medium',
+            debugMode: debugCb ? debugCb.checked : false,
+            rememberPosition: rememberPosCb ? rememberPosCb.checked : false,
+            overlayLeft: null,
+            overlayTop: null
+        };
+        if (rememberPosCb && rememberPosCb.checked && overlayEl) {
+            const r = overlayEl.getBoundingClientRect();
+            s.overlayLeft = Math.round(r.left);
+            s.overlayTop = Math.round(r.top);
+        }
+        saveOverlaySettings(s);
     }
 
     if (tiltStrengthRange && tiltStrengthValueEl) {
@@ -2096,11 +2299,12 @@ function createOverlay() {
             e.stopPropagation();
             settingsPanel.classList.toggle('jf-open');
         });
-        document.addEventListener('click', function closeSettingsPanel(e) {
+        closeSettingsPanelHandler = function (e) {
             if (settingsPanel.classList.contains('jf-open') && !settingsPanel.contains(e.target) && e.target !== settingsBtn) {
                 settingsPanel.classList.remove('jf-open');
             }
-        });
+        };
+        document.addEventListener('click', closeSettingsPanelHandler);
     }
     if (reduceGlassCb) {
         reduceGlassCb.addEventListener('change', () => {
@@ -2112,6 +2316,37 @@ function createOverlay() {
         disable3dCb.addEventListener('change', () => {
             if (disable3dCb.checked) overlayEl.setAttribute('data-jf-no-3d', 'true');
             else overlayEl.removeAttribute('data-jf-no-3d');
+            persistOverlaySettings();
+        });
+    }
+    if (blurSelect) {
+        blurSelect.addEventListener('change', () => {
+            overlayEl.setAttribute('data-jf-blur', blurSelect.value);
+            persistOverlaySettings();
+        });
+    }
+    if (speedSelect) {
+        speedSelect.addEventListener('change', () => {
+            const lerpMap = { slow: 0.08, normal: 0.14, fast: 0.22 };
+            overlayEl.setAttribute('data-jf-lerp', String(lerpMap[speedSelect.value] || 0.14));
+            persistOverlaySettings();
+        });
+    }
+    if (fontSelect) {
+        fontSelect.addEventListener('change', () => {
+            overlayEl.classList.remove('jf-font-small', 'jf-font-medium', 'jf-font-large');
+            overlayEl.classList.add('jf-font-' + fontSelect.value);
+            persistOverlaySettings();
+        });
+    }
+    if (debugCb) {
+        debugCb.addEventListener('change', () => {
+            overlayShowDebugMode = debugCb.checked;
+            persistOverlaySettings();
+        });
+    }
+    if (rememberPosCb) {
+        rememberPosCb.addEventListener('change', () => {
             persistOverlaySettings();
         });
     }
