@@ -1,7 +1,8 @@
 const GameDatabase = {
-    version: "DB3MARCHEXP",
-    lastUpdated: "2026-03-03",
-    buildDate: new Date("2026-03-03"),
+    version: "DB4MARCHEXP",
+    lastUpdated: "2026-03-04",
+    buildDate: new Date("2026-03-04"),
+
     
     gameConfig: {
         guesspy: {
@@ -169,10 +170,10 @@ const GameDatabase = {
                     en: 'VERY UNSTABLE. Shows the wrong answer 70+% of the time'
                 }
             },
-            // Логотипы игры под RU / EN (по желанию)
+            // Логотипы: ru = русский интерфейс, en = английский (по языку контента вопроса)
             logoUrls: {
-                ru: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/ydkj2018eng.png',
-                en: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/ydkj2018rus.png'
+                ru: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/ydkj2018rus.png',
+                en: 'https://getonjbghelp.github.io/jbg-finder/pngs/games/ydkj2018eng.png'
             },
             requiredIndicators: [
                 { selector: '.Lobby.scrollable', weight: 5, unique: true },
@@ -8488,7 +8489,14 @@ const GameDatabase = {
                element.offsetHeight > 0;
     },
 
-    /** Очистка сырого текста вопроса: префиксы, таймеры. Возвращает null если < 2 символов. */
+    /** Текст элемента как видит пользователь (сохраняет пробелы между блоками). */
+    getVisibleText: function(el) {
+        if (!el) return '';
+        if (typeof el.innerText === 'string') return el.innerText.trim();
+        return (el.textContent || '').trim();
+    },
+
+    /** Очистка сырого текста вопроса: префиксы, таймеры, склейки слов. Возвращает null если < 2 символов. */
     cleanQuestionText: function(str) {
         if (!str || typeof str !== 'string') return null;
         let text = str.trim();
@@ -8516,7 +8524,7 @@ const GameDatabase = {
                 const elements = document.querySelectorAll(selector);
                 for (const el of elements) {
                     if (!el || isInOverlay(el) || !this.isElementVisible(el)) continue;
-                    const raw = (el.textContent || '').trim();
+                    const raw = this.getVisibleText(el);
                     if (!raw || raw.length >= 500) continue;
                     const text = this.cleanQuestionText(raw);
                     if (text && text.length >= 2) return text;
@@ -8529,7 +8537,7 @@ const GameDatabase = {
         for (let i = 0; i < potentialQuestions.length && i < maxFallbackScan; i++) {
             const el = potentialQuestions[i];
             if (this.isElementVisible(el) && !isInOverlay(el)) {
-                const raw = (el.textContent || '').trim();
+                const raw = this.getVisibleText(el);
                 if (raw.length > 30 && raw.length < 500 &&
                     /\p{L}/u.test(raw) &&
                     (raw.includes('?') || raw.includes('_______') || raw.includes('...'))) {
@@ -8540,6 +8548,33 @@ const GameDatabase = {
         }
 
         return null;
+    },
+
+    /**
+     * Расстояние Левенштейна (инлайн-реализация, не требует внешней библиотеки).
+     * Нормализованное значение: 0 = идентично, 1 = полностью разные.
+     */
+    levenshteinDistance: function(a, b) {
+        if (!a) return b ? b.length : 0;
+        if (!b) return a.length;
+        const m = a.length, n = b.length;
+        let prev = Array.from({ length: n + 1 }, (_, i) => i);
+        for (let i = 1; i <= m; i++) {
+            const curr = [i];
+            for (let j = 1; j <= n; j++) {
+                curr[j] = a[i - 1] === b[j - 1]
+                    ? prev[j - 1]
+                    : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+            }
+            prev = curr;
+        }
+        return prev[n];
+    },
+
+    levenshteinSimilarity: function(a, b) {
+        if (!a && !b) return 1;
+        const dist = this.levenshteinDistance(a, b);
+        return 1 - dist / Math.max(a.length, b.length, 1);
     },
 
     charOverlapScore: function(a, b) {
@@ -8601,7 +8636,6 @@ const GameDatabase = {
                 if (qTokens.length && dbTokens.length) {
                     const matchCount = qTokens.filter(w => dbTokens.includes(w)).length;
                     const score = matchCount / Math.max(qTokens.length, 1);
-                    const qThreshold = Math.ceil(qTokens.length * 0.7);
                     const lastQ = qTokens.length ? qTokens[qTokens.length - 1] : null;
                     const lastDB = dbTokens.length ? dbTokens[dbTokens.length - 1] : null;
                     if (score >= 0.5 && (matchCount >= 2 || (lastQ && lastDB && lastQ === lastDB))) {
@@ -8611,20 +8645,75 @@ const GameDatabase = {
                 }
             }
 
+            // --- fuzzysort (работает хорошо на коротких совпадениях символов) ---
+            if (typeof window.fuzzysort === 'object' && typeof window.fuzzysort.go === 'function' && items.length > 0) {
+                try {
+                    const fsResults = window.fuzzysort.go(question, items, {
+                        key: 'question',
+                        limit: 1,
+                        threshold: -10000
+                    });
+                    if (fsResults.length > 0) {
+                        const raw = fsResults[0].score;
+                        // fuzzysort: 0 = точное совпадение, очень отрицательные = плохие
+                        if (raw > -5000) {
+                            const normalized = Math.max(0, Math.min(1, 1 - (-raw / 5000)));
+                            if (normalized >= 0.35) {
+                                const confidence = Math.min(68, Math.max(38, Math.round(normalized * 100)));
+                                return { answer: fsResults[0].obj.answer, confidence: confidence, method: 'fuzzysort' };
+                            }
+                        }
+                    }
+                } catch (fsErr) {
+                    console.warn('[GameDatabase] fuzzysort search failed:', fsErr);
+                }
+            }
+
+            // --- Fuse.js (лучше для длинных предложений с опечатками/перестановками) ---
+            if (typeof window.Fuse === 'function' && items.length > 0) {
+                try {
+                    const fuse = new window.Fuse(items, {
+                        keys: ['question'],
+                        threshold: 0.45,
+                        includeScore: true,
+                        ignoreLocation: true,
+                        minMatchCharLength: 2
+                    });
+                    const results = fuse.search(question);
+                    if (results.length > 0 && results[0].score !== undefined) {
+                        const score = 1 - Math.min(results[0].score, 1);
+                        if (score >= 0.35) {
+                            const confidence = Math.min(65, Math.max(35, Math.round(score * 100)));
+                            return { answer: results[0].item.answer, confidence: confidence, method: 'fuse' };
+                        }
+                    }
+                } catch (fuseErr) {
+                    console.warn('[GameDatabase] Fuse search failed, fallback to built-in:', fuseErr);
+                }
+            }
+
+            // --- встроенный charOverlap/token + Levenshtein (запасной вариант) ---
             let best = null;
             let bestScore = 0;
             const useCharOverlap = normalizedQuestion.length <= 4;
             for (const item of items) {
                 if (!item || !item.question) continue;
                 const normalizedDB = this.normalizeText(item.question);
-                const score = useCharOverlap
-                    ? this.charOverlapScore(normalizedQuestion, normalizedDB)
-                    : (normalizedQuestion.length <= 1 ? 0 : (() => {
-                        const qt = normalizedQuestion.split(' ').filter(w => w.length >= 2);
-                        const dt = normalizedDB.split(' ').filter(w => w.length >= 2);
-                        const m = qt.filter(w => dt.includes(w)).length;
-                        return m / Math.max(qt.length, 1);
-                    })());
+                let score;
+                if (useCharOverlap) {
+                    score = this.charOverlapScore(normalizedQuestion, normalizedDB);
+                } else if (normalizedQuestion.length <= 1) {
+                    score = 0;
+                } else {
+                    const qt = normalizedQuestion.split(' ').filter(w => w.length >= 2);
+                    const dt = normalizedDB.split(' ').filter(w => w.length >= 2);
+                    const tokenScore = qt.filter(w => dt.includes(w)).length / Math.max(qt.length, 1);
+                    // При коротких запросах дополнительно проверяем Levenshtein по нормализованным строкам
+                    const levScore = (normalizedQuestion.length <= 80 && normalizedDB.length <= 80)
+                        ? this.levenshteinSimilarity(normalizedQuestion, normalizedDB)
+                        : 0;
+                    score = Math.max(tokenScore, levScore);
+                }
                 if (score > bestScore && score >= 0.4) {
                     bestScore = score;
                     best = { answer: item.answer, score };
