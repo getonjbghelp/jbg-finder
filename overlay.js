@@ -984,12 +984,12 @@ function ensureStyle() {
             background: rgba(32,32,36,0.82);
             font-family: "Consolas", "JetBrains Mono", monospace;
         }
-        #${OVERLAY_ID} .jf-log-actions {
+        #${OVERLAY_ID} .jf-settings-dropdown .jf-log-actions {
             display: flex;
             gap: 8px;
-            padding: 6px 10px 8px 10px;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            background: rgba(28,28,32,0.75);
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.08);
         }
         #${OVERLAY_ID} .jf-log-btn {
             flex: 1;
@@ -1955,6 +1955,10 @@ function createOverlay() {
                             <label class="jf-settings-label"><input type="checkbox" id="jf-debug-mode"><span class="jf-settings-label-text" data-i18n="debugMode">${getText('debugMode')}</span></label>
                             <label class="jf-settings-label"><input type="checkbox" id="jf-remember-position"><span class="jf-settings-label-text" data-i18n="rememberPosition">${getText('rememberPosition')}</span></label>
                         </div>
+                        <div class="jf-settings-section jf-log-actions">
+                            <button type="button" id="jf-copy-logs" class="jf-log-btn" title="${getText('copyLogs')}">📋 ${getText('copyLogs')}</button>
+                            <button type="button" id="jf-download-logs" class="jf-log-btn" title="${getText('downloadLogs')}">💾 ${getText('downloadLogs')}</button>
+                        </div>
                     </div>
                 </div>
                 <button id="lang-flag-btn" class="overlay-btn flag-btn" title="Toggle language">🌐</button>
@@ -2016,10 +2020,6 @@ function createOverlay() {
             </div>
 
             <div id="overlay-status" class="overlay-status">${getText('loadingDB')}</div>
-            <div class="jf-log-actions">
-                <button type="button" id="jf-copy-logs" class="jf-log-btn" title="${getText('copyLogs')}">📋 ${getText('copyLogs')}</button>
-                <button type="button" id="jf-download-logs" class="jf-log-btn" title="${getText('downloadLogs')}">💾 ${getText('downloadLogs')}</button>
-            </div>
         </div>
     `;
     document.body.appendChild(overlayEl);
