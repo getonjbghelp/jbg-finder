@@ -20,7 +20,7 @@ log('Initializing JBG-Finder overlay...');
 
 const CONFIG = {
     databaseURL: "https://getonjbghelp.github.io/jbg-finder/database.js",
-    // URL для каждой CDN-библиотеки. По умолчанию — сайт (работает с любого сайта).
+    // URL для каждой CDN-библиотеки. По умолчанию — unpkg (работает с любого сайта).
     // Можно заменить на локальный путь при локальной разработке.
     cdn: {
         fuse:      "https://getonjbghelp.github.io/jbg-finder/CDNlibs/fuse.min.js",
@@ -335,15 +335,16 @@ function ensureStyle() {
             padding: 0;
         }
 
-        /* Основное окно (фиксированный размер под макет 522x338) */
+        /* Основное окно: минимальный размер, при длинном контенте — скролл внутри */
         #${OVERLAY_ID} {
             position: fixed;
             top: 40px;
             right: 40px;
             width: 522px;
+            min-height: 280px;
+            max-height: 90vh;
             height: 338px;
             max-width: 98vw;
-            max-height: 95vh;
             background: #2b2b2b;
             border: 1px solid #3b3b3b;
             border-radius: 6px;
@@ -352,6 +353,8 @@ function ensureStyle() {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             color: #f0f0f0;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
             user-select: none;
         }
 
@@ -449,7 +452,9 @@ function ensureStyle() {
         #${OVERLAY_ID} .overlay-content {
             padding: 14px 16px 10px 16px;
             background: #252525;
-            height: calc(100% - 30px); /* минус заголовок */
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
         }
@@ -541,18 +546,20 @@ function ensureStyle() {
             min-width: 0;
         }
 
-        /* Основная сетка: ВОПРОС | КНОПКИ | ОТВЕТ */
+        /* Основная сетка: ВОПРОС | КНОПКИ | ОТВЕТ; при длинном тексте — скролл в колонках */
         #${OVERLAY_ID} .overlay-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr 2fr;
+            grid-template-columns: 2fr minmax(160px, 1fr) 2fr;
             gap: 8px;
             align-items: stretch;
-            flex: 1; /* занять всё доступное пространство над строкой статуса */
+            flex: 1;
+            min-height: 140px;
         }
 
         #${OVERLAY_ID} .qa-column {
             display: flex;
             flex-direction: column;
+            min-height: 0;
             background: #2b2b2b;
             border: 1px solid #3b3b3b;
             border-radius: 4px;
@@ -655,29 +662,29 @@ function ensureStyle() {
             cursor: default;
         }
 
-        /* Центральная колонка кнопок — фиксированный минимум, чтобы текст не слетал при коротком вопросе */
+        /* Центральная колонка кнопок — нормальная ширина, текст переносится без поломки */
         #${OVERLAY_ID} .center-column {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            justify-content: center;
-            min-width: 0;
-            min-height: 132px;
+            gap: 8px;
+            justify-content: flex-start;
+            min-width: 160px;
             flex-shrink: 0;
+            min-height: 0;
         }
 
         #${OVERLAY_ID} .center-btn {
             width: 100%;
-            min-height: 40px;
-            padding: 8px 6px;
+            min-height: 44px;
+            padding: 8px 10px;
             border-radius: 3px;
             border: 1px solid #3b3b3b;
             background: #323232;
             color: #f0f0f0;
             font-size: 12px;
+            line-height: 1.3;
             cursor: pointer;
             box-sizing: border-box;
-            line-height: 1.3;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -685,7 +692,6 @@ function ensureStyle() {
             white-space: normal;
             word-wrap: break-word;
             overflow-wrap: break-word;
-            flex-shrink: 0;
         }
 
         #${OVERLAY_ID} .center-btn:hover:not(:disabled) {
@@ -1014,6 +1020,7 @@ function updateIndicator(result) {
 
 function displayQuestion(q) {
     log('=== DISPLAY QUESTION ===');
+    resetCenterButtonsHeight();
     if (!dom.questionText || !dom.questionLength || !dom.searchBtn) {
         logError('Question DOM elements not found!');
         return;
@@ -1041,16 +1048,6 @@ function displayQuestion(q) {
     updateGameAssets();
     if (dom.questionCopyBtn) dom.questionCopyBtn.disabled = false;
     setQuestionLoading(false);
-
-    setTimeout(() => {
-        try {
-            const leftH = dom.questionText && dom.questionText.getBoundingClientRect().height || 0;
-            const rightH = dom.answerText && dom.answerText.getBoundingClientRect().height || 0;
-            if (leftH >= 48 && rightH >= 48) adaptCenterButtonsHeight();
-        } catch (e) {
-            logWarn('adapt after displayQuestion', e);
-        }
-    }, 120);
 }
 
 function detectGame() {
@@ -1158,15 +1155,7 @@ function searchAnswer() {
         updateStatus('dbError', 'error');
     } finally {
         setAnswerLoading(false);
-        setTimeout(() => {
-            try {
-                const leftH = dom.questionText && dom.questionText.getBoundingClientRect().height || 0;
-                const rightH = dom.answerText && dom.answerText.getBoundingClientRect().height || 0;
-                if (leftH >= 48 && rightH >= 48) adaptCenterButtonsHeight();
-            } catch (e) {
-                logWarn('adapt after searchAnswer', e);
-            }
-        }, 120);
+        resetCenterButtonsHeight();
     }
 }
 
@@ -1189,37 +1178,36 @@ function updateAllText() {
         if (minBtn) minBtn.title = t.minimize;
         if (closeBtn) closeBtn.title = t.close;
 
-        if (dom.status.textContent === getText('loadingDB', 'en') || dom.status.textContent === getText('loadingDB', 'ru')) {
-            updateStatus('loadingDB', 'info');
-        } else if (dom.status.textContent.includes(getText('gameDetected', 'en')) || dom.status.textContent.includes(getText('gameDetected', 'ru'))) {
-            const gameName = dom.gameName ? dom.gameName.textContent : '';
-            if(gameName && gameName !== getText('notDetected')) {
-                dom.status.textContent = getText('gameDetected') + gameName + getText('gameDetectedSuffix');
+        if (dom.status) {
+            if (dom.status.textContent === getText('loadingDB', 'en') || dom.status.textContent === getText('loadingDB', 'ru')) {
+                updateStatus('loadingDB', 'info');
+            } else if (dom.status.textContent.includes(getText('gameDetected', 'en')) || dom.status.textContent.includes(getText('gameDetected', 'ru'))) {
+                const gameName = dom.gameName ? dom.gameName.textContent : '';
+                if (gameName && gameName !== getText('notDetected')) {
+                    dom.status.textContent = getText('gameDetected') + gameName + getText('gameDetectedSuffix');
+                    dom.status.style.color = '#4ecdc4';
+                }
+            } else if (dom.answerBox && dom.answerBox.classList.contains('found') && dom.answerConfidence) {
+                const conf = dom.answerConfidence.textContent;
+                dom.status.textContent = getText('answerFound') + conf + ')';
                 dom.status.style.color = '#4ecdc4';
             }
-        } else if (dom.answerBox && dom.answerBox.classList.contains('found') && dom.answerConfidence) {
-            const conf = dom.answerConfidence.textContent;
-            if (dom.status) dom.status.textContent = getText('answerFound') + conf + ')';
-            if (dom.status) dom.status.style.color = '#4ecdc4';
         }
-        
-        if (dom.questionText.textContent === getText('placeholderQuestion', 'en') || dom.questionText.textContent === getText('placeholderQuestion', 'ru')) {
+
+        if (dom.questionText && (dom.questionText.textContent === getText('placeholderQuestion', 'en') || dom.questionText.textContent === getText('placeholderQuestion', 'ru'))) {
             dom.questionText.textContent = t.placeholderQuestion;
         }
-        if (dom.answerText.textContent === getText('placeholderAnswer', 'en') || dom.answerText.textContent === getText('placeholderAnswer', 'ru')) {
-            dom.answerText.textContent = t.placeholderAnswer;
-        }
-        if (dom.answerText.textContent === getText('answerNotFound', 'en') || dom.answerText.textContent === getText('answerNotFound', 'ru')) {
-            dom.answerText.textContent = t.answerNotFound;
-        }
-         
-        if (dom.questionLength) {
-            const currentLen = dom.questionText.textContent.length;
-            if (currentLen < 10) {
-                dom.questionLength.textContent = '0' + t.symbols;
-            } else {
-                dom.questionLength.textContent = currentLen + t.symbols;
+        if (dom.answerText) {
+            if (dom.answerText.textContent === getText('placeholderAnswer', 'en') || dom.answerText.textContent === getText('placeholderAnswer', 'ru')) {
+                dom.answerText.textContent = t.placeholderAnswer;
+            } else if (dom.answerText.textContent === getText('answerNotFound', 'en') || dom.answerText.textContent === getText('answerNotFound', 'ru')) {
+                dom.answerText.textContent = t.answerNotFound;
             }
+        }
+
+        if (dom.questionLength && dom.questionText) {
+            const currentLen = dom.questionText.textContent.length;
+            dom.questionLength.textContent = currentLen + t.symbols;
         }
         if (dom.indicatorCount && currentGame) {
             const count = dom.indicatorCount.textContent.match(/\d+/);
@@ -1456,13 +1444,7 @@ function createOverlay() {
             if (dom.deleteBtn) dom.deleteBtn.disabled = true;
             setQuestionLoading(false);
             setAnswerLoading(false);
-            setTimeout(() => {
-                try {
-                    const leftH = dom.questionText && dom.questionText.getBoundingClientRect().height || 0;
-                    const rightH = dom.answerText && dom.answerText.getBoundingClientRect().height || 0;
-                    if (leftH >= 48 && rightH >= 48) adaptCenterButtonsHeight();
-                } catch (e) {}
-            }, 120);
+            resetCenterButtonsHeight();
         });
     }
 
