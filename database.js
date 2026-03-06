@@ -1,7 +1,7 @@
 const GameDatabase = {
-    version: "DB4MARCHEXP",
-    lastUpdated: "2026-03-04",
-    buildDate: new Date("2026-03-04"),
+    version: "DB6MARCHEXP",
+    lastUpdated: "2026-03-06",
+    buildDate: new Date("2026-03-06"),
     _searchCache: {},
     _fuseCache: {},
 
