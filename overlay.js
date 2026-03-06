@@ -352,10 +352,6 @@ function showPopupAt(targetEl) {
     if (!popupEl || !targetEl || !overlayEl) return;
     const rect = targetEl.getBoundingClientRect();
     const overlayRect = overlayEl.getBoundingClientRect();
-    // #region agent log
-    fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:showPopupAt',message:'popup position',data:{overlayW:overlayRect.width,overlayH:overlayRect.height,rectW:rect.width},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-
     // позиционируем попап относительно overlay (absolute внутри overlay)
     const popupRect = popupEl.getBoundingClientRect();
     const spaceAbove = rect.top - overlayRect.top;
@@ -1223,9 +1219,6 @@ function cacheDom() {
     dom.answerCopyBtn = overlayEl.querySelector('#answer-copy-btn');
     dom.deleteBtn = overlayEl.querySelector('#delete-btn');
     log('DOM elements cached:', Object.keys(dom));
-    // #region agent log
-    fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:cacheDom',message:'cacheDom done',data:{hasOverlay:!!overlayEl,detectBtn:!!dom.detectBtn,status:!!dom.status},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 }
 
 /** Точка интеграции: 3D-эффекты (матовое стекло + наклон/масштаб при hover и drag). Вызывать после cacheDom() в createOverlay(). */
@@ -1244,10 +1237,6 @@ function attach3dEffects() {
         glassEl.className = 'jf-glass';
         overlayEl.insertBefore(glassEl, overlayEl.firstChild);
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:attach3dEffects',message:'glass inserted',data:{firstChildClass:overlayEl.firstChild&&overlayEl.firstChild.className,detectBtnInOverlay:!!(dom.detectBtn&&overlayEl.contains(dom.detectBtn))},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-
     let targetRx = 0, targetRy = 0, currentRx = 0, currentRy = 0;
     let targetScale = 1, currentScale = 1;
     let isDragging = false;
@@ -1381,9 +1370,6 @@ function attach3dEffects() {
     rafId = requestAnimationFrame(tick);
 
     function cleanup() {
-        // #region agent log
-        fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:attach3dEffects.cleanup',message:'3d cleanup entered',data:{rafIdBefore:rafId},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         destroyed = true;
         if (rafId) {
             cancelAnimationFrame(rafId);
@@ -1635,9 +1621,6 @@ function detectGame() {
     updateStatus('scanning', 'searching');
     setQuestionLoading(true);
 
-    // #region agent log
-    fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:detectGame',message:'detectGame start',data:{hasDb:!!gameDatabase,hasDetectBtn:!!dom.detectBtn,hasStatus:!!dom.status},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     try {
         const result = gameDatabase.detectGame();
         logDebug('detectGame result:', result);
@@ -1741,9 +1724,6 @@ function searchAnswer() {
 function updateAllText() {
     if (!overlayEl) return;
     try {
-        // #region agent log
-        fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:updateAllText',message:'updateAllText',data:{minBtn:!!document.getElementById('minimize-btn'),closeBtn:!!document.getElementById('close-btn')},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         const t = LANG[currentLang];
         if (dom.titleEl) dom.titleEl.textContent = t.title;
         if (dom.detectBtn) dom.detectBtn.textContent = t.detectBtn;
@@ -2128,9 +2108,6 @@ function createOverlay() {
     // Функция очистки - снимает глобальные обработчики, останавливает 3D-RAF, удаляет попап/стили
     function cleanupOverlay() {
         try {
-            // #region agent log
-            fetch('http://127.0.0.1:7612/ingest/95673501-c795-413b-b53f-3a51d4e88c1f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0c5986'},body:JSON.stringify({sessionId:'0c5986',location:'overlay.js:cleanupOverlay',message:'cleanupOverlay start',data:{hasApi3d:!!api3d,hasCleanup:!!(api3d&&typeof api3d.cleanup==='function')},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
             if (api3d && typeof api3d.cleanup === 'function') {
                 api3d.cleanup();
             }
